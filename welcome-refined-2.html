@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Club - Colorful & Playful</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Floating shapes background */
+        .shapes {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .shape {
+            position: absolute;
+            opacity: 0.15;
+            animation: float-around 20s ease-in-out infinite;
+        }
+        .shape.circle {
+            border-radius: 50%;
+        }
+        @keyframes float-around {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(100px, -100px) rotate(90deg); }
+            50% { transform: translate(0, -200px) rotate(180deg); }
+            75% { transform: translate(-100px, -100px) rotate(270deg); }
+        }
+
+        /* Main container */
+        .container {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 40px;
+        }
+
+        /* Mascot character */
+        .mascot {
+            font-size: 180px;
+            margin-bottom: 40px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            animation: bounce-gentle 2s ease-in-out infinite;
+        }
+        @keyframes bounce-gentle {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-20px) scale(1.05); }
+        }
+        .mascot:hover {
+            transform: scale(1.2) rotate(10deg);
+        }
+
+        /* Title card */
+        .title-card {
+            background: white;
+            border-radius: 40px;
+            padding: 40px 60px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            margin-bottom: 60px;
+            text-align: center;
+        }
+        .title {
+            font-size: 56px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        .tagline {
+            font-size: 24px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        /* Buttons container */
+        .buttons {
+            display: flex;
+            gap: 30px;
+        }
+
+        /* Main start button */
+        .btn-start {
+            width: 200px;
+            height: 200px;
+            border-radius: 40px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            box-shadow: 0 15px 40px rgba(76, 175, 80, 0.4);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        .btn-start:hover {
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 25px 60px rgba(76, 175, 80, 0.5);
+        }
+        .btn-start:active {
+            transform: translateY(-5px) scale(1);
+        }
+        .btn-icon {
+            font-size: 80px;
+        }
+        .btn-label {
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Listen button */
+        .btn-listen {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, #FFC107 0%, #FF9800 100%);
+            box-shadow: 0 10px 30px rgba(255, 152, 0, 0.4);
+            font-size: 60px;
+            transition: all 0.3s;
+            align-self: flex-end;
+        }
+        .btn-listen:hover {
+            transform: scale(1.15) rotate(15deg);
+            box-shadow: 0 15px 40px rgba(255, 152, 0, 0.5);
+        }
+
+        /* Decorative elements */
+        .decor-top {
+            position: fixed;
+            top: 40px;
+            left: 40px;
+            font-size: 60px;
+            animation: spin-slow 10s linear infinite;
+        }
+        .decor-top-right {
+            position: fixed;
+            top: 40px;
+            right: 40px;
+            font-size: 60px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        /* Sound indicator */
+        .sound-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .sound-indicator.active {
+            opacity: 1;
+        }
+        .sound-bar {
+            width: 8px;
+            border-radius: 4px;
+            background: white;
+            animation: sound-wave 0.8s ease-in-out infinite;
+        }
+        .sound-bar:nth-child(1) { height: 30px; animation-delay: 0s; }
+        .sound-bar:nth-child(2) { height: 50px; animation-delay: 0.1s; }
+        .sound-bar:nth-child(3) { height: 70px; animation-delay: 0.2s; }
+        .sound-bar:nth-child(4) { height: 50px; animation-delay: 0.3s; }
+        .sound-bar:nth-child(5) { height: 30px; animation-delay: 0.4s; }
+        @keyframes sound-wave {
+            0%, 100% { transform: scaleY(0.5); }
+            50% { transform: scaleY(1); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating shapes -->
+    <div class="shapes">
+        <div class="shape circle" style="width: 100px; height: 100px; background: #FF6B6B; top: 10%; left: 10%; animation-delay: 0s;"></div>
+        <div class="shape" style="width: 80px; height: 80px; background: #4ECDC4; top: 20%; right: 15%; animation-delay: 2s;"></div>
+        <div class="shape circle" style="width: 120px; height: 120px; background: #FFE66D; bottom: 20%; left: 20%; animation-delay: 4s;"></div>
+        <div class="shape" style="width: 90px; height: 90px; background: #95E1D3; top: 60%; right: 10%; animation-delay: 6s;"></div>
+    </div>
+
+    <!-- Decorative elements -->
+    <div class="decor-top">⭐</div>
+    <div class="decor-top-right">🎨</div>
+
+    <!-- Main container -->
+    <div class="container">
+        <div class="mascot" onclick="tapMascot()">🦁</div>
+
+        <div class="title-card">
+            <div class="title">Reading Club</div>
+            <div class="tagline">Let's learn together!</div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn-start" onclick="startLearning()">
+                <div class="btn-icon">✅</div>
+                <div class="btn-label">Start</div>
+            </button>
+            <button class="btn-listen" onclick="playWelcome()">🔊</button>
+        </div>
+    </div>
+
+    <!-- Sound indicator -->
+    <div class="sound-indicator" id="soundIndicator">
+        <div class="sound-bar"></div>
+        <div class="sound-bar"></div>
+        <div class="sound-bar"></div>
+        <div class="sound-bar"></div>
+        <div class="sound-bar"></div>
+    </div>
+
+    <script>
+        let mascotTaps = 0;
+        const mascots = ['🦁', '🐻', '🐼', '🐨', '🦊'];
+
+        function speak(text, onEnd) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 0.9;
+            utterance.pitch = 1.15;
+            utterance.volume = 1;
+
+            const indicator = document.getElementById('soundIndicator');
+            indicator.classList.add('active');
+
+            utterance.onend = () => {
+                indicator.classList.remove('active');
+                if (onEnd) onEnd();
+            };
+
+            speechSynthesis.speak(utterance);
+        }
+
+        function playWelcome() {
+            speak("Hi! Welcome to Reading Club! I'm so excited to help you learn the alphabet! Tap the green button when you're ready to begin!");
+        }
+
+        function tapMascot() {
+            mascotTaps++;
+            const mascotEl = document.querySelector('.mascot');
+            mascotEl.textContent = mascots[mascotTaps % mascots.length];
+
+            const greetings = [
+                "Hello friend!",
+                "Ready to learn?",
+                "Let's have fun!",
+                "You're awesome!",
+                "I believe in you!"
+            ];
+            speak(greetings[mascotTaps % greetings.length]);
+        }
+
+        function startLearning() {
+            speak("Yay! Let's start your reading adventure!", () => {
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 500);
+            });
+        }
+
+        // Auto-play on load
+        window.addEventListener('load', () => {
+            setTimeout(playWelcome, 1200);
+        });
+    </script>
+</body>
+</html>
