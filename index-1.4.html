@@ -1730,7 +1730,8 @@
                 return null;
             }
 
-            const newLetter = available[Math.floor(Math.random() * available.length)];
+            // Select first available letter following PHONEMES curriculum order (vowels → easy → common → advanced)
+            const newLetter = PHONEMES.map(p => p.letter).find(letter => available.includes(letter));
             sessionData.newLettersIntroduced.push(newLetter);
 
             // Track as unknown letter (counts toward 3-letter limit)
