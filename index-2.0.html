@@ -1094,17 +1094,17 @@
             </div>
 
             <div class="actions" style="margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;">
-                <button class="btn" id="tunerBtn" onclick="toggleTuner()">▶ Start Game</button>
-                <button class="btn" onclick="tryAgain()" style="background: #7CB342; display: none;" id="tryAgainBtn">🔄 Try Again</button>
-                <button class="btn" onclick="skipLetter()" style="background: #999;">Skip</button>
-
-                <label style="color: #ddd; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-left: 10px;">
+                <label style="color: #ddd; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                     <span style="opacity: 0.8;">Auto-next:</span>
                     <div style="position: relative; width: 44px; height: 24px; background: rgba(255,255,255,0.2); border-radius: 12px; transition: background 0.3s;" id="toggleBg">
                         <input type="checkbox" id="continuousPlayMode" onchange="toggleContinuousPlay()" style="opacity: 0; width: 0; height: 0; position: absolute;">
                         <div id="toggleSlider" style="position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.3s;"></div>
                     </div>
                 </label>
+
+                <button class="btn" id="tunerBtn" onclick="toggleTuner()">▶ Start Game</button>
+                <button class="btn" onclick="tryAgain()" style="background: #7CB342; display: none;" id="tryAgainBtn">🔄 Try Again</button>
+                <button class="btn" onclick="skipLetter()" style="background: #999;">Skip</button>
             </div>
 
             <div style="text-align: center; margin-bottom: 20px; color: #ddd; font-size: 36px; font-weight: 600;">
