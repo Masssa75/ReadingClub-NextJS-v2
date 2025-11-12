@@ -3048,35 +3048,51 @@
         }
 
         async function saveSensitivity() {
-            if (!currentTarget || !currentProfileId) return;
+            if (!currentTarget) {
+                console.error('No current target');
+                return;
+            }
 
             const slider = document.getElementById('sensitivitySlider');
             const newSensitivity = parseInt(slider.value);
 
             // Update local calibration data
             if (calibrationData[currentTarget]) {
+                const calibrationId = calibrationData[currentTarget].id;
+
+                if (!calibrationId) {
+                    console.error('No calibration ID found for letter:', currentTarget);
+                    alert('Failed to save sensitivity - calibration not found');
+                    return;
+                }
+
                 calibrationData[currentTarget].sensitivity = newSensitivity;
 
-                // Update in Supabase
+                // Update in Supabase using the calibration ID
                 try {
-                    const { error } = await supabase
+                    console.log(`Updating sensitivity for ${currentTarget} (ID: ${calibrationId}) to ${newSensitivity}%`);
+
+                    const { data, error } = await supabase
                         .from('calibrations')
                         .update({ sensitivity: newSensitivity })
-                        .eq('profile_id', currentProfileId)
-                        .eq('letter', currentTarget);
+                        .eq('id', calibrationId)
+                        .select();
 
                     if (error) {
-                        console.error('Error updating sensitivity:', error);
-                        alert('Failed to save sensitivity');
+                        console.error('Supabase error:', error);
+                        alert(`Failed to save sensitivity: ${error.message}`);
                         return;
                     }
 
-                    console.log(`✅ Updated sensitivity for ${currentTarget} to ${newSensitivity}%`);
+                    console.log(`✅ Updated sensitivity for ${currentTarget} to ${newSensitivity}%`, data);
                     closeSensitivityModal();
                 } catch (err) {
-                    console.error('Error:', err);
-                    alert('Failed to save sensitivity');
+                    console.error('Unexpected error:', err);
+                    alert(`Failed to save sensitivity: ${err.message}`);
                 }
+            } else {
+                console.error('Letter not calibrated:', currentTarget);
+                alert('Letter not calibrated yet');
             }
         }
 
