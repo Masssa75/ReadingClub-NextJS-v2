@@ -744,6 +744,9 @@
         /* Instruction Modal Styles */
     </style>
 
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <!-- Supabase Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
@@ -1058,6 +1061,34 @@
         </div>
     </div>
 
+    <!-- Sensitivity Modal -->
+    <div id="sensitivityModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: #2c3e50; padding: 30px; border-radius: 10px; max-width: 400px; text-align: center; position: relative;">
+            <button onclick="closeSensitivityModal()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #aaa; font-size: 24px; cursor: pointer; padding: 5px 10px;">✕</button>
+
+            <div style="font-size: 48px; margin-bottom: 10px;" id="sensitivityLetter">a</div>
+            <h3 style="color: #fff; margin-bottom: 20px;">Adjust Sensitivity</h3>
+
+            <div style="margin: 30px 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #ddd; font-size: 14px;">
+                    <span>Easy (70%)</span>
+                    <span id="sensitivityValue">85%</span>
+                    <span>Strict (95%)</span>
+                </div>
+                <input type="range" id="sensitivitySlider" min="70" max="95" value="85"
+                       style="width: 100%; height: 8px; border-radius: 5px; background: #555; outline: none; -webkit-appearance: none;"
+                       oninput="updateSensitivityDisplay(this.value)">
+            </div>
+
+            <div style="margin-top: 20px; color: #aaa; font-size: 14px;">
+                Lower = easier to match<br>
+                Higher = more accurate required
+            </div>
+
+            <button onclick="saveSensitivity()" class="btn" style="margin-top: 20px; width: 100%;">Save</button>
+        </div>
+    </div>
+
     <div class="container">
         <div class="tabs">
             <button class="tab active" onclick="switchTab('calibrate')">📊 Calibrate</button>
@@ -1105,6 +1136,7 @@
                 <button class="btn" id="tunerBtn" onclick="toggleTuner()">▶ Start Game</button>
                 <button class="btn" onclick="tryAgain()" style="background: #7CB342; display: none;" id="tryAgainBtn">🔄 Try Again</button>
                 <button class="btn" onclick="skipLetter()" style="background: #999;">Skip</button>
+                <button class="btn" onclick="openSensitivityModal()" style="background: #666; display: none;" id="sensitivityBtn"><i data-lucide="sliders" style="width: 18px; height: 18px;"></i></button>
             </div>
 
             <div style="text-align: center; margin-bottom: 20px; color: #ddd; font-size: 36px; font-weight: 600;">
@@ -2989,6 +3021,65 @@
             analyzeTuner();
         }
 
+        // Sensitivity modal functions
+        function openSensitivityModal() {
+            if (!currentTarget) return;
+
+            const modal = document.getElementById('sensitivityModal');
+            const letterDisplay = document.getElementById('sensitivityLetter');
+            const slider = document.getElementById('sensitivitySlider');
+
+            // Get current sensitivity for this letter
+            const currentSensitivity = calibrationData[currentTarget]?.sensitivity || 85;
+
+            letterDisplay.textContent = currentTarget;
+            slider.value = currentSensitivity;
+            updateSensitivityDisplay(currentSensitivity);
+
+            modal.style.display = 'flex';
+        }
+
+        function closeSensitivityModal() {
+            document.getElementById('sensitivityModal').style.display = 'none';
+        }
+
+        function updateSensitivityDisplay(value) {
+            document.getElementById('sensitivityValue').textContent = value + '%';
+        }
+
+        async function saveSensitivity() {
+            if (!currentTarget || !currentProfileId) return;
+
+            const slider = document.getElementById('sensitivitySlider');
+            const newSensitivity = parseInt(slider.value);
+
+            // Update local calibration data
+            if (calibrationData[currentTarget]) {
+                calibrationData[currentTarget].sensitivity = newSensitivity;
+
+                // Update in Supabase
+                try {
+                    const { error } = await supabase
+                        .from('calibrations')
+                        .update({ sensitivity: newSensitivity })
+                        .eq('profile_id', currentProfileId)
+                        .eq('letter', currentTarget);
+
+                    if (error) {
+                        console.error('Error updating sensitivity:', error);
+                        alert('Failed to save sensitivity');
+                        return;
+                    }
+
+                    console.log(`✅ Updated sensitivity for ${currentTarget} to ${newSensitivity}%`);
+                    closeSensitivityModal();
+                } catch (err) {
+                    console.error('Error:', err);
+                    alert('Failed to save sensitivity');
+                }
+            }
+        }
+
         // Continuous play mode
         let continuousPlayEnabled = localStorage.getItem('continuousPlayMode') === 'true';
 
@@ -3062,6 +3153,7 @@
                 btn.textContent = '▶ Start Game';
                 document.getElementById('status').textContent = 'Stopped';
                 document.getElementById('targetLetter').textContent = '?';
+                document.getElementById('sensitivityBtn').style.display = 'none'; // Hide settings button
             } else {
                 if (Object.keys(calibrationData).length === 0) {
                     alert('Please calibrate at least one phoneme first!');
@@ -3081,6 +3173,7 @@
                 btn.textContent = '⏸ Stop Game';
                 await setNextTarget(); // Changed to await since it's now async
                 updateLetterProgressTracker();
+                document.getElementById('sensitivityBtn').style.display = 'inline-block'; // Show settings button
                 analyzeTuner();
             }
         }
@@ -4973,6 +5066,13 @@
             } catch (error) {
                 console.error('❌ Error creating anonymous profile:', error);
             }
+        }
+
+        // Initialize Lucide icons when DOM is loaded
+        if (typeof lucide !== 'undefined') {
+            setTimeout(() => {
+                lucide.createIcons();
+            }, 100);
         }
 
     </script>
