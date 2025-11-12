@@ -1174,3 +1174,241 @@ node serve.js
 - **Spam protection** - Can add later when needed
 - **Google OAuth** - Credentials not set up, deferred
 
+
+## Session 7 - Progressive Learning Game with Auto-Calibration
+
+### Overview
+Session focused on implementing a progressive 3-level learning game (Listen+Hit, Listen+Choose, Say+Hit) with TypingClub-style batch progression and seamless auto-calibration during gameplay.
+
+### Context
+User requested gamified learning modes based on multisensory/visceral learning research. Initial approach evolved from separate games to a unified progressive system with calibration integrated directly into gameplay to avoid click sounds.
+
+### Key Accomplishments
+
+#### 1. Progressive Learning Game System ✅
+**Implementation:** index-1.4.html lines 3837-4570
+
+**Three-Level Progression:**
+- **Level 1 (Listen & Hit):** Letter falls + audio plays → tap letter
+- **Level 2 (Listen & Choose):** Multiple letters fall → tap the correct one matching audio
+- **Level 3 (Say & Hit):** Letter falls silently → say the sound → tap letter
+
+**Batch-Based Progression (TypingClub-style):**
+- Batch 0: Vowels (A, E, I, O, U)
+- Batch 1-4: Consonant groups (5-6 letters each)
+- Must master all letters in a batch at current level before unlocking next batch
+- 8 successful hits needed per letter per level
+
+**Game State Management:**
+- Canvas-based falling letters (500x600px)
+- Progressive difficulty (spawn delay, speed)
+- Score tracking and visual feedback (explosions)
+- LocalStorage persistence of progress
+
+#### 2. Auto-Calibration Integration (INCOMPLETE) ⚠️
+**Goal:** Record voice during gameplay to avoid click sounds in calibration audio
+
+**Attempted Approach:**
+- First 5 times seeing uncalibrated letter → voice-triggered explosions (no tapping)
+- Record audio during voice-triggered events
+- After 5 recordings → cluster + save → switch to tap mode
+
+**Issues Encountered:**
+1. **Audio playback triggers explosion** - Microphone picks up speaker sound
+   - Tried: Fixed delay (800ms) - didn't work
+   - Tried: Dynamic muting based on audio.ended event + 500ms buffer - still didn't work
+   - Root cause: Audio still playing/echoing when detection unmutes
+
+2. **Recording count exceeded target** - Recorded 6/5 instead of 5/5
+   - Fixed: Added `calibrationCount < calibrationTarget` check
+
+3. **Clustering errors** - `Cannot read properties of undefined (reading 'length')`
+   - Added validation and error logging
+   - Issue persists when invalid clusters returned
+
+4. **Storage bucket name mismatch** - Code used `calibration_audio` instead of `calibration-audio`
+   - Fixed: Updated to correct hyphenated name
+   - Bucket already existed from initial migration
+
+**Code Changes Made:**
+- index-1.4.html:3868 - Added `voiceDetectionMuted` flag
+- index-1.4.html:4189-4216, 4243-4258 - Audio muting logic with event listeners
+- index-1.4.html:4484-4492 - Voice detection with mute check
+- index-1.4.html:4262-4271 - playLetterAudio returns audio element
+- index-1.4.html:4092, 4100 - Fixed bucket name to `calibration-audio`
+- index-1.4.html:4043-4054 - Added clustering validation
+
+#### 3. Database & Storage Setup ✅
+**Storage Bucket Creation:**
+- Created `calibration-audio` bucket via Management API
+- Confirmed policies already exist from initial migration
+
+**Migration Files:**
+- create-bucket.sql - Manual SQL for bucket creation
+- create-storage-bucket.js - Node.js script (unused)
+- /tmp/create-bucket-only.json - Management API payload
+
+### Technical Challenges
+
+#### Challenge 1: Audio Playback Contamination
+**Problem:** Speakers → Microphone → Triggers explosion before user speaks
+
+**Attempts:**
+1. Fixed 800ms delay - too short for some audio files
+2. Event-based unmuting (audio.ended + 500ms) - still triggers from echoes/reverb
+3. Disabled audio during calibration - user can't hear what to say
+
+**Unresolved:** Need better isolation (headphones requirement, or different approach entirely)
+
+#### Challenge 2: Clustering Failures
+**Problem:** `averageSnapshots(cluster.cluster)` throws error about undefined length
+
+**Debugging Added:**
+- Log recordings count before clustering
+- Log cluster result structure
+- Validate cluster before averaging
+- Better error messages
+
+**Unresolved:** Root cause not identified - needs investigation of findBestCluster implementation
+
+#### Challenge 3: Testing Without Real Audio
+**Problem:** Can't test voice detection without actual audio input
+
+**User Suggestion:** Use real audio files (calibration samples or official phonemes) in Playwright tests
+
+**Action Needed:** Set up automated testing with audio file playback
+
+### Files Modified
+
+**Main Files:**
+- index-1.4.html - Progressive game + auto-calibration logic (~4600 lines)
+
+**Test Files:**
+- test-auto-calibration.js - Playwright test (simulates volume spikes, doesn't use real audio)
+
+**Migration Files:**
+- create-bucket.sql - Storage bucket creation SQL
+- create-storage-bucket.js - Node.js bucket creation script
+
+### Next Session Notes
+
+**High Priority:**
+1. **Fix audio contamination issue** - Either:
+   - Require headphones (add instructions)
+   - Different calibration approach (don't play audio during calibration)
+   - Use noise cancellation/filtering
+   
+2. **Debug clustering failures** - Investigate findBestCluster return values
+
+3. **Set up audio testing** - Playwright tests with real audio file playback
+
+**Medium Priority:**
+4. Test complete auto-calibration flow with headphones
+5. Deploy working version to production
+6. Test with Ophelia on real device
+
+**Low Priority:**
+7. Progressive game visual polish
+8. Add difficulty progression
+9. Add celebration animations for level completion
+
+### User Feedback
+- "still doesn't work properly" - auto-calibration triggering from speaker audio
+- Emphasized need for automated testing with real audio
+- Wants to be able to test these features independently going forward
+
+### Session Outcome
+⚠️ **Incomplete** - Auto-calibration not functional due to audio feedback loop. Need different approach.
+
+
+---
+
+## Session 8 - Peak Tracking Investigation & Revert to Working Calibration
+
+### Overview
+Attempted to implement peak tracking for auto-calibration to capture voice patterns at maximum volume rather than first threshold crossing. After extensive debugging and implementation work, determined the auto-calibration approach was a dead end. Reverted to the proven click-per-capture modal calibration system from index-1.4.html.
+
+### Context
+Continuing from Session 7's incomplete auto-calibration work. User requested implementation of peak tracking similar to the old modal calibration system to improve pattern capture quality.
+
+### Work Completed
+
+#### 1. Peak Tracking Implementation ✅
+**Goal:** Capture voice patterns at peak volume, not at first threshold crossing
+
+**Implementation:**
+- Added peak tracking state variables to `progressGame` object:
+  - `trackingPeak`, `peakVolume`, `peakPattern`, `peakDecayCount`
+  - `voiceDetectionMuted`, `lastPeakTime`, `peakCooldown`
+- Created state machine for peak detection:
+  1. Volume crosses threshold → start tracking
+  2. Volume rises → update peak
+  3. Volume falls for 3 frames → capture at peak
+  4. Volume drops below threshold → reset tracking
+- Added console logging for debugging: `📈 Peak tracking started`, `📈 Peak rising`, `🔊 PEAK FOUND!`
+
+**Code Location:** index-1.4.html lines 3861-3875 (state), 4468-4576 (logic)
+
+#### 2. Syntax Error Debugging 🐛
+**Problem:** Multiple "Unexpected token 'else'" errors after initial implementation
+
+**Root Cause:** Incorrect brace structure when adding peak tracking logic
+- `else if` statements on separate lines from closing braces (JavaScript syntax error)
+- Extra closing braces disrupting if/else chains
+
+**Solution:** Used `git restore index-1.4.html` to revert to last working version, then carefully re-applied peak tracking changes with proper brace structure
+
+**Testing Tools Created:**
+- `test-syntax.js` - Playwright-based syntax validator
+- `test-peak-tracking.js` - Automated test for peak tracking behavior
+- Enhanced error reporting with line numbers and stack traces
+
+#### 3. Decision to Revert ⚠️
+**User Feedback:** "I feel like this thing is a bit of a dead end. Let's go back to having just our old regular calibration which worked really well."
+
+**Reason:** Auto-calibration during gameplay introduces too many complications:
+- Audio feedback loops (speaker → microphone)
+- Complex state management
+- Difficult to test and debug
+- Modal calibration already works well
+
+**Action Taken:** Ran `git restore index-1.4.html` to revert all changes
+
+### Lessons Learned
+
+1. **Working > Clever** - The modal calibration system works reliably. Trying to integrate calibration into gameplay added complexity without clear benefit.
+
+2. **Test Early** - Should have created automated tests before implementing complex features.
+
+3. **Know When to Stop** - Spent significant time debugging auto-calibration when reverting was the better choice.
+
+4. **Preserve Working Code** - Git made it easy to revert. Always commit working versions before major changes.
+
+### Files Modified (Then Reverted)
+- `index-1.4.html` - Added then removed peak tracking implementation
+- `test-syntax.js` - Created for syntax validation
+- `test-peak-tracking.js` - Created for automated testing
+- `volume-monitor.html` - Created for microphone volume analysis
+
+### Current State
+**Status:** ✅ Reverted to working calibration modal
+**File:** index-1.4.html (Session 6 version)
+**Features Working:**
+- Click-per-capture modal calibration
+- Multi-profile support
+- Supabase integration
+- Tuner mode with flashcard learning
+- Progressive game (Levels 1-2 working, auto-calibration removed)
+
+### Next Steps
+User requested to wrap session and discuss next focus areas.
+
+**Potential Directions:**
+1. Polish existing working features
+2. Test with Ophelia (real user testing)
+3. Deploy current working version to production
+4. Focus on educational effectiveness vs technical features
+5. Add more practice modes using existing calibration
+
+### Session Outcome
+✅ **Complete** - Successfully reverted to working state. Ready for new direction in next session.

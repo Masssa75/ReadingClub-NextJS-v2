@@ -1,17 +1,27 @@
 # ReadingClub
 
-**Version:** 1.6.0
-**Last Updated:** November 10, 2025
-**Status:** 🚀 LIVE at phuketcamp.com/phonics - Audio optimized, production ready
+**Version:** 1.10.3
+**Last Updated:** November 12, 2025
+**Status:** ✅ Stable - Level persistence fixed (HTML version) + Next.js migration Phases 1-3 complete
 
 ## 📁 Project Structure Overview
 
 ```
 ReadingClub/
-├── index-1.4.html                  # CURRENT: Optimized audio + auth (Session 6)
-├── serve.js                        # Local HTTP server for CORS-free testing
+├── index-1.4.html                  # CURRENT: Linear lessons system + golden letters
+├── app/                            # NEW: Next.js migration (Session 12)
+│   ├── MIGRATION-PLAN.md          # Phases 1-3 complete (Foundation, Audio, Calibration)
+│   ├── README.md                  # Next.js app documentation
+│   ├── package.json               # Next.js 16 + React 19 + TypeScript
+│   ├── app/                       # Next.js App Router
+│   ├── components/                # React components (CalibrationModal)
+│   ├── lib/                       # Hooks, types, constants, Supabase
+│   └── utils/                     # Audio engine, pattern matching, recording
+├── serve.cjs                       # Local HTTP server for CORS-free testing
 ├── test-auth-flow.js               # Playwright test for profile persistence
 ├── test-profile-switching.js       # Playwright test for profile switching
+├── voice-instructions/             # Audio files for game instructions
+│   └── Congratulation level 1.mp3 # Celebration audio
 ├── PHONICS-SYSTEM-README.md       # Technical documentation
 ├── CLAUDE.md                       # Project instructions (this file)
 ├── SUPABASE-SETUP.md              # Supabase configuration guide
@@ -19,9 +29,11 @@ ReadingClub/
 ├── supabase/                       # Supabase migrations
 │   └── migrations/                 # Database migrations
 └── logs/                           # Session logs
-    ├── SESSION-LOG-INDEX.md       # Master session index (6 sessions total)
+    ├── SESSION-LOG-INDEX.md       # Master session index (19 sessions total)
     ├── SESSION-LOG-2025-11-09.md  # Sessions 1-2 logs
-    └── SESSION-LOG-2025-11-10.md  # Sessions 3-6 logs
+    ├── SESSION-LOG-2025-11-10.md  # Sessions 3-8 logs
+    ├── SESSION-LOG-2025-11-11.md  # Sessions 9-13 logs
+    └── SESSION-LOG-2025-11-12.md  # Sessions 14-19 logs
 
 Production:
 └── BambooValley/phuket-camps/
@@ -29,7 +41,7 @@ Production:
         └── index.html              # DEPLOYED: https://phuketcamp.com/phonics
 ```
 
-**Current State:** Single HTML file MVP deployed to production, Supabase backend, optimized audio
+**Current State:** Single HTML file MVP deployed to production, Supabase backend, optimized audio, linear lessons system. Next.js migration in parallel development (Phases 1-3 complete).
 
 ## Project Vision & Goals
 
@@ -356,42 +368,64 @@ When debugging issues, follow this systematic 5-step approach:
 **All session accomplishments are documented in the `logs/` folder.**
 
 See:
-- `logs/SESSION-LOG-INDEX.md` - Overview of all sessions (6 sessions total)
+- `logs/SESSION-LOG-INDEX.md` - Overview of all sessions (19 sessions total)
 - `logs/SESSION-LOG-2025-11-09.md` - Sessions 1-2 detailed logs
-- `logs/SESSION-LOG-2025-11-10.md` - Sessions 3-6 detailed logs
+- `logs/SESSION-LOG-2025-11-10.md` - Sessions 3-8 detailed logs
+- `logs/SESSION-LOG-2025-11-11.md` - Sessions 9-13 detailed logs
+- `logs/SESSION-LOG-2025-11-12.md` - Sessions 14-19 detailed logs
 
 **Recent Sessions:**
-- **Session 4:** Supabase integration + UI improvements for non-readers
-- **Session 5:** Authentication + multi-profile support with Supabase
-- **Session 6:** Audio optimization (24x smaller files) + production deployment to phuketcamp.com/phonics
+- **Session 17:** Audio playback testing infrastructure (test-audio-playback.html + Playwright test).
+- **Session 18:** Next.js calibration bug fixes (audio recording length, reset button, RLS policies). See [Session 18 log](logs/SESSION-LOG-2025-11-12.md#session-18---november-12-2025).
+- **Session 19:** HTML version level persistence fix (profile-specific storage, 3 Playwright tests, all passing). See [Session 19 log](logs/SESSION-LOG-2025-11-12.md#session-19---november-12-2025).
 
 ## Current Status & Active Files
 
 ### Main Application
-**File:** `index-1.4.html` (~3600 lines, single HTML file)
+**File:** `index-1.4.html` (~4500 lines, single HTML file)
 **Deployed:** https://phuketcamp.com/phonics
 **Stable:** `index-1.2.html` (~2700 lines, moved to stable-versions folder)
 **Technology:** Vanilla JavaScript + Web Audio API + Supabase + Supabase Auth
 
-**Latest Features (Session 6):**
+**Latest Features (Session 13):**
+- ✅ **Linear Lessons System** - TypingClub-style progression with 5 lessons (A listen, A solo, E listen, E solo, Mix A+E)
+- ✅ **Visual Lesson States** - Completed (green ✅), Current (yellow glowing ▶), Locked (grey 🔒)
+- ✅ **Progress Tracking** - Progress bar showing X of 5 lessons completed with percentage
+- ✅ **Golden Letters** - Completed calibrations display with golden gradient effect (no more level badges)
+- ✅ **Dev Mode Shortcuts** - Keyboard shortcuts (1-5, C, W, R, S, H) for rapid testing
+- ✅ **Settings Modal** - Shortcuts reference, audio playback, level/progress info
+- ✅ **Simplified Celebration** - Updated modal with cleaner text and new audio file
+- ✅ **Bug Fixes** - Fixed invisible first letter, Continue button flow, voice recognition after shortcuts
+
+**Session 11 Features:**
+- ✅ **Pedagogical Letter Grouping** - Calibration grid organized by learning difficulty
+- ✅ **Visual Group Headers** - "Vowels", "Easy Consonants", "Common Consonants", "Advanced"
+
+**Session 10 Features:**
+- ✅ **Voice Instruction Popup** - Auto-plays "game play 1_v2.mp3" when starting game
+- ✅ **Celebration Modal** - Confetti animation + "A success B start.mp3" for Level 1 completion
+- ✅ **Audio MIME Type Fix** - `decodeURIComponent()` in serve.cjs for files with spaces
+
+**Session 9 Features:**
+- ✅ **Game 2 Level 1** - Complete beginner mode with auto-play audio + voice recognition
+- ✅ **Success Counter** - ⭐ 0/10 tracker with completion celebration at 10 consecutive matches
+- ✅ **Per-Letter Sensitivity** - Settings button in calibration cards with Easy/Normal/Strict slider
+
+**Previous Features (Session 6):**
 - ✅ **Optimized Audio** - 5-10KB files (24x smaller), 12x faster uploads (247ms vs 2700ms)
-- ✅ **Individual Clip Recording** - Records per snapshot, saves only best from cluster
-- ✅ **Post-Peak Extension** - Continues 700ms after peak for complete sound capture
-- ✅ **Profile Switching Fixed** - Uses `.limit(1)` with ordering to load correct profile
-- ✅ **Immediate Playback** - Audio works right after calibration without refresh
-- ✅ **Simplified Auth UI** - "Save Progress" button instead of auto-popup
 - ✅ **Production Deployment** - Live at phuketcamp.com/phonics via Netlify
-- ✅ **Magic Link Redirect** - Correctly redirects to /phonics subdirectory
 
 **Core Features (Session 1):**
 - ✅ **26 letters** - Full alphabet in phonics sounds (A-Z)
 - ✅ **Multi-user profiles** - Each person calibrates their own voice
 - ✅ **Audio recording** - Records calibration for playback reference
-- ✅ **4 tabs:**
-  - Calibrate: Pausable voice pattern recording (snapshot → pause → continue)
-  - Level 1: Listen & learn mode
+- ✅ **6 tabs:**
+  - Calibrate: Pausable voice pattern recording (snapshot → pause → continue) with per-letter sensitivity
+  - Level 1: Listen & learn mode (flashcards)
   - Tuner: Flashcard practice with LISTEN button and mastery tracking
   - Game: Falling letters game (3 lives, increasing speed)
+  - Game 2: Level 1 beginner mode (auto-play audio, voice recognition, success counter)
+  - 📚 Lessons: Linear progression system (5 lessons with clear completion states)
 - ✅ **Detection algorithm:** S11-Snapshot (80%+ accuracy)
 - ✅ **Dynamic thresholds:** Adjusted per phoneme type
 
@@ -405,6 +439,26 @@ See:
 - **Frame rate:** 60fps continuous analysis
 - **Performance:** 247ms upload + 277ms DB save = 525ms total (5.7x faster than before)
 
+### Next.js Migration (Session 12)
+**Location:** `/app` folder (parallel development)
+**Status:** ✅ Phases 1-3 complete (Foundation, Audio System, Calibration)
+**Running:** Port 3001 (`npm run dev`)
+**Plan:** See `app/MIGRATION-PLAN.md` for full roadmap
+
+**What's Built:**
+- ✅ Complete audio engine (audioEngine, frequencyAnalysis, patternMatching, audioRecording)
+- ✅ Calibration modal with 5-snapshot capture and peak detection
+- ✅ Supabase integration (profiles, calibrations, audio storage)
+- ✅ Type-safe with TypeScript
+- ✅ Next button auto-advances to next uncalibrated letter
+
+**What's Next:**
+- Phase 4: Profile Management UI (optional)
+- Phase 5: Tuner component (required)
+- Phase 6: Game 3 component (required)
+
+**Details:** See [Session 12 log](logs/SESSION-LOG-2025-11-11.md#session-12---november-11-2025) for full migration details.
+
 ### Documentation
 **File:** `PHONICS-SYSTEM-README.md`
 - Complete technical documentation
@@ -413,26 +467,43 @@ See:
 - Troubleshooting guide
 
 ### Next Development Phase
-See [Session 6 Log](logs/SESSION-LOG-2025-11-10.md#session-6---audio-optimization--production-deployment) for details:
+See [Session 17 Log](logs/SESSION-LOG-2025-11-12.md#session-17---november-12-2025) for latest session.
 
-**High Priority:**
-1. **Test with Ophelia** - Validate all features with real user (CRITICAL)
-2. **Test Profile Switching** - Verify Ophelia/Rey/Marc profiles work in production
-3. **Test Magic Link Auth** - Complete end-to-end auth flow verification
-4. **Email Template Branding** - Customize magic link email for ReadingClub (deferred)
+**🚨 CRITICAL - Next.js App Development:**
+
+1. **Adaptive Learning System** - HIGHEST PRIORITY (20-25 hours)
+   - **Full Spec**: See `/app/ADAPTIVE-TUNER-SPEC.md` for complete implementation details
+   - **Why**: User testing revealed kids interact more naturally with self-paced Tuner than structured lessons
+   - **What**: Transform Tuner into adaptive system that tracks proficiency and adjusts letter selection
+   - **Key Phases**:
+     - Phase 6.1: Database + Proficiency Storage (add proficiency column to Supabase)
+     - Phase 6.2: Session Management (localStorage for attempts, 30-min timeout)
+     - Phase 6.3: Adaptive Algorithm (warmup → new letter → 5 reps → 50/50 mix → graduation)
+     - Phase 6.4: Tuner Integration (track LISTEN clicks, replace random selection)
+     - Phase 6.5: Progress Display (mastered/known/learning stats)
+     - Phase 6.6: Celebrations (KNOWN and MASTERED graduations)
+     - Phase 6.7: Testing & Tuning (with Ophelia and siblings)
+   - **Key Insight**: Letter only reaches MASTERED if correct in NEXT session (spaced repetition)
+   - **Location**: `/app` folder (Next.js migration, parallel to index-1.4.html)
+   - **Migration Plan**: See `/app/MIGRATION-PLAN.md` Phase 6
+
+**HTML Version (index-1.4.html) - Maintenance Only:**
+- Keep stable for production at phuketcamp.com/phonics
+- No major new features (focus on Next.js app)
+- Bug fixes only if critical
 
 **Medium Priority:**
-5. **Upload Audio in Background** - Don't block modal close while uploading
-6. **Cross-Device Testing** - Verify calibrations sync across browsers
-7. **Monitor Production** - Watch for errors, performance issues, user feedback
+2. **Cross-Device Testing** - Verify Next.js app works on tablets/phones
+3. **Profile Management UI** - Add profile selector dropdown in Next.js app
+4. **Visual Polish** - More celebration effects in adaptive system
 
 **Future:**
-8. **Google OAuth Setup** - Complete Google Cloud Console configuration
-9. **Spam Protection** (if needed):
-   - RLS policies: Max 26 calibrations per profile, file size limits
-   - Auto-delete anonymous profiles inactive for 7+ days
-10. **Letter combinations** - sh, ch, th, etc.
-11. **3-letter words** - cat, dog, etc.
-12. **Onboarding flow** - Guide new users through calibration
-13. **Stripe integration** - $1-5/month subscription
+5. **Letter combinations** - sh, ch, th, etc.
+6. **3-letter words** - cat, dog, etc.
+7. **Parent Dashboard** - Weekly progress reports, letter difficulty heatmap
+8. **Onboarding flow** - Guide new users through calibration
+9. **Stripe integration** - $1-5/month subscription
+10. **Spam Protection** (if needed):
+    - RLS policies: Max 26 calibrations per profile, file size limits
+    - Auto-delete anonymous profiles inactive for 7+ days
 
