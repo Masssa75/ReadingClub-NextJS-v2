@@ -1099,9 +1099,16 @@
                 <button class="btn" onclick="skipLetter()" style="background: #999;">Skip</button>
             </div>
 
-            <div style="text-align: center; margin-bottom: 20px; color: #ddd; font-size: 18px;">
+            <div style="text-align: center; margin-bottom: 15px;">
+                <label style="color: #ddd; font-size: 16px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="continuousPlayMode" onchange="toggleContinuousPlay()" style="width: 20px; height: 20px; cursor: pointer;">
+                    <span>Continuous Play (auto-advance)</span>
+                </label>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 20px; color: #ddd; font-size: 36px; font-weight: 600;">
                 Say this sound:
-                <span onclick="playCalibrationRecording()" style="cursor: pointer; font-size: 24px; margin-left: 10px; display: inline-block; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Play my recording">🔊</span>
+                <span onclick="playCalibrationRecording()" style="cursor: pointer; font-size: 44px; margin-left: 15px; display: inline-block; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Play my recording">🔊</span>
             </div>
 
             <div id="targetLetter" style="text-align: center; font-size: 180px; font-weight: bold; color: #FDD835; margin: 20px 0; text-shadow: 0 10px 30px rgba(253, 216, 53, 0.5); transition: all 0.3s;">?</div>
@@ -1212,7 +1219,7 @@
             GRADUATION_TEST_REQUIRED: 2,          // 2 of 3 must be correct
             MASTERED_DEMOTION_LISTEN_CLICKS: 2,
             KNOWN_DEMOTION_LISTEN_CLICKS: 1,
-            RAPID_REP_COUNT: 5,                   // 5 reps after LISTEN click
+            RAPID_REP_COUNT: 3,                   // 3 reps after LISTEN click (keeps it engaging)
             WARMUP_COUNT: 5,                      // First 5 letters are warmup
             MIX_RATIO_PRACTICING: 0.5,            // 50% practicing letters
             RECENT_HISTORY_SIZE: 3                // Avoid last 3 letters
@@ -2981,6 +2988,24 @@
             analyzeTuner();
         }
 
+        // Continuous play mode
+        let continuousPlayEnabled = localStorage.getItem('continuousPlayMode') === 'true';
+
+        function toggleContinuousPlay() {
+            const checkbox = document.getElementById('continuousPlayMode');
+            continuousPlayEnabled = checkbox.checked;
+            localStorage.setItem('continuousPlayMode', continuousPlayEnabled);
+            console.log('Continuous play:', continuousPlayEnabled ? 'ON' : 'OFF');
+        }
+
+        // Initialize checkbox state on page load
+        setTimeout(() => {
+            const checkbox = document.getElementById('continuousPlayMode');
+            if (checkbox) {
+                checkbox.checked = continuousPlayEnabled;
+            }
+        }, 100);
+
         async function setNextTarget() {
             // Use adaptive selection if session is active, otherwise use random
             if (currentSession) {
@@ -3138,6 +3163,17 @@
                     isRunning = false;
                     document.getElementById('tunerBtn').textContent = '▶ Next Letter';
                     document.getElementById('tryAgainBtn').style.display = 'inline-block';
+
+                    // Auto-advance if continuous play is enabled
+                    if (continuousPlayEnabled) {
+                        document.getElementById('tryAgainBtn').style.display = 'none'; // Hide Try Again in continuous mode
+                        setTimeout(async () => {
+                            isRunning = true;
+                            document.getElementById('tunerBtn').textContent = '⏸ Stop Game';
+                            await setNextTarget();
+                            analyzeTuner();
+                        }, 1500); // 1.5 second delay to show success feedback
+                    }
                 }
 
                 if (false) {
