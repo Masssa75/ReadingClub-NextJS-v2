@@ -1163,6 +1163,38 @@
 
             <canvas id="spectrumCanvas"></canvas>
 
+            <!-- Pattern Comparison Visualization -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;" id="patternComparison">
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;">
+                    <div style="color: #aaa; font-size: 11px; margin-bottom: 8px; text-align: center;">📦 Stored Calibration</div>
+                    <canvas id="storedPatternCanvas" style="width: 100%; height: 80px; background: rgba(0,0,0,0.3); border-radius: 5px;"></canvas>
+                    <div style="color: #999; font-size: 10px; margin-top: 5px; text-align: center;">
+                        <span id="patternCount">-</span>
+                    </div>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;">
+                    <div style="color: #aaa; font-size: 11px; margin-bottom: 8px; text-align: center;">🎤 Current Recording</div>
+                    <canvas id="currentPatternCanvas" style="width: 100%; height: 80px; background: rgba(0,0,0,0.3); border-radius: 5px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Training Correction Buttons -->
+            <div id="trainingButtons" style="display: none; margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px; text-align: center;">
+                <div style="color: #ddd; font-size: 13px; margin-bottom: 10px;">Recognition issue? Train the system:</div>
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button id="addPositiveBtn" class="btn" style="background: #4CAF50; display: none;">
+                        ✓ Add to '<span id="positiveTarget">?</span>'
+                    </button>
+                    <button id="addNegativeBtn" class="btn" style="background: #f44336; display: none;">
+                        ✗ Not '<span id="negativeTarget">?</span>'
+                    </button>
+                    <button id="addCorrectBtn" class="btn" style="background: #7CB342; display: none;">
+                        ✓ Was '<span id="correctTarget">?</span>'
+                    </button>
+                </div>
+                <div style="color: #999; font-size: 11px; margin-top: 8px;" id="trainingFeedback"></div>
+            </div>
+
             <div id="status" style="font-family: monospace; font-size: 11px; white-space: pre-wrap; line-height: 1.4;">Click Start to begin</div>
         </div>
 
@@ -1281,6 +1313,40 @@
         const canvasCtx = canvas.getContext('2d');
         canvas.width = 800;
         canvas.height = 240;
+
+        // Pattern comparison canvases (will be initialized when switching to Play tab)
+        let storedPatternCanvas = null;
+        let storedPatternCtx = null;
+        let currentPatternCanvas = null;
+        let currentPatternCtx = null;
+
+        // Initialize pattern canvases
+        function initializePatternCanvases() {
+            if (storedPatternCanvas) return; // Already initialized
+
+            storedPatternCanvas = document.getElementById('storedPatternCanvas');
+            currentPatternCanvas = document.getElementById('currentPatternCanvas');
+
+            if (!storedPatternCanvas || !currentPatternCanvas) {
+                console.warn('⚠️ Pattern canvases not found');
+                return;
+            }
+
+            storedPatternCtx = storedPatternCanvas.getContext('2d');
+            storedPatternCanvas.width = storedPatternCanvas.offsetWidth || 400;
+            storedPatternCanvas.height = 80;
+
+            currentPatternCtx = currentPatternCanvas.getContext('2d');
+            currentPatternCanvas.width = currentPatternCanvas.offsetWidth || 400;
+            currentPatternCanvas.height = 80;
+
+            console.log('✅ Pattern canvases initialized:', storedPatternCanvas.width, 'x', storedPatternCanvas.height);
+
+            // Visualize stored pattern if letter is already selected
+            if (currentTarget) {
+                visualizeStoredPattern(currentTarget);
+            }
+        }
 
         // ========== SESSION MANAGEMENT FUNCTIONS ==========
 
@@ -2055,11 +2121,31 @@
                 // Convert to the format expected by the app
                 const calibrations = {};
                 data.forEach(cal => {
-                    calibrations[cal.letter] = {
-                        pattern: cal.pattern_data.pattern || [cal.pattern_data],
+                    // Force letter to lowercase (handles old uppercase calibrations)
+                    const letter = cal.letter.toLowerCase();
+
+                    // New data structure: supports multiple patterns + negatives
+                    const patterns = cal.pattern_data.pattern ? [cal.pattern_data.pattern] : [cal.pattern_data];
+
+                    calibrations[letter] = {
+                        patterns: patterns,  // Array of positive example patterns
+                        negativePatterns: [], // Patterns to reject (trained locally)
                         timestamp: new Date(cal.created_at).getTime(),
                         audioUrl: cal.audio_url
                     };
+
+                    // Load any local additions from localStorage
+                    const localKey = `calibration_extras_${currentProfileId}_${letter}`;
+                    const localData = localStorage.getItem(localKey);
+                    if (localData) {
+                        try {
+                            const extras = JSON.parse(localData);
+                            if (extras.patterns) calibrations[letter].patterns.push(...extras.patterns);
+                            if (extras.negativePatterns) calibrations[letter].negativePatterns = extras.negativePatterns;
+                        } catch (e) {
+                            console.warn(`Failed to load local extras for ${letter}:`, e);
+                        }
+                    }
                 });
 
                 console.log(`✅ Loaded ${Object.keys(calibrations).length} calibrations from Supabase`);
@@ -2070,8 +2156,8 @@
             }
         }
 
-        const PLOSIVES = ['B', 'C', 'D', 'G', 'K', 'P', 'T'];
-        const NASALS = ['M', 'N'];
+        const PLOSIVES = ['b', 'c', 'd', 'g', 'k', 'p', 't'];
+        const NASALS = ['m', 'n'];
 
         function isPlosive(letter) {
             return PLOSIVES.includes(letter);
@@ -2494,7 +2580,8 @@
 
             // Store as "pattern" (but it's just 1 peak snapshot, wrapped in array for compatibility)
             calibrationData[letter] = {
-                pattern: [baseline], // Wrap in array for compatibility with existing code
+                patterns: [baseline], // Array of positive examples
+                negativePatterns: [], // Patterns to reject
                 timestamp: Date.now()
             };
 
@@ -2995,6 +3082,8 @@
         // Elimination game mode
         let patternBuffer = [];
         let currentTarget = null;
+        let lastRecordedSnapshot = null; // Store snapshot for training buttons
+        let lastPrediction = null; // Store last prediction for training buttons
 
         function pickRandomLetter() {
             // Only pick from letters that are BOTH calibrated AND in current PHONEMES list
@@ -3017,8 +3106,140 @@
             document.getElementById('tryAgainBtn').style.display = 'none';
             document.getElementById('tunerBtn').textContent = '⏸ Stop Game';
             patternBuffer = [];
+            hideTrainingButtons(); // Hide training buttons when starting new attempt
             isRunning = true;
             analyzeTuner();
+        }
+
+        // Training correction functions
+        function saveCalibrationExtras(letter) {
+            if (!currentProfileId) {
+                console.error('No profile selected');
+                return;
+            }
+
+            const localKey = `calibration_extras_${currentProfileId}_${letter}`;
+            const calibration = calibrationData[letter];
+
+            // Filter out the original pattern from Supabase (index 0)
+            const addedPatterns = calibration.patterns.slice(1);
+            const negativePatterns = calibration.negativePatterns || [];
+
+            // Only save if there are additions
+            if (addedPatterns.length > 0 || negativePatterns.length > 0) {
+                const extras = {
+                    patterns: addedPatterns,
+                    negativePatterns: negativePatterns
+                };
+                localStorage.setItem(localKey, JSON.stringify(extras));
+                console.log(`💾 Saved ${addedPatterns.length} positive + ${negativePatterns.length} negative patterns for ${letter}`);
+            }
+        }
+
+        function addPositivePattern(letter) {
+            if (!lastRecordedSnapshot || !calibrationData[letter]) {
+                console.error('Cannot add positive pattern: no snapshot or no calibration');
+                return;
+            }
+
+            // Add snapshot to patterns array
+            calibrationData[letter].patterns.push(lastRecordedSnapshot);
+
+            // Save to localStorage
+            saveCalibrationExtras(letter);
+
+            // Update visualization
+            visualizeStoredPattern(letter);
+
+            // Show feedback
+            const feedback = document.getElementById('trainingFeedback');
+            feedback.textContent = `✓ Added positive example for '${letter}' (${calibrationData[letter].patterns.length} total)`;
+            feedback.style.color = '#4CAF50';
+
+            // Hide training buttons after action
+            hideTrainingButtons();
+
+            console.log(`✓ Added positive pattern to ${letter}:`, lastRecordedSnapshot);
+        }
+
+        function addNegativePattern(letter) {
+            if (!lastRecordedSnapshot || !calibrationData[letter]) {
+                console.error('Cannot add negative pattern: no snapshot or no calibration');
+                return;
+            }
+
+            // Add snapshot to negativePatterns array
+            if (!calibrationData[letter].negativePatterns) {
+                calibrationData[letter].negativePatterns = [];
+            }
+            calibrationData[letter].negativePatterns.push(lastRecordedSnapshot);
+
+            // Save to localStorage
+            saveCalibrationExtras(letter);
+
+            // Update visualization
+            visualizeStoredPattern(letter);
+
+            // Show feedback
+            const feedback = document.getElementById('trainingFeedback');
+            feedback.textContent = `✓ Added negative example for '${letter}' (${calibrationData[letter].negativePatterns.length} total)`;
+            feedback.style.color = '#f44336';
+
+            // Hide training buttons after action
+            hideTrainingButtons();
+
+            console.log(`✗ Added negative pattern to ${letter}:`, lastRecordedSnapshot);
+        }
+
+        function showTrainingButtons(prediction, targetLetter) {
+            // Hide all buttons first
+            document.getElementById('addPositiveBtn').style.display = 'none';
+            document.getElementById('addNegativeBtn').style.display = 'none';
+            document.getElementById('addCorrectBtn').style.display = 'none';
+
+            // Clear previous feedback
+            document.getElementById('trainingFeedback').textContent = '';
+
+            // Scenario 1: Wrong prediction (predicted X but wanted Y)
+            if (prediction !== targetLetter) {
+                // Show "Not 'X'" button (add to negative patterns of predicted letter)
+                document.getElementById('negativeTarget').textContent = prediction;
+                document.getElementById('addNegativeBtn').style.display = 'inline-block';
+
+                // Show "Was 'Y'" button (add to positive patterns of target letter)
+                document.getElementById('correctTarget').textContent = targetLetter;
+                document.getElementById('addCorrectBtn').style.display = 'inline-block';
+            }
+            // Scenario 2: Correct prediction but low score
+            else {
+                // Show "Add to 'X'" button (add to positive patterns to improve recognition)
+                document.getElementById('positiveTarget').textContent = targetLetter;
+                document.getElementById('addPositiveBtn').style.display = 'inline-block';
+            }
+
+            // Show the container
+            document.getElementById('trainingButtons').style.display = 'block';
+        }
+
+        function hideTrainingButtons() {
+            document.getElementById('trainingButtons').style.display = 'none';
+        }
+
+        // Initialize button handlers
+        function initTrainingButtons() {
+            document.getElementById('addPositiveBtn').onclick = () => {
+                addPositivePattern(currentTarget);
+            };
+
+            document.getElementById('addNegativeBtn').onclick = () => {
+                if (lastPrediction) {
+                    addNegativePattern(lastPrediction);
+                }
+            };
+
+            document.getElementById('addCorrectBtn').onclick = () => {
+                addPositivePattern(currentTarget);
+            };
         }
 
         // Sensitivity modal functions
@@ -3144,6 +3365,10 @@
                 document.getElementById('tryAgainBtn').style.display = 'none';
                 patternBuffer = [];
                 listenClickedThisRound = false; // Reset LISTEN tracking for this letter
+                hideTrainingButtons(); // Hide training buttons when starting new letter
+
+                // Visualize stored calibration pattern
+                visualizeStoredPattern(currentTarget);
             }
 
             // Update progress tracker
@@ -3236,8 +3461,8 @@
             }
 
             // Dynamic thresholds for nasals (same as game mode)
-            const FRICATIVES = ['F', 'S', 'V', 'Z', 'H'];
-            const LIQUIDS = ['L', 'R'];
+            const FRICATIVES = ['f', 's', 'v', 'z', 'h'];
+            const LIQUIDS = ['l', 'r'];
             const isCurrentNasal = currentTarget && isNasal(currentTarget);
             const isFricative = currentTarget && FRICATIVES.includes(currentTarget);
             const isLiquid = currentTarget && LIQUIDS.includes(currentTarget);
@@ -3265,6 +3490,18 @@
                 const prediction = result.predictedLetter || '?';
                 const isCorrect = prediction === currentTarget;
 
+                // TRAINING: Capture current snapshot for training buttons
+                const energies = patternBuffer.map(frame => frame.reduce((a, b) => a + b, 0));
+                const peakIdx = energies.indexOf(Math.max(...energies));
+                let snapshot = patternBuffer[peakIdx];
+                // Normalize to 0-1 range
+                const maxVal = Math.max(...snapshot);
+                if (maxVal > 0) {
+                    snapshot = snapshot.map(v => v / maxVal);
+                }
+                lastRecordedSnapshot = snapshot;
+                lastPrediction = prediction;
+
                 // Show simplified status
                 const barCount = Math.max(0, Math.floor(score / 10));
                 const bar = '█'.repeat(barCount);
@@ -3274,6 +3511,9 @@
                 document.getElementById('matchScore').textContent = Math.round(score) + '%';
                 document.getElementById('confidenceFill').style.width = score + '%';
 
+                // Visualize current recording pattern
+                visualizeCurrentPattern(patternBuffer);
+
                 // Success if S11 predicts correctly AND score > 80%
                 if (isCorrect && score > 80) {
                     celebrateMatch();
@@ -3282,6 +3522,9 @@
                     if (currentSession) {
                         recordAttempt(currentTarget, true, listenClickedThisRound, score);
                     }
+
+                    // TRAINING: Hide training buttons on success
+                    hideTrainingButtons();
 
                     // Show success message
                     document.getElementById('status').textContent = `✓ MATCH! ${Math.round(score)}%\n\n` + statusText;
@@ -3300,6 +3543,9 @@
                             analyzeTuner();
                         }, 1500); // 1.5 second delay to show success feedback
                     }
+                } else {
+                    // TRAINING: Show training buttons on failure (wrong prediction or low score)
+                    showTrainingButtons(prediction, currentTarget);
                 }
 
                 if (false) {
@@ -3625,23 +3871,56 @@
                 currentSnapshot = currentSnapshot.map(v => v / maxCurrent);
             }
 
-            // Get stored baseline snapshot (already averaged and normalized)
-            const storedSnapshot = calibrationData[target].pattern[0]; // It's a single snapshot now
+            // NEW: Test against ALL positive patterns, take best match
+            const patterns = calibrationData[target].patterns || [calibrationData[target].pattern?.[0]];
+            let bestPositiveScore = 0;
 
-            // Calculate simple distance (sum of absolute differences)
-            let totalDistance = 0;
-            const minLength = Math.min(currentSnapshot.length, storedSnapshot.length);
+            patterns.forEach(storedSnapshot => {
+                if (!storedSnapshot) return;
 
-            for (let i = 0; i < minLength; i++) {
-                totalDistance += Math.abs(currentSnapshot[i] - storedSnapshot[i]);
+                // Calculate simple distance (sum of absolute differences)
+                let totalDistance = 0;
+                const minLength = Math.min(currentSnapshot.length, storedSnapshot.length);
+
+                for (let i = 0; i < minLength; i++) {
+                    totalDistance += Math.abs(currentSnapshot[i] - storedSnapshot[i]);
+                }
+
+                // Convert distance to similarity score (0-100)
+                const avgDistance = totalDistance / minLength;
+                const similarity = Math.max(0, 100 - (avgDistance * 100));
+
+                if (similarity > bestPositiveScore) {
+                    bestPositiveScore = similarity;
+                }
+            });
+
+            // NEW: Check against negative patterns (patterns that should NOT match)
+            const negativePatterns = calibrationData[target].negativePatterns || [];
+            let maxNegativeMatch = 0;
+
+            negativePatterns.forEach(negSnapshot => {
+                let totalDistance = 0;
+                const minLength = Math.min(currentSnapshot.length, negSnapshot.length);
+
+                for (let i = 0; i < minLength; i++) {
+                    totalDistance += Math.abs(currentSnapshot[i] - negSnapshot[i]);
+                }
+
+                const avgDistance = totalDistance / minLength;
+                const similarity = Math.max(0, 100 - (avgDistance * 100));
+
+                if (similarity > maxNegativeMatch) {
+                    maxNegativeMatch = similarity;
+                }
+            });
+
+            // If negative match is strong (>70%), significantly reduce score
+            if (maxNegativeMatch > 70) {
+                bestPositiveScore = bestPositiveScore * (1 - (maxNegativeMatch / 100) * 0.8);
             }
 
-            // Convert distance to similarity score (0-100)
-            // Max possible avgDistance is 1.0 (completely different patterns)
-            const avgDistance = totalDistance / minLength;
-            const similarity = Math.max(0, 100 - (avgDistance * 100));
-
-            return similarity;
+            return bestPositiveScore;
         }
 
         function calculatePatternSimilarity(pattern1, pattern2) {
@@ -3689,6 +3968,89 @@
                 canvasCtx.fillRect(x, height - barHeight, barWidth, barHeight);
                 x += barWidth + 1;
             }
+        }
+
+        // Draw downsampled pattern (64 bins) on a canvas
+        function drawDownsampledPattern(ctx, canvas, pattern) {
+            const width = canvas.width;
+            const height = canvas.height;
+
+            // Clear canvas
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, width, height);
+
+            if (!pattern || pattern.length === 0) return;
+
+            // Draw bars
+            const barWidth = width / pattern.length;
+            pattern.forEach((value, i) => {
+                const barHeight = value * height;
+                const hue = (i / pattern.length) * 120 + 100;
+                ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+                ctx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight);
+            });
+        }
+
+        // Visualize stored calibration pattern for current target letter
+        function visualizeStoredPattern(letter) {
+            if (!storedPatternCanvas || !storedPatternCtx) {
+                console.log('⚠️ Pattern canvases not initialized yet');
+                return;
+            }
+
+            if (!calibrationData[letter]) {
+                // Clear canvas if no calibration
+                storedPatternCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                storedPatternCtx.fillRect(0, 0, storedPatternCanvas.width, storedPatternCanvas.height);
+                console.log(`⚠️ No calibration data for letter: ${letter}`);
+                document.getElementById('patternCount').textContent = '-';
+                return;
+            }
+
+            // Get stored patterns (first one for visualization)
+            const patterns = calibrationData[letter].patterns || [calibrationData[letter].pattern?.[0]];
+            const storedPattern = patterns[0];
+
+            if (!storedPattern) {
+                console.log(`⚠️ No valid pattern for letter: ${letter}`);
+                return;
+            }
+
+            // Normalize pattern for visualization
+            const max = Math.max(...storedPattern);
+            const normalized = max > 0 ? storedPattern.map(v => v / max) : storedPattern;
+
+            drawDownsampledPattern(storedPatternCtx, storedPatternCanvas, normalized);
+
+            // Update pattern count display
+            const negCount = (calibrationData[letter].negativePatterns || []).length;
+            const countText = `${patterns.length} positive${negCount > 0 ? `, ${negCount} negative` : ''}`;
+            document.getElementById('patternCount').textContent = countText;
+
+            console.log(`✅ Visualized stored pattern for ${letter} (${countText})`);
+        }
+
+        // Visualize current recording pattern
+        function visualizeCurrentPattern(buffer) {
+            if (!currentPatternCanvas || !currentPatternCtx) {
+                return; // Silently fail if not initialized
+            }
+
+            if (!buffer || buffer.length === 0) {
+                // Clear canvas if no data
+                currentPatternCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                currentPatternCtx.fillRect(0, 0, currentPatternCanvas.width, currentPatternCanvas.height);
+                return;
+            }
+
+            // Use the most recent frame from buffer
+            const currentPattern = buffer[buffer.length - 1];
+
+            // Normalize pattern for visualization
+            const max = Math.max(...currentPattern);
+            const normalized = max > 0 ? currentPattern.map(v => v / max) : currentPattern;
+
+            drawDownsampledPattern(currentPatternCtx, currentPatternCanvas, normalized);
         }
 
         // DEPRECATED: Audio is now stored in Supabase Storage
@@ -3827,6 +4189,11 @@
                 tabContent.classList.add('active');
                 console.log(`✓ Added 'active' class to #${tabName}`);
                 console.log(`📊 Element display after:`, window.getComputedStyle(tabContent).display);
+
+                // Initialize pattern canvases when switching to Play tab
+                if (tabName === 'tuner') {
+                    initializePatternCanvases();
+                }
 
                 // Update stats display when switching to Stats tab
                 if (tabName === 'stats') {
@@ -4840,8 +5207,8 @@
             const currentLetter = currentBatchLetters[progressGame.currentLetterIndex];
 
             // Dynamic thresholds (COPIED FROM TUNER)
-            const FRICATIVES = ['F', 'S', 'V', 'Z', 'H'];
-            const LIQUIDS = ['L', 'R'];
+            const FRICATIVES = ['f', 's', 'v', 'z', 'h'];
+            const LIQUIDS = ['l', 'r'];
             const isCurrentNasal = currentLetter && isNasal(currentLetter);
             const isFricative = currentLetter && FRICATIVES.includes(currentLetter);
             const isLiquid = currentLetter && LIQUIDS.includes(currentLetter);
@@ -5057,6 +5424,9 @@
             // Create calibration grid
             createCalibrationGrid();
             updateCalibrationStats();
+
+            // Initialize training correction buttons
+            initTrainingButtons();
         })();
 
         async function createAnonymousProfile() {
