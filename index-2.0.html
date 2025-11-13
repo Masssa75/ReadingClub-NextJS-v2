@@ -2125,7 +2125,8 @@
                     const letter = cal.letter.toLowerCase();
 
                     // New data structure: supports multiple patterns + negatives
-                    const patterns = cal.pattern_data.pattern ? [cal.pattern_data.pattern] : [cal.pattern_data];
+                    // pattern_data.pattern is already an array: [baseline]
+                    const patterns = cal.pattern_data.pattern ? cal.pattern_data.pattern : [cal.pattern_data];
 
                     calibrations[letter] = {
                         patterns: patterns,  // Array of positive example patterns
