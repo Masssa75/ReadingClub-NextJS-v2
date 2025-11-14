@@ -4326,45 +4326,67 @@
         let lastMatchedPatternType = null;
 
         function visualizeAdditionalPatterns(letter) {
-            const container = document.getElementById('additionalPatternsContainer');
-            const grid = document.getElementById('additionalPatternsGrid');
+            try {
+                const container = document.getElementById('additionalPatternsContainer');
+                const grid = document.getElementById('additionalPatternsGrid');
 
-            if (!container || !grid) return;
+                if (!container || !grid) {
+                    console.log('⚠️ Additional patterns container/grid not found');
+                    return;
+                }
 
-            // Load additional patterns from localStorage
-            const extrasKey = `calibration_extras_${currentProfileId}_${letter}`;
-            const extrasJSON = localStorage.getItem(extrasKey);
+                // Load additional patterns from localStorage
+                const extrasKey = `calibration_extras_${currentProfileId}_${letter}`;
+                const extrasJSON = localStorage.getItem(extrasKey);
 
-            if (!extrasJSON) {
-                container.style.display = 'none';
-                return;
+                if (!extrasJSON) {
+                    console.log(`No additional patterns for ${letter}`);
+                    container.style.display = 'none';
+                    return;
+                }
+
+                const extras = JSON.parse(extrasJSON);
+                const positivePatterns = extras.patterns || [];
+                const negativePatterns = extras.negativePatterns || [];
+
+                console.log(`📊 Additional patterns for ${letter}: ${positivePatterns.length} positive, ${negativePatterns.length} negative`);
+
+                // If no additional patterns, hide container
+                if (positivePatterns.length === 0 && negativePatterns.length === 0) {
+                    container.style.display = 'none';
+                    return;
+                }
+
+                // Show container and clear grid
+                container.style.display = 'block';
+                grid.innerHTML = '';
+
+                // Add positive patterns
+                positivePatterns.forEach((pattern, index) => {
+                    try {
+                        const card = createPatternCard(pattern, 'positive', index, letter);
+                        grid.appendChild(card);
+                        console.log(`✅ Added positive pattern #${index + 1}`);
+                    } catch (e) {
+                        console.error(`❌ Error creating positive pattern #${index + 1}:`, e);
+                    }
+                });
+
+                // Add negative patterns
+                negativePatterns.forEach((pattern, index) => {
+                    try {
+                        const card = createPatternCard(pattern, 'negative', index, letter);
+                        grid.appendChild(card);
+                        console.log(`✅ Added negative pattern #${index + 1}`);
+                    } catch (e) {
+                        console.error(`❌ Error creating negative pattern #${index + 1}:`, e);
+                    }
+                });
+
+                console.log(`✅ Visualized ${positivePatterns.length + negativePatterns.length} additional patterns`);
+            } catch (error) {
+                console.error('❌ Error in visualizeAdditionalPatterns:', error);
             }
-
-            const extras = JSON.parse(extrasJSON);
-            const positivePatterns = extras.patterns || [];
-            const negativePatterns = extras.negativePatterns || [];
-
-            // If no additional patterns, hide container
-            if (positivePatterns.length === 0 && negativePatterns.length === 0) {
-                container.style.display = 'none';
-                return;
-            }
-
-            // Show container and clear grid
-            container.style.display = 'block';
-            grid.innerHTML = '';
-
-            // Add positive patterns
-            positivePatterns.forEach((pattern, index) => {
-                const card = createPatternCard(pattern, 'positive', index, letter);
-                grid.appendChild(card);
-            });
-
-            // Add negative patterns
-            negativePatterns.forEach((pattern, index) => {
-                const card = createPatternCard(pattern, 'negative', index, letter);
-                grid.appendChild(card);
-            });
         }
 
         function createPatternCard(pattern, type, index, letter) {
