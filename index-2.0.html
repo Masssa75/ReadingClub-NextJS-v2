@@ -4247,20 +4247,29 @@
                 }
             });
 
-            // Simple logic: if negative match is stronger than positive match, reject it
-            if (maxNegativeMatch > bestPositiveScore) {
+            // Reject only if negative is SIGNIFICANTLY stronger (5% margin)
+            // This prevents rejection when sounds are naturally similar
+            const NEGATIVE_MARGIN = 5; // Negative must be 5% stronger to reject
+
+            if (maxNegativeMatch > bestPositiveScore + NEGATIVE_MARGIN) {
                 window.lastMatchInfo = {
                     target: target,
                     type: 'negative',
                     index: bestNegativeIndex,
                     score: maxNegativeMatch
                 };
-                console.log(`❌ REJECTED: Negative match (${maxNegativeMatch.toFixed(1)}%) stronger than positive (${bestPositiveScore.toFixed(1)}%)`);
+                const diff = maxNegativeMatch - bestPositiveScore;
+                console.log(`❌ REJECTED: Negative (${maxNegativeMatch.toFixed(1)}%) beats positive (${bestPositiveScore.toFixed(1)}%) by ${diff.toFixed(1)}%`);
                 return 0; // Reject completely
             }
 
-            // If we got here, positive match is stronger than negative (or no negative patterns)
-            console.log(`✅ ACCEPTED: Positive match (${bestPositiveScore.toFixed(1)}%) stronger than negative (${maxNegativeMatch.toFixed(1)}%)`);
+            // If we got here, positive match is strong enough (or no negative patterns)
+            if (maxNegativeMatch > 0) {
+                const diff = bestPositiveScore - maxNegativeMatch;
+                console.log(`✅ ACCEPTED: Positive (${bestPositiveScore.toFixed(1)}%) beats negative (${maxNegativeMatch.toFixed(1)}%) by ${diff.toFixed(1)}%`);
+            } else {
+                console.log(`✅ ACCEPTED: Positive match (${bestPositiveScore.toFixed(1)}%), no negatives`);
+            }
             return bestPositiveScore;
         }
 
