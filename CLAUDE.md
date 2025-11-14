@@ -2,7 +2,7 @@
 
 **Version:** 1.12.0
 **Last Updated:** November 14, 2025
-**Status:** ✅ Stable - Critical bug fixes deployed (406 errors + session expiry)
+**Status:** ✅ Stable - Visual threshold meter implemented for voice detection feedback
 
 ## 📁 Project Structure Overview
 
@@ -29,7 +29,7 @@ ReadingClub/
 ├── supabase/                       # Supabase migrations
 │   └── migrations/                 # Database migrations
 └── logs/                           # Session logs
-    ├── SESSION-LOG-INDEX.md       # Master session index (20 sessions total)
+    ├── SESSION-LOG-INDEX.md       # Master session index (24 sessions total)
     ├── SESSION-LOG-2025-11-09.md  # Sessions 1-2 logs
     ├── SESSION-LOG-2025-11-10.md  # Sessions 3-8 logs
     ├── SESSION-LOG-2025-11-11.md  # Sessions 9-13 logs
@@ -382,12 +382,12 @@ See:
 - `logs/SESSION-LOG-2025-11-10.md` - Sessions 3-8 detailed logs
 - `logs/SESSION-LOG-2025-11-11.md` - Sessions 9-13 detailed logs
 - `logs/SESSION-LOG-2025-11-12.md` - Sessions 14-21 detailed logs
-- `logs/SESSION-LOG-2025-11-14.md` - Sessions 22-23 detailed logs
+- `logs/SESSION-LOG-2025-11-14.md` - Sessions 22-24 detailed logs
 
 **Recent Sessions:**
-- **Session 21:** Pattern comparison visualization added to Play tab + pitch recognition analysis (4 test approaches created). See [Session 21 log](logs/SESSION-LOG-2025-11-12.md#session-21---november-13-2025).
 - **Session 22:** Pattern training system + proficiency migration (eliminated 406 errors, enabled long-term learning). See [Session 22 log](logs/SESSION-LOG-2025-11-14.md#session-22---november-14-2025).
 - **Session 23:** Voice generator folder support + critical bug fixes (406 errors + letterStats.entries). See [Session 23 log](logs/SESSION-LOG-2025-11-14.md#session-23---november-14-2025).
+- **Session 24:** Visual threshold meter for voice detection (real-time feedback showing volume and energy concentration). See [Session 24 log](logs/SESSION-LOG-2025-11-14.md#session-24---november-14-2025).
 
 ## Current Status & Active Files
 
