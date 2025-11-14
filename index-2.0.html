@@ -1089,6 +1089,36 @@
         </div>
     </div>
 
+    <!-- Manual Recording Modal -->
+    <div id="manualRecordModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: #2c3e50; padding: 30px; border-radius: 10px; max-width: 500px; text-align: center; position: relative;">
+            <button onclick="closeManualRecordModal()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; color: #aaa; font-size: 24px; cursor: pointer; padding: 5px 10px;">✕</button>
+
+            <div style="font-size: 48px; margin-bottom: 10px;" id="manualRecordLetter">a</div>
+            <h3 style="color: #fff; margin-bottom: 10px;">Add Correct Example</h3>
+            <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Record the correct sound to add as a positive example</p>
+
+            <div id="manualRecordStatus" style="margin: 20px 0; font-size: 16px; color: #FDD835; min-height: 30px;">
+                Ready to record
+            </div>
+
+            <!-- Waveform visualization -->
+            <canvas id="manualRecordCanvas" style="width: 100%; height: 80px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 20px 0;"></canvas>
+
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button id="manualRecordStartBtn" onclick="startManualRecord()" class="btn" style="background: #4CAF50;">
+                    🎤 Start Recording
+                </button>
+                <button id="manualRecordRedoBtn" onclick="redoManualRecord()" class="btn" style="background: #f44336; display: none;">
+                    🔄 Redo
+                </button>
+                <button id="manualRecordAcceptBtn" onclick="acceptManualRecord()" class="btn" style="background: #1976D2; display: none;">
+                    ✓ Accept
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="tabs">
             <button class="tab active" onclick="switchTab('calibrate')">📊 Calibrate</button>
@@ -1137,6 +1167,14 @@
                 <button class="btn" onclick="tryAgain()" style="background: #7CB342; display: none;" id="tryAgainBtn">🔄 Try Again</button>
                 <button class="btn" onclick="skipLetter()" style="background: #999;">Skip</button>
                 <button class="btn" onclick="openSensitivityModal()" style="background: #666; display: none;" id="sensitivityBtn"><i data-lucide="sliders" style="width: 18px; height: 18px;"></i></button>
+            </div>
+
+            <!-- Manual Recording Button -->
+            <div style="text-align: center; margin-bottom: 15px;">
+                <button class="btn" onclick="openManualRecordModal()" style="background: #1976D2; font-size: 13px;" id="manualRecordBtn">
+                    🎤 Add Correct Example
+                </button>
+                <div style="color: #999; font-size: 10px; margin-top: 5px;">If it's correct but not recognized</div>
             </div>
 
             <div style="text-align: center; margin-bottom: 20px; color: #ddd; font-size: 36px; font-weight: 600;">
@@ -3352,6 +3390,152 @@
                 console.error('Letter not calibrated:', currentTarget);
                 alert('Letter not calibrated yet');
             }
+        }
+
+        // Manual Recording Modal Functions
+        let manualRecordBuffer = [];
+        let manualRecordSnapshot = null;
+        let manualRecordCanvas = null;
+        let manualRecordCtx = null;
+        let isManualRecording = false;
+
+        function openManualRecordModal() {
+            if (!currentTarget) {
+                alert('Please start the game first to select a letter');
+                return;
+            }
+
+            const modal = document.getElementById('manualRecordModal');
+            const letterDisplay = document.getElementById('manualRecordLetter');
+
+            letterDisplay.textContent = currentTarget;
+            modal.style.display = 'flex';
+
+            // Initialize canvas
+            manualRecordCanvas = document.getElementById('manualRecordCanvas');
+            manualRecordCtx = manualRecordCanvas.getContext('2d');
+            manualRecordCanvas.width = manualRecordCanvas.offsetWidth || 400;
+            manualRecordCanvas.height = 80;
+
+            // Clear canvas
+            manualRecordCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            manualRecordCtx.fillRect(0, 0, manualRecordCanvas.width, manualRecordCanvas.height);
+
+            // Reset state
+            manualRecordBuffer = [];
+            manualRecordSnapshot = null;
+            document.getElementById('manualRecordStatus').textContent = 'Ready to record';
+            document.getElementById('manualRecordStartBtn').style.display = 'inline-block';
+            document.getElementById('manualRecordRedoBtn').style.display = 'none';
+            document.getElementById('manualRecordAcceptBtn').style.display = 'none';
+        }
+
+        function closeManualRecordModal() {
+            const modal = document.getElementById('manualRecordModal');
+            modal.style.display = 'none';
+            isManualRecording = false;
+            manualRecordBuffer = [];
+            manualRecordSnapshot = null;
+        }
+
+        function startManualRecord() {
+            // Start listening for audio
+            isManualRecording = true;
+            manualRecordBuffer = [];
+            document.getElementById('manualRecordStatus').textContent = '🎤 Recording... (say the sound now)';
+            document.getElementById('manualRecordStartBtn').style.display = 'none';
+
+            // Capture for 2 seconds
+            const captureFrames = [];
+            const captureInterval = setInterval(() => {
+                if (!isManualRecording) {
+                    clearInterval(captureInterval);
+                    return;
+                }
+
+                // Get current frequency data
+                analyser.getByteFrequencyData(dataArray);
+                const pattern = downsampleFrequencies(dataArray, PATTERN_BINS);
+                captureFrames.push(pattern);
+            }, 33); // ~30fps
+
+            setTimeout(() => {
+                clearInterval(captureInterval);
+                if (!isManualRecording) return;
+
+                isManualRecording = false;
+
+                if (captureFrames.length === 0) {
+                    document.getElementById('manualRecordStatus').textContent = '❌ No sound detected, try again';
+                    document.getElementById('manualRecordStartBtn').style.display = 'inline-block';
+                    return;
+                }
+
+                // Find peak moment
+                const energies = captureFrames.map(frame => frame.reduce((a, b) => a + b, 0));
+                const peakIdx = energies.indexOf(Math.max(...energies));
+                let snapshot = captureFrames[peakIdx];
+
+                // Normalize to 0-1 range
+                const maxVal = Math.max(...snapshot);
+                if (maxVal > 0) {
+                    snapshot = snapshot.map(v => v / maxVal);
+                }
+
+                manualRecordSnapshot = snapshot;
+
+                // Visualize the captured snapshot
+                drawDownsampledPattern(manualRecordCtx, manualRecordCanvas, snapshot);
+
+                document.getElementById('manualRecordStatus').textContent = '✓ Captured! Accept or redo?';
+                document.getElementById('manualRecordRedoBtn').style.display = 'inline-block';
+                document.getElementById('manualRecordAcceptBtn').style.display = 'inline-block';
+
+                console.log('✓ Manual snapshot captured:', snapshot);
+            }, 2000);
+        }
+
+        function redoManualRecord() {
+            // Reset and allow re-recording
+            manualRecordSnapshot = null;
+            document.getElementById('manualRecordStatus').textContent = 'Ready to record';
+            document.getElementById('manualRecordStartBtn').style.display = 'inline-block';
+            document.getElementById('manualRecordRedoBtn').style.display = 'none';
+            document.getElementById('manualRecordAcceptBtn').style.display = 'none';
+
+            // Clear canvas
+            manualRecordCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            manualRecordCtx.fillRect(0, 0, manualRecordCanvas.width, manualRecordCanvas.height);
+        }
+
+        function acceptManualRecord() {
+            if (!manualRecordSnapshot || !currentTarget) {
+                console.error('No snapshot or no target letter');
+                return;
+            }
+
+            // Add to positive patterns
+            if (!calibrationData[currentTarget]) {
+                alert('Letter not calibrated yet. Please calibrate first.');
+                closeManualRecordModal();
+                return;
+            }
+
+            calibrationData[currentTarget].patterns.push(manualRecordSnapshot);
+
+            // Save to localStorage
+            saveCalibrationExtras(currentTarget);
+
+            // Update visualization
+            visualizeStoredPattern(currentTarget);
+
+            console.log(`✓ Added manual recording to ${currentTarget}. Total patterns: ${calibrationData[currentTarget].patterns.length}`);
+
+            // Close modal with success message
+            document.getElementById('manualRecordStatus').textContent = '✅ Example added successfully!';
+            setTimeout(() => {
+                closeManualRecordModal();
+            }, 1500);
         }
 
         // Continuous play mode
