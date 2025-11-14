@@ -3780,6 +3780,14 @@
             }
 
             // Try to match against TARGET letter only
+            // Debug: Log when detection conditions aren't met
+            if (currentTarget && patternBuffer.length === PATTERN_LENGTH && volume > 5) {
+                // Only log if there's some volume (avoid spam from silence)
+                if (!(volume > volumeThreshold && energyConcentration > concentrationThreshold)) {
+                    console.log(`⚠️ Sound detected but thresholds not met: vol=${volume.toFixed(1)} (need ${volumeThreshold}), concentration=${energyConcentration.toFixed(1)} (need ${concentrationThreshold})`);
+                }
+            }
+
             if (patternBuffer.length === PATTERN_LENGTH && volume > volumeThreshold && energyConcentration > concentrationThreshold && currentTarget) {
 
                 // S11-Snapshot detection for ALL letters
