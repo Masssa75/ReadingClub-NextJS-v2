@@ -1216,6 +1216,14 @@
                 </div>
             </div>
 
+            <!-- Additional Patterns Visualization -->
+            <div id="additionalPatternsContainer" style="margin-top: 15px; display: none;">
+                <div style="color: #aaa; font-size: 12px; margin-bottom: 10px; font-weight: bold;">Additional Training Patterns:</div>
+                <div id="additionalPatternsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                    <!-- Pattern cards will be inserted here -->
+                </div>
+            </div>
+
             <!-- Training Correction Buttons -->
             <div id="trainingButtons" style="display: none; margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px; text-align: center;">
                 <div style="color: #ddd; font-size: 13px; margin-bottom: 10px;">Recognition issue? Train the system:</div>
@@ -3737,6 +3745,17 @@
                 // Visualize current recording pattern
                 visualizeCurrentPattern(patternBuffer);
 
+                // Highlight matched pattern (if additional patterns exist)
+                if (window.lastMatchInfo && window.lastMatchInfo.target === currentTarget) {
+                    const matchInfo = window.lastMatchInfo;
+                    // Skip index 0 (main calibration pattern shown above)
+                    // Additional patterns start at index 1
+                    if (matchInfo.index > 0) {
+                        const additionalIndex = matchInfo.index - 1;
+                        highlightMatchedPattern(matchInfo.type, additionalIndex);
+                    }
+                }
+
                 // Success if S11 predicts correctly AND score > 80%
                 if (isCorrect && score > 80) {
                     celebrateMatch();
@@ -4098,8 +4117,9 @@
             // NEW: Test against ALL positive patterns, take best match
             const patterns = calibrationData[target].patterns || [calibrationData[target].pattern?.[0]];
             let bestPositiveScore = 0;
+            let bestPositiveIndex = -1;
 
-            patterns.forEach(storedSnapshot => {
+            patterns.forEach((storedSnapshot, index) => {
                 if (!storedSnapshot) return;
 
                 // Calculate simple distance (sum of absolute differences)
@@ -4116,14 +4136,24 @@
 
                 if (similarity > bestPositiveScore) {
                     bestPositiveScore = similarity;
+                    bestPositiveIndex = index;
                 }
             });
+
+            // Store match info globally for highlighting
+            window.lastMatchInfo = {
+                target: target,
+                type: 'positive',
+                index: bestPositiveIndex,
+                score: bestPositiveScore
+            };
 
             // NEW: Check against negative patterns (patterns that should NOT match)
             const negativePatterns = calibrationData[target].negativePatterns || [];
             let maxNegativeMatch = 0;
+            let bestNegativeIndex = -1;
 
-            negativePatterns.forEach(negSnapshot => {
+            negativePatterns.forEach((negSnapshot, index) => {
                 let totalDistance = 0;
                 const minLength = Math.min(currentSnapshot.length, negSnapshot.length);
 
@@ -4136,8 +4166,19 @@
 
                 if (similarity > maxNegativeMatch) {
                     maxNegativeMatch = similarity;
+                    bestNegativeIndex = index;
                 }
             });
+
+            // If negative match was stronger, update match info
+            if (maxNegativeMatch > bestPositiveScore) {
+                window.lastMatchInfo = {
+                    target: target,
+                    type: 'negative',
+                    index: bestNegativeIndex,
+                    score: maxNegativeMatch
+                };
+            }
 
             // If negative match is strong (>70%), significantly reduce score
             if (maxNegativeMatch > 70) {
@@ -4252,6 +4293,9 @@
             document.getElementById('patternCount').textContent = countText;
 
             console.log(`✅ Visualized stored pattern for ${letter} (${countText})`);
+
+            // Also visualize additional training patterns
+            visualizeAdditionalPatterns(letter);
         }
 
         // Visualize current recording pattern
@@ -4275,6 +4319,119 @@
             const normalized = max > 0 ? currentPattern.map(v => v / max) : currentPattern;
 
             drawDownsampledPattern(currentPatternCtx, currentPatternCanvas, normalized);
+        }
+
+        // Visualize additional training patterns (positive and negative)
+        let lastMatchedPatternIndex = null;
+        let lastMatchedPatternType = null;
+
+        function visualizeAdditionalPatterns(letter) {
+            const container = document.getElementById('additionalPatternsContainer');
+            const grid = document.getElementById('additionalPatternsGrid');
+
+            if (!container || !grid) return;
+
+            // Load additional patterns from localStorage
+            const extrasKey = `calibration_extras_${currentProfileId}_${letter}`;
+            const extrasJSON = localStorage.getItem(extrasKey);
+
+            if (!extrasJSON) {
+                container.style.display = 'none';
+                return;
+            }
+
+            const extras = JSON.parse(extrasJSON);
+            const positivePatterns = extras.patterns || [];
+            const negativePatterns = extras.negativePatterns || [];
+
+            // If no additional patterns, hide container
+            if (positivePatterns.length === 0 && negativePatterns.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            // Show container and clear grid
+            container.style.display = 'block';
+            grid.innerHTML = '';
+
+            // Add positive patterns
+            positivePatterns.forEach((pattern, index) => {
+                const card = createPatternCard(pattern, 'positive', index, letter);
+                grid.appendChild(card);
+            });
+
+            // Add negative patterns
+            negativePatterns.forEach((pattern, index) => {
+                const card = createPatternCard(pattern, 'negative', index, letter);
+                grid.appendChild(card);
+            });
+        }
+
+        function createPatternCard(pattern, type, index, letter) {
+            const card = document.createElement('div');
+            const bgColor = type === 'positive' ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)';
+            const borderColor = type === 'positive' ? '#4CAF50' : '#f44336';
+            const icon = type === 'positive' ? '✓' : '✗';
+
+            card.id = `pattern-${type}-${index}`;
+            card.style.cssText = `
+                background: ${bgColor};
+                padding: 10px;
+                border-radius: 8px;
+                border: 2px solid ${borderColor};
+                transition: all 0.3s ease;
+            `;
+
+            const label = document.createElement('div');
+            label.style.cssText = `
+                color: ${borderColor};
+                font-size: 10px;
+                margin-bottom: 5px;
+                text-align: center;
+                font-weight: bold;
+            `;
+            label.textContent = `${icon} ${type.toUpperCase()} #${index + 1}`;
+
+            const canvas = document.createElement('canvas');
+            canvas.style.cssText = 'width: 100%; height: 50px; background: rgba(0,0,0,0.3); border-radius: 5px;';
+            canvas.width = 200;
+            canvas.height = 50;
+
+            card.appendChild(label);
+            card.appendChild(canvas);
+
+            // Draw pattern on canvas
+            const ctx = canvas.getContext('2d');
+            const max = Math.max(...pattern);
+            const normalized = max > 0 ? pattern.map(v => v / max) : pattern;
+            drawDownsampledPattern(ctx, canvas, normalized);
+
+            return card;
+        }
+
+        function highlightMatchedPattern(type, index) {
+            // Remove previous highlight
+            if (lastMatchedPatternIndex !== null && lastMatchedPatternType !== null) {
+                const prevCard = document.getElementById(`pattern-${lastMatchedPatternType}-${lastMatchedPatternIndex}`);
+                if (prevCard) {
+                    const borderColor = lastMatchedPatternType === 'positive' ? '#4CAF50' : '#f44336';
+                    prevCard.style.border = `2px solid ${borderColor}`;
+                    prevCard.style.boxShadow = 'none';
+                    prevCard.style.transform = 'scale(1)';
+                }
+            }
+
+            // Add new highlight
+            const card = document.getElementById(`pattern-${type}-${index}`);
+            if (card) {
+                const glowColor = type === 'positive' ? '#4CAF50' : '#f44336';
+                card.style.border = `3px solid ${glowColor}`;
+                card.style.boxShadow = `0 0 20px ${glowColor}`;
+                card.style.transform = 'scale(1.05)';
+
+                lastMatchedPatternIndex = index;
+                lastMatchedPatternType = type;
+            }
         }
 
         // DEPRECATED: Audio is now stored in Supabase Storage
