@@ -2758,13 +2758,61 @@
             updateCalibrationStats();
         }
 
-        function resetCalibration() {
-            if (confirm(`Reset all calibration data for ${currentProfile}?`)) {
+        async function resetCalibration() {
+            if (!confirm(`Reset all calibration data for ${currentProfile}?\n\nThis will delete all calibrations and audio recordings from the database. This cannot be undone.`)) {
+                return;
+            }
+
+            try {
+                console.log('🔄 Starting calibration reset...');
+
+                // Delete all calibrations from Supabase
+                if (currentProfileId) {
+                    const { error: deleteError } = await supabase
+                        .from('calibrations')
+                        .delete()
+                        .eq('profile_id', currentProfileId);
+
+                    if (deleteError) {
+                        console.error('❌ Error deleting calibrations:', deleteError);
+                        alert('Error deleting calibrations from database. Please try again.');
+                        return;
+                    }
+
+                    console.log('✅ Deleted calibrations from database');
+
+                    // Note: We don't delete audio files from storage because they're expensive to regenerate
+                    // and storage is cheap. They'll be orphaned but that's okay.
+
+                    // Clear all calibration extras from localStorage (training patterns)
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith(`calibration_extras_${currentProfileId}_`)) {
+                            keysToRemove.push(key);
+                        }
+                    }
+                    keysToRemove.forEach(key => localStorage.removeItem(key));
+                    console.log(`✅ Cleared ${keysToRemove.length} training pattern entries from localStorage`);
+                }
+
+                // Clear local calibration data
                 calibrationData = {};
+
+                // Clear old localStorage key (legacy)
                 const key = `phonicsPatterns_${currentProfile}`;
                 localStorage.removeItem(key);
+
+                // Refresh UI
                 createCalibrationGrid();
                 updateCalibrationStats();
+
+                console.log('✅ Calibration reset complete');
+                alert('All calibrations have been reset successfully!');
+
+            } catch (error) {
+                console.error('❌ Error during reset:', error);
+                alert('An error occurred while resetting calibrations. Please check the console for details.');
             }
         }
 
