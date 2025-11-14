@@ -1177,6 +1177,23 @@
                 <div style="color: #999; font-size: 10px; margin-top: 5px;">If it's correct but not recognized</div>
             </div>
 
+            <!-- Training Correction Buttons (moved to top for visibility) -->
+            <div id="trainingButtons" style="display: none; margin-bottom: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px; text-align: center;">
+                <div style="color: #ddd; font-size: 13px; margin-bottom: 10px;">Recognition issue? Train the system:</div>
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button id="addPositiveBtn" class="btn" style="background: #4CAF50; display: none;">
+                        ✓ Add to '<span id="positiveTarget">?</span>'
+                    </button>
+                    <button id="addNegativeBtn" class="btn" style="background: #f44336; display: none;">
+                        ✗ Not '<span id="negativeTarget">?</span>'
+                    </button>
+                    <button id="addCorrectBtn" class="btn" style="background: #7CB342; display: none;">
+                        ✓ Was '<span id="correctTarget">?</span>'
+                    </button>
+                </div>
+                <div style="color: #999; font-size: 11px; margin-top: 8px;" id="trainingFeedback"></div>
+            </div>
+
             <div style="text-align: center; margin-bottom: 20px; color: #ddd; font-size: 36px; font-weight: 600;">
                 Say this sound:
                 <span onclick="playCalibrationRecording()" style="cursor: pointer; font-size: 44px; margin-left: 15px; display: inline-block; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" title="Play my recording">🔊</span>
@@ -1261,23 +1278,6 @@
                 <div id="additionalPatternsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
                     <!-- Pattern cards will be inserted here -->
                 </div>
-            </div>
-
-            <!-- Training Correction Buttons -->
-            <div id="trainingButtons" style="display: none; margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 10px; text-align: center;">
-                <div style="color: #ddd; font-size: 13px; margin-bottom: 10px;">Recognition issue? Train the system:</div>
-                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <button id="addPositiveBtn" class="btn" style="background: #4CAF50; display: none;">
-                        ✓ Add to '<span id="positiveTarget">?</span>'
-                    </button>
-                    <button id="addNegativeBtn" class="btn" style="background: #f44336; display: none;">
-                        ✗ Not '<span id="negativeTarget">?</span>'
-                    </button>
-                    <button id="addCorrectBtn" class="btn" style="background: #7CB342; display: none;">
-                        ✓ Was '<span id="correctTarget">?</span>'
-                    </button>
-                </div>
-                <div style="color: #999; font-size: 11px; margin-top: 8px;" id="trainingFeedback"></div>
             </div>
 
             <div id="status" style="font-family: monospace; font-size: 11px; white-space: pre-wrap; line-height: 1.4;">Click Start to begin</div>
