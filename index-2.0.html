@@ -3761,8 +3761,8 @@
                 volumeMeterValue.textContent = Math.round(volume);
                 volumeMeterThreshold.textContent = volumeThreshold;
 
-                // Calculate fill percentage (max out at 150% of threshold for visualization)
-                const maxVolume = volumeThreshold * 1.5;
+                // Calculate fill percentage (max out at 1000% of threshold for visualization)
+                const maxVolume = volumeThreshold * 10;
                 const volumePercent = Math.min(100, (volume / maxVolume) * 100);
                 volumeMeterFill.style.width = volumePercent + '%';
 
@@ -3790,8 +3790,8 @@
                 concentrationMeterValue.textContent = concentration.toFixed(1);
                 concentrationMeterThreshold.textContent = concentrationThreshold.toFixed(1);
 
-                // Calculate fill percentage (max out at 150% of threshold for visualization)
-                const maxConcentration = concentrationThreshold * 1.5;
+                // Calculate fill percentage (max out at 1000% of threshold for visualization)
+                const maxConcentration = concentrationThreshold * 10;
                 const concentrationPercent = Math.min(100, (concentration / maxConcentration) * 100);
                 concentrationMeterFill.style.width = concentrationPercent + '%';
 
