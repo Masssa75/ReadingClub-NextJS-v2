@@ -3745,12 +3745,8 @@
                     }
 
                     // TRAINING: Show RED button for 5 seconds (to correct false positives)
-                    // Skip if continuous play is enabled (auto-advance won't give time to click)
-                    if (!continuousPlayEnabled) {
-                        showSuccessTrainingButton(prediction, currentTarget);
-                    } else {
-                        hideTrainingButtons();
-                    }
+                    // Always show, even with continuous play (user has 5 seconds to click)
+                    showSuccessTrainingButton(prediction, currentTarget);
 
                     // Show success message
                     document.getElementById('status').textContent = `✓ MATCH! ${Math.round(score)}%\n\n` + statusText;
