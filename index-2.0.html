@@ -2159,10 +2159,16 @@
             }
 
             try {
+                const loadStart = Date.now();
+                console.log('⏳ Loading calibrations from Supabase...');
+
                 const { data, error } = await supabase
                     .from('calibrations')
                     .select('*')
                     .eq('profile_id', currentProfileId);
+
+                const loadTime = Date.now() - loadStart;
+                console.log(`⏱️ Supabase query took: ${loadTime}ms`);
 
                 if (error) throw error;
 
@@ -3700,8 +3706,22 @@
             }
         }
 
+        let analyzerRunning = false;
+
         function analyzeTuner() {
-            if (!isRunning) return;
+            if (!isRunning) {
+                if (analyzerRunning) {
+                    console.log('⏸ Analyzer stopped');
+                    analyzerRunning = false;
+                }
+                return;
+            }
+
+            if (!analyzerRunning) {
+                console.log('▶ Analyzer started - listening to microphone');
+                analyzerRunning = true;
+            }
+
             requestAnimationFrame(analyzeTuner);
 
             analyser.getByteFrequencyData(dataArray);
@@ -4583,7 +4603,12 @@
 
         async function setupAudio() {
             try {
+                const setupStart = Date.now();
+                console.log('🎤 Requesting microphone access...');
+
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const micTime = Date.now() - setupStart;
+                console.log(`⏱️ Microphone permission granted in ${micTime}ms`);
 
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 analyser = audioContext.createAnalyser();
@@ -4597,6 +4622,9 @@
                 dataArray = new Uint8Array(bufferLength);
 
                 microphone.connect(analyser);
+
+                const totalTime = Date.now() - setupStart;
+                console.log(`✅ Audio setup complete in ${totalTime}ms`);
 
             } catch (err) {
                 alert('Microphone access denied!');
