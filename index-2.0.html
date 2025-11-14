@@ -3871,22 +3871,20 @@
                 return;
             }
 
-            // Dynamic thresholds for nasals (same as game mode)
+            // Dynamic thresholds: volume stays constant, only concentration adjusts per letter type
             const FRICATIVES = ['f', 's', 'v', 'z', 'h'];
             const LIQUIDS = ['l', 'r'];
             const isCurrentNasal = currentTarget && isNasal(currentTarget);
             const isFricative = currentTarget && FRICATIVES.includes(currentTarget);
             const isLiquid = currentTarget && LIQUIDS.includes(currentTarget);
 
-            let volumeThreshold = 15;
+            const volumeThreshold = 15; // Standard volume threshold for all letters
             let concentrationThreshold = 2.0;
 
             if (isCurrentNasal || isLiquid) {
-                volumeThreshold = 8;
-                concentrationThreshold = 1.5;
+                concentrationThreshold = 1.5; // Lower concentration for nasals/liquids (m, n, l, r)
             } else if (isFricative) {
-                volumeThreshold = 10;
-                concentrationThreshold = 1.8;
+                concentrationThreshold = 1.8; // Lower concentration for fricatives (f, s, v, z, h)
             }
 
             // Update threshold meter in real-time
