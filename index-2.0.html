@@ -3271,10 +3271,14 @@
             }
             calibrationData[letter].negativePatterns.push(lastRecordedSnapshot);
 
+            console.log(`✗ Added negative pattern to ${letter} (total: ${calibrationData[letter].negativePatterns.length})`);
+            console.log(`  Pattern preview:`, lastRecordedSnapshot.slice(0, 5));
+
             // Save to localStorage
             saveCalibrationExtras(letter);
 
             // Update visualization
+            console.log(`  Calling visualizeStoredPattern for ${letter}...`);
             visualizeStoredPattern(letter);
 
             // Show feedback
@@ -3284,8 +3288,6 @@
 
             // Hide training buttons after action
             hideTrainingButtons();
-
-            console.log(`✗ Added negative pattern to ${letter}:`, lastRecordedSnapshot);
         }
 
         let trainingButtonTimeout = null;
@@ -4228,9 +4230,13 @@
                 };
             }
 
-            // If negative match is strong (>70%), significantly reduce score
-            if (maxNegativeMatch > 70) {
-                bestPositiveScore = bestPositiveScore * (1 - (maxNegativeMatch / 100) * 0.8);
+            // Only apply penalty if negative match is BOTH strong (>75%) AND stronger than positive match
+            // This prevents false negatives when sounds are naturally similar
+            if (maxNegativeMatch > 75 && maxNegativeMatch > bestPositiveScore) {
+                // Reduce penalty from 0.8 to 0.4 to be less aggressive
+                const penalty = (maxNegativeMatch / 100) * 0.4;
+                bestPositiveScore = bestPositiveScore * (1 - penalty);
+                console.log(`⚠️ Negative pattern match (${maxNegativeMatch.toFixed(1)}%) stronger than positive (${(bestPositiveScore / (1 - penalty)).toFixed(1)}%), reducing score to ${bestPositiveScore.toFixed(1)}%`);
             }
 
             return bestPositiveScore;
@@ -4378,6 +4384,9 @@
                 const container = document.getElementById('additionalPatternsContainer');
                 const grid = document.getElementById('additionalPatternsGrid');
 
+                console.log(`📊 visualizeAdditionalPatterns called for ${letter}`);
+                console.log(`  Container exists: ${!!container}, Grid exists: ${!!grid}`);
+
                 if (!container || !grid) {
                     console.log('⚠️ Additional patterns container/grid not found');
                     return;
@@ -4387,8 +4396,11 @@
                 const extrasKey = `calibration_extras_${currentProfileId}_${letter}`;
                 const extrasJSON = localStorage.getItem(extrasKey);
 
+                console.log(`  Looking for key: ${extrasKey}`);
+                console.log(`  Found in localStorage: ${!!extrasJSON}`);
+
                 if (!extrasJSON) {
-                    console.log(`No additional patterns for ${letter}`);
+                    console.log(`  No additional patterns for ${letter}, hiding container`);
                     container.style.display = 'none';
                     return;
                 }
@@ -4397,10 +4409,11 @@
                 const positivePatterns = extras.patterns || [];
                 const negativePatterns = extras.negativePatterns || [];
 
-                console.log(`📊 Additional patterns for ${letter}: ${positivePatterns.length} positive, ${negativePatterns.length} negative`);
+                console.log(`  Patterns: ${positivePatterns.length} positive, ${negativePatterns.length} negative`);
 
                 // If no additional patterns, hide container
                 if (positivePatterns.length === 0 && negativePatterns.length === 0) {
+                    console.log(`  No patterns to display, hiding container`);
                     container.style.display = 'none';
                     return;
                 }
@@ -4408,15 +4421,16 @@
                 // Show container and clear grid
                 container.style.display = 'block';
                 grid.innerHTML = '';
+                console.log(`  Container displayed, grid cleared`);
 
                 // Add positive patterns
                 positivePatterns.forEach((pattern, index) => {
                     try {
                         const card = createPatternCard(pattern, 'positive', index, letter);
                         grid.appendChild(card);
-                        console.log(`✅ Added positive pattern #${index + 1}`);
+                        console.log(`  ✅ Added positive pattern card #${index + 1}`);
                     } catch (e) {
-                        console.error(`❌ Error creating positive pattern #${index + 1}:`, e);
+                        console.error(`  ❌ Error creating positive pattern #${index + 1}:`, e);
                     }
                 });
 
@@ -4425,7 +4439,7 @@
                     try {
                         const card = createPatternCard(pattern, 'negative', index, letter);
                         grid.appendChild(card);
-                        console.log(`✅ Added negative pattern #${index + 1}`);
+                        console.log(`  ✅ Added negative pattern card #${index + 1}`);
                     } catch (e) {
                         console.error(`❌ Error creating negative pattern #${index + 1}:`, e);
                     }
