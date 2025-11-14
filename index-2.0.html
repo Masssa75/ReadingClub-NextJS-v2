@@ -4220,7 +4220,7 @@
                 }
             });
 
-            // If negative match was stronger, update match info
+            // Simple logic: if negative match is stronger than positive match, reject it
             if (maxNegativeMatch > bestPositiveScore) {
                 window.lastMatchInfo = {
                     target: target,
@@ -4228,17 +4228,12 @@
                     index: bestNegativeIndex,
                     score: maxNegativeMatch
                 };
+                console.log(`❌ REJECTED: Negative match (${maxNegativeMatch.toFixed(1)}%) stronger than positive (${bestPositiveScore.toFixed(1)}%)`);
+                return 0; // Reject completely
             }
 
-            // Only apply penalty if negative match is BOTH strong (>75%) AND stronger than positive match
-            // This prevents false negatives when sounds are naturally similar
-            if (maxNegativeMatch > 75 && maxNegativeMatch > bestPositiveScore) {
-                // Reduce penalty from 0.8 to 0.4 to be less aggressive
-                const penalty = (maxNegativeMatch / 100) * 0.4;
-                bestPositiveScore = bestPositiveScore * (1 - penalty);
-                console.log(`⚠️ Negative pattern match (${maxNegativeMatch.toFixed(1)}%) stronger than positive (${(bestPositiveScore / (1 - penalty)).toFixed(1)}%), reducing score to ${bestPositiveScore.toFixed(1)}%`);
-            }
-
+            // If we got here, positive match is stronger than negative (or no negative patterns)
+            console.log(`✅ ACCEPTED: Positive match (${bestPositiveScore.toFixed(1)}%) stronger than negative (${maxNegativeMatch.toFixed(1)}%)`);
             return bestPositiveScore;
         }
 
