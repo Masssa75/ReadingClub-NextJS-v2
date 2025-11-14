@@ -3808,6 +3808,7 @@
 
                 // Success if S11 predicts correctly AND score > 80%
                 if (isCorrect && score > 80) {
+                    console.log(`🎉 SUCCESS DETECTED! Letter: ${currentTarget}, Score: ${Math.round(score)}%`);
                     celebrateMatch();
 
                     // Record attempt in adaptive learning session
@@ -3822,19 +3823,25 @@
                     // Show success message
                     document.getElementById('status').textContent = `✓ MATCH! ${Math.round(score)}%\n\n` + statusText;
                     // Stop analyzing so results stay visible
+                    console.log(`⏸ STOPPING GAME (isRunning was: ${isRunning})`);
                     isRunning = false;
+                    console.log(`⏸ isRunning is now: ${isRunning}`);
                     document.getElementById('tunerBtn').textContent = '▶ Next Letter';
                     document.getElementById('tryAgainBtn').style.display = 'inline-block';
 
                     // Auto-advance if continuous play is enabled
+                    console.log(`🔄 Continuous play enabled: ${continuousPlayEnabled}`);
                     if (continuousPlayEnabled) {
                         document.getElementById('tryAgainBtn').style.display = 'none'; // Hide Try Again in continuous mode
+                        console.log('▶ Auto-advancing in 1.5 seconds...');
                         setTimeout(async () => {
                             isRunning = true;
                             document.getElementById('tunerBtn').textContent = '⏸ Stop Game';
                             await setNextTarget();
                             analyzeTuner();
                         }, 1500); // 1.5 second delay to show success feedback
+                    } else {
+                        console.log('⏸ Waiting for user to click "Next Letter" button');
                     }
                 } else {
                     // TRAINING: Show training buttons on failure (wrong prediction or low score)
