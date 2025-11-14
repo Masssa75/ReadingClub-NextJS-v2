@@ -654,3 +654,290 @@ None - all tests passing, persistence verified working
 **Git Status:** Modified index-1.4.html (not committed)
 **Testing:** All Playwright tests passing ✅
 
+## Session 20 - November 12, 2025
+
+**Focus:** Quiet Voice Calibration Analysis & Multi-Calibration Planning
+
+**Status:** ✅ Complete (Planning Only - No Code Changes)
+
+### Problem Discussed
+
+**User Issue:**
+- 5-year-old daughter's voice is too quiet during calibration
+- Results in weak baseline patterns
+- Random background noise triggers false positive matches
+- Similar to M/N issues but inverse problem (voice too quiet vs. sound naturally quiet)
+
+### Analysis Completed
+
+#### 1. **M and N Fixes Review**
+
+Found 3 solutions previously implemented for nasal sounds (M, N):
+
+**Solution 1: Dynamic Volume Threshold** (index-2.0.html:2357-2358)
+```javascript
+const volumeThreshold = isNasal(letter) ? 8 : 15;
+```
+- Normal letters: 15% volume required
+- Nasals: 8% volume required (almost half!)
+
+**Solution 2: Energy Concentration Check** (index-2.0.html:2366-2376)
+```javascript
+const energyConcentration = peakEnergy / avgEnergy;
+const concentrationThreshold = isNasal(letter) ? 1.5 : 2.0;
+```
+- Speech has focused peaks (3-5x), noise is diffuse (1-2x)
+- Normal letters: requires > 2.0 ratio
+- Nasals: requires > 1.5 ratio (more lenient)
+
+**Solution 3: Pre-Amplification** (index-2.0.html:2378-2381)
+```javascript
+if (isNasal(letter)) {
+    snapshot = snapshot.map(v => v * 2.0);
+}
+```
+- Multiply all frequency values by 2.0 before normalization
+- Makes nasals more prominent in pattern matching
+
+#### 2. **Proposed Solution: Multi-Layer Calibration Quality Control**
+
+**Phase 1 (Quick Fix - 15 mins):**
+1. Add MIN_CALIBRATION_VOLUME check (reject snapshots below 20%)
+2. Add visual volume meter during calibration (green/yellow/red)
+3. Show "Speak louder!" message if rejected
+
+**Phase 2 (Medium - 30 mins):**
+4. Enhance energy concentration threshold during calibration (stricter than gameplay)
+5. Validate cluster quality before accepting calibration
+
+**Phase 3 (Advanced - 1 hour):**
+6. Implement phoneme-specific pattern validation (vowels should have low-freq peaks, fricatives high-freq)
+7. Add "recalibrate" suggestion if patterns look suspicious
+
+#### 3. **Multi-Calibration Per Letter Analysis**
+
+**User Idea:**
+- Allow multiple calibrations per letter for day-to-day voice variation
+- Morning voice, afternoon voice, sick day voice all stored
+- Match against BEST of all calibrations
+
+**Current System:**
+```sql
+UNIQUE(profile_id, letter)  -- Only ONE calibration per letter
+```
+
+**Recommended Approach: Option 2 (Array in pattern_data)**
+
+**New Structure:**
+```javascript
+calibrationData['a'] = {
+  calibrations: [  // Array of variations
+    {
+      pattern: [baseline1],
+      timestamp: 123,
+      audioUrl: "url1"
+    },
+    {
+      pattern: [baseline2],
+      timestamp: 456,
+      audioUrl: "url2"
+    }
+  ],
+  primaryAudioUrl: "url1"  // First one for playback
+}
+```
+
+**Detection Update:**
+```javascript
+// Match against ALL patterns, take BEST
+const calibrations = calibrationData[letter].calibrations;
+const scores = calibrations.map(cal =>
+  calculatePatternSimilarity(current, cal.pattern)
+);
+const bestScore = Math.max(...scores);
+```
+
+**Advantages:**
+- ✅ No database migration needed (JSONB handles arrays)
+- ✅ Backward compatible (wrap old data in array)
+- ✅ Easy to add more calibrations
+- ✅ Detection automatically more robust
+- ✅ Performance impact negligible (3ms → 9ms per letter)
+
+**Complications:** None major
+- Storage: 3 calibrations = 3x pattern data + 3x audio files
+- UI needs: "Add Calibration" button, calibration count badge, management modal
+
+**Implementation Estimate:**
+- Phase 1 (Core - 1 hour): Detection loop, save append, load function
+- Phase 2 (UI - 30 mins): Count badge, button text, confirmation modal
+- Phase 3 (Management - 30 mins): View all calibrations, delete, set primary
+
+### Decisions Made
+
+**User Decision:**
+- Test current system with daughter more before implementing changes
+- Evaluate which solutions to implement after real-world testing
+
+**No Code Changes:**
+- Session was purely analysis and planning
+- Recommendations documented for future implementation
+
+### Technical Details
+
+**Files Analyzed:**
+- `index-2.0.html` - Found M/N fixes (lines 2357-2381)
+- `PHONICS-SYSTEM-README.md` - Reviewed nasal handling documentation
+- `supabase/migrations/20251110043427_create_profiles_and_calibrations.sql` - Reviewed schema constraints
+
+**Key Insights:**
+- M/N fixes provide blueprint for handling quiet/diffuse sounds
+- Multi-calibration approach addresses day-to-day variation elegantly
+- Minimum volume check would prevent weak baselines immediately
+
+### Recommendations for Future Sessions
+
+**If Implementing Quiet Voice Fix (Phase 1):**
+1. Add `MIN_CALIBRATION_VOLUME = 20` constant
+2. Check volume in calibration peak detection
+3. Add volume meter UI component (green/yellow/red bars)
+4. Show rejection message: "Speak louder! Try again."
+
+**If Implementing Multi-Calibration:**
+1. Update `saveCalibrationToSupabase()` to append to array
+2. Update detection to loop through all calibrations
+3. Add UI for "Add Calibration" vs "Recalibrate"
+4. Add calibration count badge to cards
+5. Add management modal for viewing/deleting calibrations
+
+### Known Issues
+
+None - no code changes made
+
+### Next Steps
+
+**Immediate:**
+1. User will test current system with daughter
+2. Gather real-world feedback on calibration quality
+3. Determine which solutions to prioritize
+
+**Potential Implementations:**
+1. Minimum volume check (quick win)
+2. Visual volume meter (UX improvement)
+3. Multi-calibration support (handles variation)
+4. Pattern sanity checking (advanced validation)
+
+### Code Statistics
+
+- **Files Modified:** 0
+- **Lines Changed:** 0
+- **Analysis Completed:** Yes
+- **Recommendations Documented:** Yes
+
+---
+
+**Session Duration:** ~30 minutes
+
+---
+
+## Session 21 - November 13, 2025
+
+**Focus:** Pattern Comparison Visualization & Pitch Recognition Analysis
+
+**Status:** ✅ Complete
+
+### Key Achievements
+
+1. **Pitch Recognition Investigation**
+   - Analyzed current calibration system (single snapshot at peak moment, 64-bin downsampled pattern, correlation-based matching)
+   - Explored pitch-handling strategies to improve recognition across different voice pitches
+   - Created test-pitch-strategies.html comparing 4 approaches in real-time:
+     - Baseline (current single snapshot)
+     - Multi-Pitch Calibration (3 pitch variations: normal, +20%, -20%)
+     - Sliding Window (±5 bin shifts)
+     - Hybrid (combining both techniques)
+   - Created test-temporal-pattern.html comparing temporal vs snapshot approaches (before/peak/after)
+   - **Conclusion:** Single snapshot performs better than temporal patterns for this use case
+
+2. **Pattern Comparison Visualization (Production Feature)**
+   - Added side-by-side pattern visualization to Play tab in index-2.0.html (and index-1.4.html)
+   - Shows stored calibration pattern vs current recording pattern in real-time
+   - Implemented lazy initialization (canvases initialize when switching to Play tab)
+   - Added safety checks and debug logging for troubleshooting
+   - Fixed canvas timing bug (canvases were initializing before DOM was ready)
+   - Feature helps users understand why matches succeed or fail
+   - **Status:** ✅ Working locally, ready for production deployment
+
+3. **HTML Structure Changes**
+   - Added two new canvases below main spectrum in Play tab:
+     - 📦 Stored Calibration (left) - shows 64-bin pattern from calibration
+     - 🎤 Current Recording (right) - shows current voice pattern in real-time
+   - Implemented three new helper functions:
+     - `initializePatternCanvases()` - Initializes canvases when Play tab opens
+     - `visualizeStoredPattern(letter)` - Draws stored calibration for target letter
+     - `visualizeCurrentPattern(buffer)` - Draws current voice recording
+     - `drawDownsampledPattern(ctx, canvas, pattern)` - Renders 64-bin patterns as bars
+
+### Technical Details
+
+**Files Created:**
+- `test-pitch-strategies.html` - Live comparison of 4 pitch-handling strategies
+- `test-temporal-pattern.html` - Side-by-side temporal vs snapshot comparison
+
+**Files Modified:**
+- `index-2.0.html` - Added pattern comparison visualization (lines 1166-1176, 1297-1329, 3724-3814)
+- `index-1.4.html` - Synced with index-2.0.html changes
+
+**Code Changes:**
+- Added HTML for two comparison canvases in Play tab (12 lines)
+- Modified canvas initialization to be lazy (on tab switch) (30 lines)
+- Added visualization calls in `setNextTarget()` and `analyzeTuner()` (2 lines each)
+- Added null checks to prevent errors before canvases are ready (6 lines)
+- Implemented three visualization helper functions (90 lines total)
+
+**Key Learning:**
+- Temporal patterns (before/peak/after) didn't improve accuracy over single snapshot
+- Current correlation-based matching is already quite robust
+- Visual comparison is extremely helpful for debugging and understanding recognition behavior
+
+### Testing
+
+**Local Testing:**
+- ✅ Pattern canvases initialize correctly when switching to Play tab
+- ✅ Stored calibration pattern displays when letter is selected
+- ✅ Current recording pattern updates in real-time during voice detection
+- ✅ Visualizations show clear comparison between stored and current patterns
+
+**Console Logs:**
+- `✅ Pattern canvases initialized: [width] x 80`
+- `✅ Visualized stored pattern for [letter]`
+- `⚠️ Pattern canvases not initialized yet` (before tab switch)
+
+### User Feedback
+
+User confirmed pattern visualization works perfectly after the timing fix. This feature provides valuable insight into why recognition succeeds or fails, especially helpful for understanding calibration quality and voice consistency.
+
+### Next Steps
+
+- Deploy index-2.0.html to production at phuketcamp.com/phonics
+- Consider pitch-handling improvements if user testing reveals issues with Ophelia's voice
+- Continue Next.js adaptive learning development (Phase 6.5+)
+
+### Time Spent
+~2 hours
+
+### Code Statistics
+
+- **Files Created:** 2 (test harnesses)
+- **Files Modified:** 2 (index-2.0.html, index-1.4.html)
+- **Lines Added:** ~140
+- **Functions Added:** 4
+- **Testing Status:** ✅ Working locally
+
+### Files to Deploy
+- `index-2.0.html` → `/BambooValley/phuket-camps/public/phonics/index.html`
+
+---
+
+**Session Duration:** ~2 hours
+

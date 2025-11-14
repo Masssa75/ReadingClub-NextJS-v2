@@ -1,7 +1,7 @@
 # Session Log Index
 
-**Total Sessions:** 19
-**Latest Session:** Session 19 - November 12, 2025
+**Total Sessions:** 23
+**Latest Session:** Session 23 - November 14, 2025
 
 ## All Sessions
 
@@ -293,4 +293,67 @@
 **Status:** ✅ Complete - Persistence working correctly (user needs cache clear)
 
 **Details:** [Session Log 2025-11-12](SESSION-LOG-2025-11-12.md#session-19---november-12-2025)
+
+### Session 20 - November 12, 2025
+**Focus:** Quiet Voice Calibration Analysis & Multi-Calibration Planning
+**Key Achievements:**
+- Analyzed M and N fixes (dynamic volume threshold, energy concentration, pre-amplification)
+- Proposed multi-layer calibration quality control (minimum volume check, visual meter, pattern validation)
+- Designed multi-calibration per letter system for day-to-day voice variation
+- Recommended Option 2: Array in pattern_data (no schema change, backward compatible)
+- No code changes - pure analysis and planning session
+- User will test current system with daughter before implementing solutions
+
+**Time Spent:** ~30 minutes
+
+**Status:** ✅ Complete (Planning Only)
+
+**Details:** [Session Log 2025-11-12](SESSION-LOG-2025-11-12.md#session-20---november-12-2025)
+
+### Session 21 - November 13, 2025
+**Focus:** Pattern Comparison Visualization & Pitch Recognition Analysis
+**Key Achievements:**
+- Created test harnesses for pitch-handling strategies (4 approaches) and temporal patterns
+- Added live pattern comparison visualization to Play tab (stored vs current recording)
+- Fixed canvas initialization timing bug (lazy load on tab switch)
+- Confirmed single snapshot performs better than temporal patterns
+- Feature shows 64-bin patterns side-by-side for debugging recognition issues
+
+**Time Spent:** ~2 hours
+
+**Status:** ✅ Complete - Ready for production deployment
+
+**Details:** [Session Log 2025-11-12](SESSION-LOG-2025-11-12.md#session-21---november-13-2025)
+
+### Session 22 - November 14, 2025
+**Focus:** Pattern Training System, Proficiency Migration, and UX Improvements
+**Key Achievements:**
+- Fixed calibration visualization bug (double-wrapped pattern array causing empty black boxes)
+- Implemented positive/negative pattern training system with localStorage persistence
+- Added manual recording modal for unrecognized correct sounds (2-second capture workflow)
+- Applied proficiency migration to production database (eliminated 406 errors, enabled long-term learning)
+- Fixed RED correction button to always show after successful matches (regardless of Auto-next setting)
+- All features deployed to https://phuketcamp.com/phonics2/
+
+**Time Spent:** ~3.5 hours
+
+**Status:** ✅ Complete - All features working and deployed to phonics2
+
+**Details:** [Session Log 2025-11-14](SESSION-LOG-2025-11-14.md#session-22---november-14-2025)
+
+### Session 23 - November 14, 2025
+**Focus:** Voice Generator Folder Support & Critical Bug Fixes (406 Errors + letterStats)
+**Key Achievements:**
+- Fixed voice generator to show files in selected subfolders (e.g., "Bamboo Valley Fly over Video")
+- Fixed 406 errors on proficiency queries by changing `.single()` to `.maybeSingle()`
+- Fixed letterStats.entries error on session expiry (added Map conversion before endSession)
+- Discovered Session 22 used index-2.0.html, applied fixes to correct file
+- Created Playwright verification test - confirmed 0 out of 1 proficiency requests returned 406
+- All fixes deployed and verified at https://phuketcamp.com/phonics2/
+
+**Time Spent:** ~1.5 hours
+
+**Status:** ✅ Complete - All critical errors fixed and verified in production
+
+**Details:** [Session Log 2025-11-14](SESSION-LOG-2025-11-14.md#session-23---november-14-2025)
 

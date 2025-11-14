@@ -1,8 +1,8 @@
 # ReadingClub
 
-**Version:** 1.10.3
-**Last Updated:** November 12, 2025
-**Status:** ✅ Stable - Level persistence fixed (HTML version) + Next.js migration Phases 1-3 complete
+**Version:** 1.12.0
+**Last Updated:** November 14, 2025
+**Status:** ✅ Stable - Critical bug fixes deployed (406 errors + session expiry)
 
 ## 📁 Project Structure Overview
 
@@ -29,11 +29,11 @@ ReadingClub/
 ├── supabase/                       # Supabase migrations
 │   └── migrations/                 # Database migrations
 └── logs/                           # Session logs
-    ├── SESSION-LOG-INDEX.md       # Master session index (19 sessions total)
+    ├── SESSION-LOG-INDEX.md       # Master session index (20 sessions total)
     ├── SESSION-LOG-2025-11-09.md  # Sessions 1-2 logs
     ├── SESSION-LOG-2025-11-10.md  # Sessions 3-8 logs
     ├── SESSION-LOG-2025-11-11.md  # Sessions 9-13 logs
-    └── SESSION-LOG-2025-11-12.md  # Sessions 14-19 logs
+    └── SESSION-LOG-2025-11-12.md  # Sessions 14-20 logs
 
 Production:
 └── BambooValley/phuket-camps/
@@ -368,16 +368,17 @@ When debugging issues, follow this systematic 5-step approach:
 **All session accomplishments are documented in the `logs/` folder.**
 
 See:
-- `logs/SESSION-LOG-INDEX.md` - Overview of all sessions (19 sessions total)
+- `logs/SESSION-LOG-INDEX.md` - Overview of all sessions (23 sessions total)
 - `logs/SESSION-LOG-2025-11-09.md` - Sessions 1-2 detailed logs
 - `logs/SESSION-LOG-2025-11-10.md` - Sessions 3-8 detailed logs
 - `logs/SESSION-LOG-2025-11-11.md` - Sessions 9-13 detailed logs
-- `logs/SESSION-LOG-2025-11-12.md` - Sessions 14-19 detailed logs
+- `logs/SESSION-LOG-2025-11-12.md` - Sessions 14-21 detailed logs
+- `logs/SESSION-LOG-2025-11-14.md` - Sessions 22-23 detailed logs
 
 **Recent Sessions:**
-- **Session 17:** Audio playback testing infrastructure (test-audio-playback.html + Playwright test).
-- **Session 18:** Next.js calibration bug fixes (audio recording length, reset button, RLS policies). See [Session 18 log](logs/SESSION-LOG-2025-11-12.md#session-18---november-12-2025).
-- **Session 19:** HTML version level persistence fix (profile-specific storage, 3 Playwright tests, all passing). See [Session 19 log](logs/SESSION-LOG-2025-11-12.md#session-19---november-12-2025).
+- **Session 21:** Pattern comparison visualization added to Play tab + pitch recognition analysis (4 test approaches created). See [Session 21 log](logs/SESSION-LOG-2025-11-12.md#session-21---november-13-2025).
+- **Session 22:** Pattern training system + proficiency migration (eliminated 406 errors, enabled long-term learning). See [Session 22 log](logs/SESSION-LOG-2025-11-14.md#session-22---november-14-2025).
+- **Session 23:** Voice generator folder support + critical bug fixes (406 errors + letterStats.entries). See [Session 23 log](logs/SESSION-LOG-2025-11-14.md#session-23---november-14-2025).
 
 ## Current Status & Active Files
 
@@ -387,15 +388,15 @@ See:
 **Stable:** `index-1.2.html` (~2700 lines, moved to stable-versions folder)
 **Technology:** Vanilla JavaScript + Web Audio API + Supabase + Supabase Auth
 
-**Latest Features (Session 13):**
+**Latest Features (Session 21):**
+- ✅ **Pattern Comparison Visualization** - Side-by-side view of stored calibration vs current recording in Play tab
+- ✅ **Real-time Pattern Display** - 64-bin frequency patterns shown as colored bars during voice detection
+- ✅ **Debug Visualization** - Helps understand why matches succeed or fail, shows calibration quality
+
+**Session 13 Features:**
 - ✅ **Linear Lessons System** - TypingClub-style progression with 5 lessons (A listen, A solo, E listen, E solo, Mix A+E)
 - ✅ **Visual Lesson States** - Completed (green ✅), Current (yellow glowing ▶), Locked (grey 🔒)
-- ✅ **Progress Tracking** - Progress bar showing X of 5 lessons completed with percentage
-- ✅ **Golden Letters** - Completed calibrations display with golden gradient effect (no more level badges)
-- ✅ **Dev Mode Shortcuts** - Keyboard shortcuts (1-5, C, W, R, S, H) for rapid testing
-- ✅ **Settings Modal** - Shortcuts reference, audio playback, level/progress info
-- ✅ **Simplified Celebration** - Updated modal with cleaner text and new audio file
-- ✅ **Bug Fixes** - Fixed invisible first letter, Continue button flow, voice recognition after shortcuts
+- ✅ **Golden Letters** - Completed calibrations display with golden gradient effect
 
 **Session 11 Features:**
 - ✅ **Pedagogical Letter Grouping** - Calibration grid organized by learning difficulty
@@ -467,11 +468,19 @@ See:
 - Troubleshooting guide
 
 ### Next Development Phase
-See [Session 17 Log](logs/SESSION-LOG-2025-11-12.md#session-17---november-12-2025) for latest session.
+See [Session Log Index](logs/SESSION-LOG-INDEX.md) for all 20 sessions.
+
+**🚨 Pending User Testing (Session 20):**
+
+User is testing current system with daughter (quiet voice issue). Awaiting feedback to determine which solutions to implement:
+1. **Minimum Volume Check** - Reject quiet calibrations during capture (15 mins)
+2. **Visual Volume Meter** - Real-time feedback green/yellow/red (30 mins)
+3. **Multi-Calibration Per Letter** - Handle day-to-day voice variation (2 hours)
+4. **Pattern Sanity Validation** - Phoneme-specific checks (1 hour)
 
 **🚨 CRITICAL - Next.js App Development:**
 
-1. **Adaptive Learning System** - HIGHEST PRIORITY (20-25 hours)
+1. **Adaptive Learning System** - IN PROGRESS (Phases 6.1-6.4 complete, 20-25 hours total)
    - **Full Spec**: See `/app/ADAPTIVE-TUNER-SPEC.md` for complete implementation details
    - **Why**: User testing revealed kids interact more naturally with self-paced Tuner than structured lessons
    - **What**: Transform Tuner into adaptive system that tracks proficiency and adjusts letter selection

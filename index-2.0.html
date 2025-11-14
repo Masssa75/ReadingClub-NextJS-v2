@@ -1419,6 +1419,8 @@
                     } else {
                         // Session expired - end it and start new
                         console.log('⏰ Session expired, starting new session');
+                        // Convert letterStats to Map before ending session
+                        session.letterStats = new Map(Object.entries(session.letterStats || {}));
                         endSession(session);
                     }
                 } catch (error) {
@@ -1638,7 +1640,7 @@
                     .select('proficiency')
                     .eq('profile_id', currentProfileId)
                     .eq('letter', letter)
-                    .single();
+                    .maybeSingle();
 
                 if (error || !data) return LetterProficiency.UNKNOWN;
                 return data.proficiency || LetterProficiency.UNKNOWN;
@@ -3242,8 +3244,8 @@
             // Clear previous feedback
             document.getElementById('trainingFeedback').textContent = '';
 
-            // Show only "Not 'X'" button (where X is the target letter that matched)
-            document.getElementById('negativeTarget').textContent = targetLetter;
+            // Show only "Not 'X'" button (where X is the letter that was detected/matched)
+            document.getElementById('negativeTarget').textContent = prediction;
             document.getElementById('addNegativeBtn').style.display = 'inline-block';
 
             // Show the container
@@ -4433,13 +4435,20 @@
         // ========== ADAPTIVE STATS DISPLAY ==========
 
         async function updateAdaptiveStatsDisplay() {
+            // Always load proficiency pools (permanent data, not session-specific)
+            const calibratedLetters = Object.keys(calibrationData);
+            const proficiencyMap = await loadProficiencyMap(currentProfileId);
+            const pools = groupLettersByProficiency(proficiencyMap, calibratedLetters);
+
+            document.getElementById('statsMastered').textContent = pools.mastered.length.toString();
+            document.getElementById('statsKnown').textContent = pools.known.length.toString();
+            document.getElementById('statsSometimes').textContent = pools.sometimes.length.toString();
+            document.getElementById('statsUnknown').textContent = pools.unknown.length.toString();
+
+            // Session-specific stats (only show if session is active)
             if (!currentSession) {
                 document.getElementById('statsPhase').textContent = 'Not Started';
                 document.getElementById('statsAttempts').textContent = '0';
-                document.getElementById('statsMastered').textContent = '0';
-                document.getElementById('statsKnown').textContent = '0';
-                document.getElementById('statsSometimes').textContent = '0';
-                document.getElementById('statsUnknown').textContent = '0';
                 document.getElementById('statsNewLetters').textContent = 'None';
                 document.getElementById('statsGraduated').textContent = 'None';
                 document.getElementById('statsStreak').textContent = '0';
@@ -4470,16 +4479,6 @@
 
             document.getElementById('statsPhase').textContent = phase;
             document.getElementById('statsAttempts').textContent = attemptCount.toString();
-
-            // Load proficiency pools
-            const calibratedLetters = Object.keys(calibrationData);
-            const proficiencyMap = await loadProficiencyMap(currentProfileId);
-            const pools = groupLettersByProficiency(proficiencyMap, calibratedLetters);
-
-            document.getElementById('statsMastered').textContent = pools.mastered.length.toString();
-            document.getElementById('statsKnown').textContent = pools.known.length.toString();
-            document.getElementById('statsSometimes').textContent = pools.sometimes.length.toString();
-            document.getElementById('statsUnknown').textContent = pools.unknown.length.toString();
 
             // Session info
             const newLetters = currentSession.newLettersIntroduced.length > 0

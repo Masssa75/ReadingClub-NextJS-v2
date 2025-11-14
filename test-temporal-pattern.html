@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporal Pattern vs Snapshot Comparison</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 20px;
+            padding: 30px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #FDD835;
+        }
+        .subtitle {
+            text-align: center;
+            color: #ddd;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .method-card {
+            background: rgba(0, 0, 0, 0.5);
+            border: 3px solid #7CB342;
+            border-radius: 15px;
+            padding: 25px;
+        }
+        .method-card.winner {
+            border-color: #FFD700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+        }
+        .method-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #FDD835;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .method-description {
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 20px;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .score-display {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .score-value {
+            font-size: 48px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .score-label {
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 5px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .stat-box {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #FDD835;
+        }
+        .pattern-visualization {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .pattern-label {
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .temporal-frames {
+            display: flex;
+            gap: 5px;
+        }
+        .temporal-frame {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            padding: 8px;
+            text-align: center;
+        }
+        .temporal-frame-label {
+            font-size: 9px;
+            color: #7CB342;
+            margin-bottom: 5px;
+        }
+        .mini-canvas {
+            width: 100%;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+        .control-section {
+            background: rgba(124, 179, 66, 0.1);
+            border: 2px solid #7CB342;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .letter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+        .letter-btn {
+            padding: 12px 20px;
+            background: #7CB342;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .letter-btn:hover {
+            background: #689F38;
+            transform: scale(1.05);
+        }
+        .letter-btn.active {
+            background: #FDD835;
+            color: #333;
+        }
+        .letter-btn.calibrated {
+            background: #4CAF50;
+        }
+        .btn {
+            padding: 12px 30px;
+            background: #7CB342;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #689F38;
+        }
+        .btn.stop {
+            background: #f44336;
+        }
+        .current-target {
+            text-align: center;
+            font-size: 100px;
+            font-weight: bold;
+            color: #FDD835;
+            margin: 20px 0;
+            text-shadow: 0 0 30px rgba(253, 216, 53, 0.5);
+        }
+        .status {
+            text-align: center;
+            font-size: 14px;
+            color: #aaa;
+            margin: 10px 0;
+        }
+        #mainCanvas {
+            width: 100%;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .match-indicator {
+            text-align: center;
+            font-size: 16px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .match-indicator.correct {
+            color: #4CAF50;
+        }
+        .match-indicator.wrong {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏱️ Temporal Pattern vs Single Snapshot</h1>
+        <p class="subtitle">Compare capturing sound evolution (before/peak/after) vs single peak snapshot</p>
+
+        <!-- Control Section -->
+        <div class="control-section">
+            <h3 style="color: #7CB342; margin-bottom: 15px; text-align: center;">Step 1: Calibrate</h3>
+            <div class="letter-buttons" id="letterButtons"></div>
+            <div style="text-align: center;">
+                <button class="btn" id="calibrateBtn" onclick="startCalibration()">🎤 Calibrate Letter</button>
+                <button class="btn" onclick="resetAll()">🔄 Reset All</button>
+            </div>
+            <div class="status" id="calibrationStatus">Select a letter to calibrate</div>
+        </div>
+
+        <div class="control-section">
+            <h3 style="color: #FDD835; margin-bottom: 15px; text-align: center;">Step 2: Test Recognition</h3>
+            <div class="current-target" id="currentTarget">-</div>
+            <div style="text-align: center;">
+                <button class="btn" id="testBtn" onclick="startTesting()">▶ Start Testing</button>
+                <button class="btn stop" onclick="stopTesting()" style="display:none;" id="stopBtn">⏹ Stop</button>
+            </div>
+            <canvas id="mainCanvas"></canvas>
+            <div class="status" id="testStatus">Calibrate a letter first</div>
+        </div>
+
+        <!-- Comparison Grid -->
+        <div class="comparison-grid">
+            <!-- Temporal Pattern Method -->
+            <div class="method-card" id="temporalCard">
+                <div class="method-name">🎬 Temporal Pattern</div>
+                <div class="method-description">
+                    Captures 3 moments: Before peak (-100ms), At peak, After peak (+100ms)
+                    <br>Matches the sound's evolution over time
+                </div>
+
+                <div class="score-display">
+                    <div class="score-value" id="temporalScore">--%</div>
+                    <div class="score-label">Current Match Score</div>
+                </div>
+
+                <div class="pattern-visualization">
+                    <div class="pattern-label">📦 Stored Calibration (3 time slices)</div>
+                    <div class="temporal-frames">
+                        <div class="temporal-frame">
+                            <div class="temporal-frame-label">Before Peak</div>
+                            <canvas class="mini-canvas" id="temporalCanvas0"></canvas>
+                        </div>
+                        <div class="temporal-frame">
+                            <div class="temporal-frame-label">At Peak</div>
+                            <canvas class="mini-canvas" id="temporalCanvas1"></canvas>
+                        </div>
+                        <div class="temporal-frame">
+                            <div class="temporal-frame-label">After Peak</div>
+                            <canvas class="mini-canvas" id="temporalCanvas2"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pattern-visualization">
+                    <div class="pattern-label">🎤 Current Recording (3 time slices)</div>
+                    <div class="temporal-frames">
+                        <div class="temporal-frame">
+                            <div class="temporal-frame-label">Before Peak</div>
+                            <canvas class="mini-canvas" id="currentTemporalCanvas0"></canvas>
+                        </div>
+                        <div class="temporal-frame">
+                            <div class="temporal-frame-label">At Peak</div>
+                            <canvas class="mini-canvas" id="currentTemporalCanvas1"></canvas>
+                        </div>
+                        <div class="temporal-frame">
+                            <div class="temporal-frame-label">After Peak</div>
+                            <canvas class="mini-canvas" id="currentTemporalCanvas2"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Correct</div>
+                        <div class="stat-value" id="temporalCorrect">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Total</div>
+                        <div class="stat-value" id="temporalTotal">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Accuracy</div>
+                        <div class="stat-value" id="temporalAccuracy">--%</div>
+                    </div>
+                </div>
+
+                <div class="match-indicator" id="temporalMatch"></div>
+            </div>
+
+            <!-- Single Snapshot Method -->
+            <div class="method-card" id="snapshotCard">
+                <div class="method-name">📸 Single Snapshot (Current)</div>
+                <div class="method-description">
+                    Captures only the peak moment
+                    <br>Current algorithm used in production
+                </div>
+
+                <div class="score-display">
+                    <div class="score-value" id="snapshotScore">--%</div>
+                    <div class="score-label">Current Match Score</div>
+                </div>
+
+                <div class="pattern-visualization">
+                    <div class="pattern-label">📦 Stored Calibration (peak only)</div>
+                    <canvas class="mini-canvas" id="snapshotCanvas" style="height: 80px;"></canvas>
+                </div>
+
+                <div class="pattern-visualization">
+                    <div class="pattern-label">🎤 Current Recording (peak only)</div>
+                    <canvas class="mini-canvas" id="currentSnapshotCanvas" style="height: 80px;"></canvas>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">Correct</div>
+                        <div class="stat-value" id="snapshotCorrect">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Total</div>
+                        <div class="stat-value" id="snapshotTotal">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Accuracy</div>
+                        <div class="stat-value" id="snapshotAccuracy">--%</div>
+                    </div>
+                </div>
+
+                <div class="match-indicator" id="snapshotMatch"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONFIGURATION ==========
+        const LETTERS = ['A', 'E', 'I', 'O', 'U', 'B', 'M', 'N', 'S', 'T'];
+        const PATTERN_BINS = 64;
+        const TEMPORAL_OFFSET_MS = 100; // Time before/after peak
+
+        // ========== GLOBAL STATE ==========
+        let audioContext, analyser, microphone, dataArray;
+        let isRecording = false;
+        let isTesting = false;
+        let selectedLetter = null;
+        let calibrationData = {};
+        let canvas, canvasCtx;
+        let frameBuffer = []; // Store recent frames for temporal capture
+        let stats = {
+            temporal: { correct: 0, total: 0 },
+            snapshot: { correct: 0, total: 0 }
+        };
+
+        // ========== INITIALIZATION ==========
+        window.onload = () => {
+            renderLetterButtons();
+            canvas = document.getElementById('mainCanvas');
+            canvasCtx = canvas.getContext('2d');
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 120;
+
+            // Initialize mini canvases
+            for (let i = 0; i < 3; i++) {
+                const c = document.getElementById(`temporalCanvas${i}`);
+                c.width = c.offsetWidth;
+                c.height = 60;
+
+                const cc = document.getElementById(`currentTemporalCanvas${i}`);
+                cc.width = cc.offsetWidth;
+                cc.height = 60;
+            }
+            const sc = document.getElementById('snapshotCanvas');
+            sc.width = sc.offsetWidth;
+            sc.height = 80;
+
+            const csc = document.getElementById('currentSnapshotCanvas');
+            csc.width = csc.offsetWidth;
+            csc.height = 80;
+        };
+
+        function renderLetterButtons() {
+            const container = document.getElementById('letterButtons');
+            LETTERS.forEach(letter => {
+                const btn = document.createElement('button');
+                btn.className = 'letter-btn';
+                btn.textContent = letter;
+                btn.id = `letter-${letter}`;
+                btn.onclick = () => selectLetter(letter);
+                container.appendChild(btn);
+            });
+        }
+
+        function selectLetter(letter) {
+            selectedLetter = letter;
+            document.querySelectorAll('.letter-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`letter-${letter}`).classList.add('active');
+            document.getElementById('currentTarget').textContent = letter;
+
+            if (calibrationData[letter]) {
+                updateStatus('calibrationStatus', `✅ ${letter} calibrated. Ready to test!`);
+                updateStatus('testStatus', `Ready to test ${letter}. Click "Start Testing"`);
+                document.getElementById('calibrateBtn').textContent = '🔄 Recalibrate';
+            } else {
+                updateStatus('calibrationStatus', `Selected: ${letter}. Click "Calibrate Letter"`);
+                document.getElementById('calibrateBtn').textContent = '🎤 Calibrate Letter';
+            }
+        }
+
+        // ========== AUDIO SETUP ==========
+        async function setupAudio() {
+            if (audioContext) return;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+
+                analyser.fftSize = 2048;
+                analyser.smoothingTimeConstant = 0.5;
+
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+
+                microphone.connect(analyser);
+                console.log('✅ Audio setup complete');
+            } catch (err) {
+                alert('Microphone access denied!');
+                console.error('Audio setup error:', err);
+            }
+        }
+
+        // ========== CALIBRATION ==========
+        async function startCalibration() {
+            if (!selectedLetter) {
+                alert('Please select a letter first!');
+                return;
+            }
+
+            if (!audioContext) await setupAudio();
+
+            isRecording = true;
+            frameBuffer = [];
+            document.getElementById('calibrateBtn').textContent = '🎤 Say the letter...';
+            updateStatus('calibrationStatus', `Say "${selectedLetter}" clearly and hold it for a moment`);
+
+            captureTemporalPattern();
+        }
+
+        function captureTemporalPattern() {
+            if (!isRecording) return;
+            requestAnimationFrame(captureTemporalPattern);
+
+            analyser.getByteFrequencyData(dataArray);
+            drawSpectrum(canvasCtx, canvas, dataArray);
+
+            // Store frame with timestamp
+            const snapshot = downsampleFrequencies(dataArray, PATTERN_BINS);
+            const max = Math.max(...snapshot);
+            if (max > 0) {
+                const normalized = snapshot.map(v => v / max);
+                frameBuffer.push({
+                    data: normalized,
+                    timestamp: Date.now(),
+                    volume: (dataArray.reduce((a, b) => a + b, 0) / dataArray.length / 128) * 100
+                });
+            }
+
+            // Keep only last 500ms of frames
+            const now = Date.now();
+            frameBuffer = frameBuffer.filter(f => now - f.timestamp < 500);
+
+            // Check for peak
+            if (frameBuffer.length > 10) {
+                const recentVolumes = frameBuffer.slice(-20).map(f => f.volume);
+                const maxVolume = Math.max(...recentVolumes);
+                const currentVolume = frameBuffer[frameBuffer.length - 1].volume;
+
+                // If current volume is peak and > 15%
+                if (currentVolume >= maxVolume && currentVolume > 15) {
+                    finishTemporalCalibration();
+                }
+            }
+        }
+
+        function finishTemporalCalibration() {
+            isRecording = false;
+
+            if (frameBuffer.length < 5) {
+                alert('Not enough data captured. Try again.');
+                return;
+            }
+
+            // Find peak frame
+            const peakIdx = frameBuffer.length - 1;
+
+            // Calculate frame indices for before/after (assuming ~60fps = ~16ms per frame)
+            const framesPerMs = 60 / 1000; // ~0.06 frames per ms
+            const offsetFrames = Math.round(TEMPORAL_OFFSET_MS * framesPerMs);
+
+            const beforeIdx = Math.max(0, peakIdx - offsetFrames);
+            const afterIdx = Math.min(frameBuffer.length - 1, peakIdx + offsetFrames);
+
+            // Extract temporal pattern (3 time slices)
+            const temporalPattern = [
+                frameBuffer[beforeIdx].data,
+                frameBuffer[peakIdx].data,
+                frameBuffer[afterIdx].data
+            ];
+
+            // Extract single snapshot (just peak)
+            const snapshotPattern = frameBuffer[peakIdx].data;
+
+            // Store both patterns
+            calibrationData[selectedLetter] = {
+                temporal: temporalPattern,
+                snapshot: snapshotPattern,
+                timestamp: Date.now()
+            };
+
+            // Visualize captured patterns
+            visualizeTemporalPattern(temporalPattern);
+            visualizeSnapshot(snapshotPattern);
+
+            document.getElementById('calibrateBtn').textContent = '✅ Calibrated!';
+            document.getElementById(`letter-${selectedLetter}`).classList.add('calibrated');
+            updateStatus('calibrationStatus', `✅ ${selectedLetter} calibrated with both methods!`);
+            updateStatus('testStatus', `Ready to test ${selectedLetter}. Click "Start Testing"`);
+
+            console.log(`✅ Calibrated ${selectedLetter}`, calibrationData[selectedLetter]);
+        }
+
+        // ========== TESTING ==========
+        function startTesting() {
+            if (!selectedLetter || !calibrationData[selectedLetter]) {
+                alert('Please calibrate a letter first!');
+                return;
+            }
+
+            isTesting = true;
+            frameBuffer = [];
+            document.getElementById('testBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'inline-block';
+            updateStatus('testStatus', `Say "${selectedLetter}" - testing both methods...`);
+
+            testRecognition();
+        }
+
+        function stopTesting() {
+            isTesting = false;
+            document.getElementById('testBtn').style.display = 'inline-block';
+            document.getElementById('stopBtn').style.display = 'none';
+            updateStatus('testStatus', 'Testing stopped');
+        }
+
+        function testRecognition() {
+            if (!isTesting) return;
+            requestAnimationFrame(testRecognition);
+
+            analyser.getByteFrequencyData(dataArray);
+            drawSpectrum(canvasCtx, canvas, dataArray);
+
+            // Store frame
+            const snapshot = downsampleFrequencies(dataArray, PATTERN_BINS);
+            const max = Math.max(...snapshot);
+            if (max > 0) {
+                const normalized = snapshot.map(v => v / max);
+                frameBuffer.push({
+                    data: normalized,
+                    timestamp: Date.now(),
+                    volume: (dataArray.reduce((a, b) => a + b, 0) / dataArray.length / 128) * 100
+                });
+            }
+
+            const now = Date.now();
+            frameBuffer = frameBuffer.filter(f => now - f.timestamp < 500);
+
+            // Check for peak
+            if (frameBuffer.length > 10) {
+                const recentVolumes = frameBuffer.slice(-20).map(f => f.volume);
+                const maxVolume = Math.max(...recentVolumes);
+                const currentVolume = frameBuffer[frameBuffer.length - 1].volume;
+
+                if (currentVolume >= maxVolume && currentVolume > 15) {
+                    // Extract patterns from current sound
+                    const peakIdx = frameBuffer.length - 1;
+                    const framesPerMs = 60 / 1000;
+                    const offsetFrames = Math.round(TEMPORAL_OFFSET_MS * framesPerMs);
+                    const beforeIdx = Math.max(0, peakIdx - offsetFrames);
+                    const afterIdx = Math.min(frameBuffer.length - 1, peakIdx + offsetFrames);
+
+                    const currentTemporal = [
+                        frameBuffer[beforeIdx].data,
+                        frameBuffer[peakIdx].data,
+                        frameBuffer[afterIdx].data
+                    ];
+                    const currentSnapshot = frameBuffer[peakIdx].data;
+
+                    // Test both methods
+                    const storedData = calibrationData[selectedLetter];
+
+                    const temporalScore = compareTemporalPatterns(currentTemporal, storedData.temporal);
+                    const snapshotScore = compareSnapshots(currentSnapshot, storedData.snapshot);
+
+                    // Visualize current patterns
+                    visualizeCurrentTemporalPattern(currentTemporal);
+                    visualizeCurrentSnapshot(currentSnapshot);
+
+                    // Update UI
+                    updateMethodUI('temporal', temporalScore, temporalScore > 80);
+                    updateMethodUI('snapshot', snapshotScore, snapshotScore > 80);
+
+                    // Highlight winner
+                    document.getElementById('temporalCard').classList.toggle('winner', temporalScore > snapshotScore);
+                    document.getElementById('snapshotCard').classList.toggle('winner', snapshotScore > temporalScore);
+
+                    // Clear buffer after detection
+                    frameBuffer = [];
+                }
+            }
+        }
+
+        // ========== PATTERN COMPARISON ==========
+        function compareTemporalPatterns(current, stored) {
+            // Compare all 3 time slices and average the scores
+            let totalScore = 0;
+            for (let i = 0; i < 3; i++) {
+                const score = calculateCorrelation(current[i], stored[i]);
+                totalScore += score;
+            }
+            return totalScore / 3;
+        }
+
+        function compareSnapshots(current, stored) {
+            return calculateCorrelation(current, stored);
+        }
+
+        function calculateCorrelation(pattern1, pattern2) {
+            let sumProduct = 0;
+            let sum1Sq = 0;
+            let sum2Sq = 0;
+
+            const minLength = Math.min(pattern1.length, pattern2.length);
+            for (let i = 0; i < minLength; i++) {
+                sumProduct += pattern1[i] * pattern2[i];
+                sum1Sq += pattern1[i] * pattern1[i];
+                sum2Sq += pattern2[i] * pattern2[i];
+            }
+
+            const denominator = Math.sqrt(sum1Sq * sum2Sq);
+            if (denominator === 0) return 0;
+
+            return (sumProduct / denominator) * 100;
+        }
+
+        // ========== VISUALIZATION ==========
+        function visualizeTemporalPattern(pattern) {
+            for (let i = 0; i < 3; i++) {
+                const canvas = document.getElementById(`temporalCanvas${i}`);
+                const ctx = canvas.getContext('2d');
+                drawMiniSpectrum(ctx, canvas, pattern[i]);
+            }
+        }
+
+        function visualizeSnapshot(pattern) {
+            const canvas = document.getElementById('snapshotCanvas');
+            const ctx = canvas.getContext('2d');
+            drawMiniSpectrum(ctx, canvas, pattern);
+        }
+
+        function visualizeCurrentTemporalPattern(pattern) {
+            for (let i = 0; i < 3; i++) {
+                const canvas = document.getElementById(`currentTemporalCanvas${i}`);
+                const ctx = canvas.getContext('2d');
+                drawMiniSpectrum(ctx, canvas, pattern[i]);
+            }
+        }
+
+        function visualizeCurrentSnapshot(pattern) {
+            const canvas = document.getElementById('currentSnapshotCanvas');
+            const ctx = canvas.getContext('2d');
+            drawMiniSpectrum(ctx, canvas, pattern);
+        }
+
+        function drawMiniSpectrum(ctx, canvas, pattern) {
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, width, height);
+
+            const barWidth = width / pattern.length;
+            pattern.forEach((value, i) => {
+                const barHeight = value * height;
+                const hue = (i / pattern.length) * 120 + 120;
+                ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+                ctx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight);
+            });
+        }
+
+        function drawSpectrum(ctx, canvas, dataArray) {
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, width, height);
+
+            const barWidth = width / dataArray.length * 2.5;
+            let x = 0;
+
+            for (let i = 0; i < dataArray.length; i++) {
+                const barHeight = (dataArray[i] / 255) * height;
+                const hue = (i / dataArray.length) * 120 + 120;
+                ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+                ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+        }
+
+        // ========== UI UPDATES ==========
+        function updateMethodUI(method, score, isMatch) {
+            document.getElementById(`${method}Score`).textContent = Math.round(score) + '%';
+
+            const matchEl = document.getElementById(`${method}Match`);
+            if (isMatch) {
+                stats[method].correct++;
+                matchEl.textContent = '✓ MATCH!';
+                matchEl.className = 'match-indicator correct';
+            } else {
+                matchEl.textContent = '✗ No match';
+                matchEl.className = 'match-indicator wrong';
+            }
+            stats[method].total++;
+
+            document.getElementById(`${method}Correct`).textContent = stats[method].correct;
+            document.getElementById(`${method}Total`).textContent = stats[method].total;
+            const accuracy = (stats[method].correct / stats[method].total * 100).toFixed(0);
+            document.getElementById(`${method}Accuracy`).textContent = accuracy + '%';
+        }
+
+        function updateStatus(elementId, message) {
+            document.getElementById(elementId).textContent = message;
+        }
+
+        function resetAll() {
+            calibrationData = {};
+            stats = {
+                temporal: { correct: 0, total: 0 },
+                snapshot: { correct: 0, total: 0 }
+            };
+            document.querySelectorAll('.letter-btn').forEach(btn => {
+                btn.classList.remove('calibrated', 'active');
+            });
+            document.getElementById('calibrateBtn').textContent = '🎤 Calibrate Letter';
+            updateStatus('calibrationStatus', 'Select a letter to calibrate');
+
+            // Reset UI
+            updateMethodUI('temporal', 0, null);
+            updateMethodUI('snapshot', 0, null);
+            stats.temporal = { correct: 0, total: 0 };
+            stats.snapshot = { correct: 0, total: 0 };
+        }
+
+        // ========== UTILITY FUNCTIONS ==========
+        function downsampleFrequencies(fullData, targetBins) {
+            const pattern = [];
+            const binSize = Math.floor(fullData.length / targetBins);
+
+            for (let i = 0; i < targetBins; i++) {
+                let sum = 0;
+                const start = i * binSize;
+                const end = Math.min(start + binSize, fullData.length);
+
+                for (let j = start; j < end; j++) {
+                    sum += fullData[j];
+                }
+
+                pattern.push(sum / binSize);
+            }
+
+            return pattern;
+        }
+    </script>
+</body>
+</html>

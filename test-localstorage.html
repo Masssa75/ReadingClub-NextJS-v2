@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LocalStorage Test</title>
+    <style>
+        body { font-family: monospace; padding: 40px; background: #1a1a2e; color: #eee; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
+        .result { background: #16213e; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+    </style>
+</head>
+<body>
+    <h1>🔍 LocalStorage Persistence Test</h1>
+
+    <p>This tests if localStorage works and persists between page refreshes.</p>
+
+    <button onclick="testWrite()">1. Write Test Data</button>
+    <button onclick="testRead()">2. Read Test Data</button>
+    <button onclick="testClear()">3. Clear Test Data</button>
+
+    <div class="result" id="result">
+        Click "1. Write Test Data" first, then refresh the page and click "2. Read Test Data"
+    </div>
+
+    <h2>Instructions:</h2>
+    <ol>
+        <li>Click "1. Write Test Data" - you should see a success message</li>
+        <li>Refresh this page (Cmd+R or F5)</li>
+        <li>Click "2. Read Test Data" - if it shows the same data, localStorage is working!</li>
+        <li>If it says "No data found", localStorage is being cleared between sessions</li>
+    </ol>
+
+    <script>
+        function testWrite() {
+            const testData = {
+                id: 'test-' + Date.now(),
+                timestamp: new Date().toISOString(),
+                random: Math.random()
+            };
+
+            try {
+                localStorage.setItem('phonicsTest', JSON.stringify(testData));
+                document.getElementById('result').innerHTML = `
+                    <span class="success">✅ Successfully wrote to localStorage:</span><br><br>
+                    <pre>${JSON.stringify(testData, null, 2)}</pre><br>
+                    <strong>Now refresh the page and click "2. Read Test Data"</strong>
+                `;
+            } catch (e) {
+                document.getElementById('result').innerHTML = `
+                    <span class="error">❌ Error writing to localStorage:</span><br><br>
+                    ${e.message}
+                `;
+            }
+        }
+
+        function testRead() {
+            try {
+                const data = localStorage.getItem('phonicsTest');
+                if (data) {
+                    document.getElementById('result').innerHTML = `
+                        <span class="success">✅ Successfully read from localStorage:</span><br><br>
+                        <pre>${JSON.stringify(JSON.parse(data), null, 2)}</pre><br>
+                        <strong>LocalStorage is working correctly!</strong>
+                    `;
+                } else {
+                    document.getElementById('result').innerHTML = `
+                        <span class="error">❌ No data found in localStorage</span><br><br>
+                        This means localStorage was cleared between sessions.<br>
+                        Check if you're in Private/Incognito mode or if your browser is set to clear data on exit.
+                    `;
+                }
+            } catch (e) {
+                document.getElementById('result').innerHTML = `
+                    <span class="error">❌ Error reading from localStorage:</span><br><br>
+                    ${e.message}
+                `;
+            }
+        }
+
+        function testClear() {
+            localStorage.removeItem('phonicsTest');
+            document.getElementById('result').innerHTML = `
+                <span class="success">✅ Cleared test data</span><br><br>
+                You can now start the test again from step 1.
+            `;
+        }
+
+        // Auto-check on load
+        window.onload = () => {
+            const existingData = localStorage.getItem('phonicsTest');
+            if (existingData) {
+                document.getElementById('result').innerHTML = `
+                    <span class="success">📦 Found existing test data in localStorage!</span><br><br>
+                    <pre>${JSON.stringify(JSON.parse(existingData), null, 2)}</pre><br>
+                    <strong>LocalStorage persisted correctly across page loads!</strong><br><br>
+                    Click "3. Clear Test Data" to reset, or "1. Write Test Data" to create new data.
+                `;
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1163,6 +1163,18 @@
 
             <canvas id="spectrumCanvas"></canvas>
 
+            <!-- Pattern Comparison Visualization -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;" id="patternComparison">
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;">
+                    <div style="color: #aaa; font-size: 11px; margin-bottom: 8px; text-align: center;">📦 Stored Calibration</div>
+                    <canvas id="storedPatternCanvas" style="width: 100%; height: 80px; background: rgba(0,0,0,0.3); border-radius: 5px;"></canvas>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;">
+                    <div style="color: #aaa; font-size: 11px; margin-bottom: 8px; text-align: center;">🎤 Current Recording</div>
+                    <canvas id="currentPatternCanvas" style="width: 100%; height: 80px; background: rgba(0,0,0,0.3); border-radius: 5px;"></canvas>
+                </div>
+            </div>
+
             <div id="status" style="font-family: monospace; font-size: 11px; white-space: pre-wrap; line-height: 1.4;">Click Start to begin</div>
         </div>
 
@@ -1282,6 +1294,40 @@
         canvas.width = 800;
         canvas.height = 240;
 
+        // Pattern comparison canvases (will be initialized when switching to Play tab)
+        let storedPatternCanvas = null;
+        let storedPatternCtx = null;
+        let currentPatternCanvas = null;
+        let currentPatternCtx = null;
+
+        // Initialize pattern canvases
+        function initializePatternCanvases() {
+            if (storedPatternCanvas) return; // Already initialized
+
+            storedPatternCanvas = document.getElementById('storedPatternCanvas');
+            currentPatternCanvas = document.getElementById('currentPatternCanvas');
+
+            if (!storedPatternCanvas || !currentPatternCanvas) {
+                console.warn('⚠️ Pattern canvases not found');
+                return;
+            }
+
+            storedPatternCtx = storedPatternCanvas.getContext('2d');
+            storedPatternCanvas.width = storedPatternCanvas.offsetWidth || 400;
+            storedPatternCanvas.height = 80;
+
+            currentPatternCtx = currentPatternCanvas.getContext('2d');
+            currentPatternCanvas.width = currentPatternCanvas.offsetWidth || 400;
+            currentPatternCanvas.height = 80;
+
+            console.log('✅ Pattern canvases initialized:', storedPatternCanvas.width, 'x', storedPatternCanvas.height);
+
+            // Visualize stored pattern if letter is already selected
+            if (currentTarget) {
+                visualizeStoredPattern(currentTarget);
+            }
+        }
+
         // ========== SESSION MANAGEMENT FUNCTIONS ==========
 
         function initializeSession(profileId) {
@@ -1315,6 +1361,8 @@
                     } else {
                         // Session expired - end it and start new
                         console.log('⏰ Session expired, starting new session');
+                        // Convert letterStats to Map before ending session
+                        session.letterStats = new Map(Object.entries(session.letterStats || {}));
                         endSession(session);
                     }
                 } catch (error) {
@@ -2055,7 +2103,9 @@
                 // Convert to the format expected by the app
                 const calibrations = {};
                 data.forEach(cal => {
-                    calibrations[cal.letter] = {
+                    // Force letter to lowercase (handles old uppercase calibrations)
+                    const letter = cal.letter.toLowerCase();
+                    calibrations[letter] = {
                         pattern: cal.pattern_data.pattern || [cal.pattern_data],
                         timestamp: new Date(cal.created_at).getTime(),
                         audioUrl: cal.audio_url
@@ -2070,8 +2120,8 @@
             }
         }
 
-        const PLOSIVES = ['B', 'C', 'D', 'G', 'K', 'P', 'T'];
-        const NASALS = ['M', 'N'];
+        const PLOSIVES = ['b', 'c', 'd', 'g', 'k', 'p', 't'];
+        const NASALS = ['m', 'n'];
 
         function isPlosive(letter) {
             return PLOSIVES.includes(letter);
@@ -3144,6 +3194,9 @@
                 document.getElementById('tryAgainBtn').style.display = 'none';
                 patternBuffer = [];
                 listenClickedThisRound = false; // Reset LISTEN tracking for this letter
+
+                // Visualize stored calibration pattern
+                visualizeStoredPattern(currentTarget);
             }
 
             // Update progress tracker
@@ -3236,8 +3289,8 @@
             }
 
             // Dynamic thresholds for nasals (same as game mode)
-            const FRICATIVES = ['F', 'S', 'V', 'Z', 'H'];
-            const LIQUIDS = ['L', 'R'];
+            const FRICATIVES = ['f', 's', 'v', 'z', 'h'];
+            const LIQUIDS = ['l', 'r'];
             const isCurrentNasal = currentTarget && isNasal(currentTarget);
             const isFricative = currentTarget && FRICATIVES.includes(currentTarget);
             const isLiquid = currentTarget && LIQUIDS.includes(currentTarget);
@@ -3273,6 +3326,9 @@
                 document.getElementById('status').textContent = statusText;
                 document.getElementById('matchScore').textContent = Math.round(score) + '%';
                 document.getElementById('confidenceFill').style.width = score + '%';
+
+                // Visualize current recording pattern
+                visualizeCurrentPattern(patternBuffer);
 
                 // Success if S11 predicts correctly AND score > 80%
                 if (isCorrect && score > 80) {
@@ -3691,6 +3747,76 @@
             }
         }
 
+        // Draw downsampled pattern (64 bins) on a canvas
+        function drawDownsampledPattern(ctx, canvas, pattern) {
+            const width = canvas.width;
+            const height = canvas.height;
+
+            // Clear canvas
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, width, height);
+
+            if (!pattern || pattern.length === 0) return;
+
+            // Draw bars
+            const barWidth = width / pattern.length;
+            pattern.forEach((value, i) => {
+                const barHeight = value * height;
+                const hue = (i / pattern.length) * 120 + 100;
+                ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+                ctx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight);
+            });
+        }
+
+        // Visualize stored calibration pattern for current target letter
+        function visualizeStoredPattern(letter) {
+            if (!storedPatternCanvas || !storedPatternCtx) {
+                console.log('⚠️ Pattern canvases not initialized yet');
+                return;
+            }
+
+            if (!calibrationData[letter]) {
+                // Clear canvas if no calibration
+                storedPatternCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                storedPatternCtx.fillRect(0, 0, storedPatternCanvas.width, storedPatternCanvas.height);
+                console.log(`⚠️ No calibration data for letter: ${letter}`);
+                return;
+            }
+
+            // Get stored pattern (it's wrapped in array as [baseline])
+            const storedPattern = calibrationData[letter].pattern[0];
+
+            // Normalize pattern for visualization
+            const max = Math.max(...storedPattern);
+            const normalized = max > 0 ? storedPattern.map(v => v / max) : storedPattern;
+
+            drawDownsampledPattern(storedPatternCtx, storedPatternCanvas, normalized);
+            console.log(`✅ Visualized stored pattern for ${letter}`);
+        }
+
+        // Visualize current recording pattern
+        function visualizeCurrentPattern(buffer) {
+            if (!currentPatternCanvas || !currentPatternCtx) {
+                return; // Silently fail if not initialized
+            }
+
+            if (!buffer || buffer.length === 0) {
+                // Clear canvas if no data
+                currentPatternCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                currentPatternCtx.fillRect(0, 0, currentPatternCanvas.width, currentPatternCanvas.height);
+                return;
+            }
+
+            // Use the most recent frame from buffer
+            const currentPattern = buffer[buffer.length - 1];
+
+            // Normalize pattern for visualization
+            const max = Math.max(...currentPattern);
+            const normalized = max > 0 ? currentPattern.map(v => v / max) : currentPattern;
+
+            drawDownsampledPattern(currentPatternCtx, currentPatternCanvas, normalized);
+        }
+
         // DEPRECATED: Audio is now stored in Supabase Storage
         // These functions are kept for backwards compatibility but are no longer used
         function saveAudioRecording(letter, audioBlob) {
@@ -3827,6 +3953,11 @@
                 tabContent.classList.add('active');
                 console.log(`✓ Added 'active' class to #${tabName}`);
                 console.log(`📊 Element display after:`, window.getComputedStyle(tabContent).display);
+
+                // Initialize pattern canvases when switching to Play tab
+                if (tabName === 'tuner') {
+                    initializePatternCanvases();
+                }
 
                 // Update stats display when switching to Stats tab
                 if (tabName === 'stats') {
@@ -4840,8 +4971,8 @@
             const currentLetter = currentBatchLetters[progressGame.currentLetterIndex];
 
             // Dynamic thresholds (COPIED FROM TUNER)
-            const FRICATIVES = ['F', 'S', 'V', 'Z', 'H'];
-            const LIQUIDS = ['L', 'R'];
+            const FRICATIVES = ['f', 's', 'v', 'z', 'h'];
+            const LIQUIDS = ['l', 'r'];
             const isCurrentNasal = currentLetter && isNasal(currentLetter);
             const isFricative = currentLetter && FRICATIVES.includes(currentLetter);
             const isLiquid = currentLetter && LIQUIDS.includes(currentLetter);
