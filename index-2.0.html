@@ -3192,7 +3192,39 @@
             console.log(`✗ Added negative pattern to ${letter}:`, lastRecordedSnapshot);
         }
 
+        let trainingButtonTimeout = null;
+
+        function showSuccessTrainingButton(prediction, targetLetter) {
+            // Show only RED button after successful match (to correct false positives)
+            // Hide all buttons first
+            document.getElementById('addPositiveBtn').style.display = 'none';
+            document.getElementById('addNegativeBtn').style.display = 'none';
+            document.getElementById('addCorrectBtn').style.display = 'none';
+
+            // Clear previous feedback
+            document.getElementById('trainingFeedback').textContent = '';
+
+            // Show only "Not 'X'" button (where X is the target letter that matched)
+            document.getElementById('negativeTarget').textContent = targetLetter;
+            document.getElementById('addNegativeBtn').style.display = 'inline-block';
+
+            // Show the container
+            document.getElementById('trainingButtons').style.display = 'block';
+
+            // Auto-hide after 5 seconds
+            if (trainingButtonTimeout) clearTimeout(trainingButtonTimeout);
+            trainingButtonTimeout = setTimeout(() => {
+                hideTrainingButtons();
+            }, 5000);
+        }
+
         function showTrainingButtons(prediction, targetLetter) {
+            // Clear any pending auto-hide timeout
+            if (trainingButtonTimeout) {
+                clearTimeout(trainingButtonTimeout);
+                trainingButtonTimeout = null;
+            }
+
             // Hide all buttons first
             document.getElementById('addPositiveBtn').style.display = 'none';
             document.getElementById('addNegativeBtn').style.display = 'none';
@@ -3224,6 +3256,10 @@
 
         function hideTrainingButtons() {
             document.getElementById('trainingButtons').style.display = 'none';
+            if (trainingButtonTimeout) {
+                clearTimeout(trainingButtonTimeout);
+                trainingButtonTimeout = null;
+            }
         }
 
         // Initialize button handlers
@@ -3524,8 +3560,13 @@
                         recordAttempt(currentTarget, true, listenClickedThisRound, score);
                     }
 
-                    // TRAINING: Hide training buttons on success
-                    hideTrainingButtons();
+                    // TRAINING: Show RED button for 5 seconds (to correct false positives)
+                    // Skip if continuous play is enabled (auto-advance won't give time to click)
+                    if (!continuousPlayEnabled) {
+                        showSuccessTrainingButton(prediction, currentTarget);
+                    } else {
+                        hideTrainingButtons();
+                    }
 
                     // Show success message
                     document.getElementById('status').textContent = `✓ MATCH! ${Math.round(score)}%\n\n` + statusText;
@@ -5379,10 +5420,11 @@
 
                     // Check if we have a saved guest profile ID
                     const savedGuestId = localStorage.getItem('guestProfileId');
+                    console.log('🔍 Checking localStorage for guestProfileId:', savedGuestId);
 
                     if (savedGuestId) {
                         // Try to load existing guest profile
-                        console.log('🔍 Attempting to load saved guest profile:', savedGuestId);
+                        console.log('✓ Found saved guest profile, attempting to load:', savedGuestId);
                         try {
                             const { data: existingProfile, error } = await supabase
                                 .from('profiles')
