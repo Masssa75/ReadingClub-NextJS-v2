@@ -3707,12 +3707,14 @@
         }
 
         let analyzerRunning = false;
+        let analyzerHeartbeat = 0;
 
         function analyzeTuner() {
             if (!isRunning) {
                 if (analyzerRunning) {
-                    console.log('⏸ Analyzer stopped');
+                    console.log('⏸ Analyzer stopped - isRunning is false');
                     analyzerRunning = false;
+                    analyzerHeartbeat = 0;
                 }
                 return;
             }
@@ -3720,6 +3722,13 @@
             if (!analyzerRunning) {
                 console.log('▶ Analyzer started - listening to microphone');
                 analyzerRunning = true;
+                analyzerHeartbeat = 0;
+            }
+
+            // Heartbeat: Log state every 180 frames (~3 seconds at 60fps)
+            analyzerHeartbeat++;
+            if (analyzerHeartbeat % 180 === 0) {
+                console.log(`💓 Analyzer active: target=${currentTarget}, isRunning=${isRunning}`);
             }
 
             requestAnimationFrame(analyzeTuner);
