@@ -99,43 +99,52 @@ Based on homeschooling best practices, students advance through mastery:
 
 ## Autonomous Development Workflow
 
-### The Golden Rule - ALWAYS Follow This Pattern:
+### Deployment Process - How to Push to Production
+
+**IMPORTANT:** This project deploys to https://phuketcamp.com/phonics2/ via GitHub + Netlify auto-deploy.
+
+#### Step 1: Make changes in DRC project
 ```bash
-1. Make code changes
-2. git add -A && git commit -m "feat: description" && git push origin main
-3. IMMEDIATELY (within 5 seconds) start streaming logs:
-   netlify logs:deploy
-   # Watch until you see "Build script success" or an error
-4. If build fails:
-   - Analyze the error from the logs
-   - Fix the issue immediately
-   - Repeat from step 1
-5. If build succeeds, verify deployment:
-   netlify api listSiteDeploys --data '{"site_id": "xxx"}' | jq '.[0].state'
-   # Must show "ready"
-6. npx playwright test --headed  # Test on DEPLOYED site (use --headless by default)
-7. If tests fail:
-   - Debug what's wrong
-   - Fix and repeat from step 1
+cd /Users/marcschwyn/Desktop/projects/DRC
+# Make your changes to index-2.0.html
+git add -A
+git commit -m "feat: description"
+# Note: No remote configured in DRC repo - commits are local only
 ```
+
+#### Step 2: Copy to deployment repo and push
+```bash
+# Copy updated file to deployment location
+cp /Users/marcschwyn/Desktop/projects/DRC/index-2.0.html \
+   /Users/marcschwyn/Desktop/projects/BambooValley/phuket-camps/public/phonics2/index.html
+
+# Navigate to deployment repo
+cd /Users/marcschwyn/Desktop/projects/BambooValley/phuket-camps
+
+# If git lock exists, remove it:
+rm -f .git/index.lock
+
+# Commit and push to GitHub
+git add public/phonics2/index.html
+git commit -m "feat: description of changes"
+git push origin main
+```
+
+#### Step 3: Verify deployment
+```bash
+# Netlify auto-deploys from GitHub (takes ~1-2 minutes)
+# Check https://phuketcamp.com/phonics2/ to verify changes
+```
+
+**Deployment URLs:**
+- **phonics2** (active development): https://phuketcamp.com/phonics2/
+- **phonics** (stable version): https://phuketcamp.com/phonics/
 
 **NEVER**:
 - Wait to push code "until it's ready"
 - Test only locally
 - Skip deployment verification
 - Leave broken code undeployed
-
-### Real-time Build Monitoring
-```bash
-# Stream deployment logs in real-time
-netlify logs:deploy
-
-# Get deployment details
-netlify api listSiteDeploys --data '{"site_id": "xxx"}' | jq '.[0:3]'
-
-# Get specific deployment error
-netlify api getSiteDeploy --data '{"site_id": "xxx", "deploy_id": "DEPLOY_ID"}' | jq '.error_message'
-```
 
 ### Your Full Permissions
 
