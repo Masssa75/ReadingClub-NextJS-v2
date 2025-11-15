@@ -1163,6 +1163,7 @@
                     </div>
                 </label>
 
+                <button class="btn" id="muteBtn" onclick="toggleMute()" style="background: #666; display: none;">🎤 Mute</button>
                 <button class="btn" id="tunerBtn" onclick="toggleTuner()">▶ Start Game</button>
                 <button class="btn" onclick="tryAgain()" style="background: #7CB342; display: none;" id="tryAgainBtn">🔄 Try Again</button>
                 <button class="btn" onclick="skipLetter()" style="background: #999;">Skip</button>
@@ -3702,6 +3703,24 @@
         }
 
         let listenClickedThisRound = false; // Track if LISTEN was clicked for current letter
+        let isMuted = false; // Track microphone mute state
+
+        function toggleMute() {
+            const btn = document.getElementById('muteBtn');
+            isMuted = !isMuted;
+
+            if (isMuted) {
+                btn.textContent = '🔇 Unmute';
+                btn.style.background = '#f44336'; // Red when muted
+                document.getElementById('status').textContent = '🔇 Microphone muted - Click Unmute to continue';
+                console.log('🔇 Microphone muted');
+            } else {
+                btn.textContent = '🎤 Mute';
+                btn.style.background = '#666'; // Gray when active
+                document.getElementById('status').textContent = 'Microphone active';
+                console.log('🎤 Microphone unmuted');
+            }
+        }
 
         async function toggleTuner() {
             const btn = document.getElementById('tunerBtn');
@@ -3722,6 +3741,8 @@
                 document.getElementById('targetLetter').textContent = '?';
                 document.getElementById('sensitivityBtn').style.display = 'none'; // Hide settings button
                 document.getElementById('thresholdMeter').style.display = 'none'; // Hide threshold meter
+                document.getElementById('muteBtn').style.display = 'none'; // Hide mute button
+                isMuted = false; // Reset mute state
             } else {
                 if (Object.keys(calibrationData).length === 0) {
                     alert('Please calibrate at least one phoneme first!');
@@ -3743,6 +3764,9 @@
                 updateLetterProgressTracker();
                 document.getElementById('sensitivityBtn').style.display = 'inline-block'; // Show settings button
                 document.getElementById('thresholdMeter').style.display = 'block'; // Show threshold meter
+                document.getElementById('muteBtn').style.display = 'inline-block'; // Show mute button
+                document.getElementById('muteBtn').textContent = '🎤 Mute'; // Reset button text
+                document.getElementById('muteBtn').style.background = '#666'; // Reset button color
                 analyzeTuner();
             }
         }
@@ -3868,6 +3892,11 @@
 
             // Skip detection if playing back a recording
             if (isPlayingRecording) {
+                return;
+            }
+
+            // Skip detection if microphone is muted
+            if (isMuted) {
                 return;
             }
 
