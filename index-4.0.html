@@ -4928,28 +4928,14 @@
                     return;
                 }
 
-                // Load additional patterns from localStorage
-                const extrasKey = `calibration_extras_${currentProfileId}_${letter}`;
-                const extrasJSON = localStorage.getItem(extrasKey);
+                // Get all snapshots from calibrationData (NEW FORMAT)
+                const snapshots = calibrationData[letter]?.snapshots || [];
 
-                console.log(`  Looking for key: ${extrasKey}`);
-                console.log(`  Found in localStorage: ${!!extrasJSON}`);
+                console.log(`  Found ${snapshots.length} total snapshots for ${letter}`);
 
-                if (!extrasJSON) {
-                    console.log(`  No additional patterns for ${letter}, hiding container`);
-                    container.style.display = 'none';
-                    return;
-                }
-
-                const extras = JSON.parse(extrasJSON);
-                const positivePatterns = extras.patterns || [];
-                const negativePatterns = extras.negativePatterns || [];
-
-                console.log(`  Patterns: ${positivePatterns.length} positive, ${negativePatterns.length} negative`);
-
-                // If no additional patterns, hide container
-                if (positivePatterns.length === 0 && negativePatterns.length === 0) {
-                    console.log(`  No patterns to display, hiding container`);
+                // If no snapshots, hide container
+                if (snapshots.length === 0) {
+                    console.log(`  No snapshots to display, hiding container`);
                     container.style.display = 'none';
                     return;
                 }
@@ -4959,35 +4945,41 @@
                 grid.innerHTML = '';
                 console.log(`  Container displayed, grid cleared`);
 
-                // Add positive patterns
-                positivePatterns.forEach((pattern, index) => {
+                // Separate positive and negative snapshots
+                const positiveSnapshots = snapshots.filter(s => !s.isNegative);
+                const negativeSnapshots = snapshots.filter(s => s.isNegative);
+
+                console.log(`  ${positiveSnapshots.length} positive, ${negativeSnapshots.length} negative`);
+
+                // Add positive snapshots
+                positiveSnapshots.forEach((snapshot, index) => {
                     try {
-                        const card = createPatternCard(pattern, 'positive', index, letter);
+                        const card = createPatternCard(snapshot.data, 'positive', index, letter, snapshot.score, snapshot.profileId);
                         grid.appendChild(card);
-                        console.log(`  ✅ Added positive pattern card #${index + 1}`);
+                        console.log(`  ✅ Added positive snapshot card #${index + 1} (score: ${snapshot.score})`);
                     } catch (e) {
-                        console.error(`  ❌ Error creating positive pattern #${index + 1}:`, e);
+                        console.error(`  ❌ Error creating positive snapshot #${index + 1}:`, e);
                     }
                 });
 
-                // Add negative patterns
-                negativePatterns.forEach((pattern, index) => {
+                // Add negative snapshots
+                negativeSnapshots.forEach((snapshot, index) => {
                     try {
-                        const card = createPatternCard(pattern, 'negative', index, letter);
+                        const card = createPatternCard(snapshot.data, 'negative', index, letter, snapshot.score, snapshot.profileId);
                         grid.appendChild(card);
-                        console.log(`  ✅ Added negative pattern card #${index + 1}`);
+                        console.log(`  ✅ Added negative snapshot card #${index + 1} (score: ${snapshot.score})`);
                     } catch (e) {
-                        console.error(`❌ Error creating negative pattern #${index + 1}:`, e);
+                        console.error(`❌ Error creating negative snapshot #${index + 1}:`, e);
                     }
                 });
 
-                console.log(`✅ Visualized ${positivePatterns.length + negativePatterns.length} additional patterns`);
+                console.log(`✅ Visualized ${snapshots.length} total snapshots`);
             } catch (error) {
                 console.error('❌ Error in visualizeAdditionalPatterns:', error);
             }
         }
 
-        function createPatternCard(pattern, type, index, letter) {
+        function createPatternCard(pattern, type, index, letter, score = 0, profileId = null) {
             const card = document.createElement('div');
             const bgColor = type === 'positive' ? 'rgba(76,175,80,0.1)' : 'rgba(244,67,54,0.1)';
             const borderColor = type === 'positive' ? '#4CAF50' : '#f44336';
@@ -5012,12 +5004,25 @@
             `;
             label.textContent = `${icon} ${type.toUpperCase()} #${index + 1}`;
 
+            // Add score and profile info
+            const info = document.createElement('div');
+            info.style.cssText = `
+                color: #aaa;
+                font-size: 9px;
+                margin-bottom: 5px;
+                text-align: center;
+            `;
+            const profileName = profileId ? profileId.substring(0, 8) : 'Unknown';
+            const scoreValue = score || 0;
+            info.textContent = `✓ ${scoreValue} matches | Profile: ${profileName}`;
+
             const canvas = document.createElement('canvas');
             canvas.style.cssText = 'width: 100%; height: 50px; background: rgba(0,0,0,0.3); border-radius: 5px;';
             canvas.width = 200;
             canvas.height = 50;
 
             card.appendChild(label);
+            card.appendChild(info);
             card.appendChild(canvas);
 
             // Draw pattern on canvas
