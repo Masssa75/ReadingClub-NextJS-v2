@@ -4324,8 +4324,17 @@
                     celebrateMatch();
 
                     // SCORING: Increment score for winning positive snapshot
+                    console.log('🔍 Checking score increment conditions:', {
+                        hasLastMatchInfo: !!window.lastMatchInfo,
+                        hasPositiveSnapshot: !!(window.lastMatchInfo?.positiveSnapshot),
+                        matchType: window.lastMatchInfo?.matchType,
+                        currentTarget: currentTarget
+                    });
                     if (window.lastMatchInfo && window.lastMatchInfo.positiveSnapshot && window.lastMatchInfo.matchType === 'accepted') {
+                        console.log('✅ All conditions met, calling incrementSnapshotScore');
                         incrementSnapshotScore(currentTarget, window.lastMatchInfo.positiveSnapshot);
+                    } else {
+                        console.log('❌ Score increment conditions NOT met');
                     }
 
                     // Record attempt in adaptive learning session
