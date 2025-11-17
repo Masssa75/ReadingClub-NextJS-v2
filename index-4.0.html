@@ -4850,14 +4850,25 @@
                 return;
             }
 
-            // Get stored patterns (first one for visualization)
-            const patterns = calibrationData[letter].patterns || [calibrationData[letter].pattern?.[0]];
-            const storedPattern = patterns[0];
+            // Get stored snapshots (NEW FORMAT: snapshots array with .data property)
+            const snapshots = calibrationData[letter].snapshots || [];
 
-            if (!storedPattern) {
-                console.log(`⚠️ No valid pattern for letter: ${letter}`);
+            if (snapshots.length === 0) {
+                console.log(`⚠️ No snapshots for letter: ${letter}`);
+                storedPatternCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                storedPatternCtx.fillRect(0, 0, storedPatternCanvas.width, storedPatternCanvas.height);
+                document.getElementById('patternCount').textContent = '-';
                 return;
             }
+
+            // Get first positive snapshot for visualization
+            const firstPositive = snapshots.find(s => !s.isNegative);
+            if (!firstPositive || !firstPositive.data) {
+                console.log(`⚠️ No valid positive snapshot for letter: ${letter}`);
+                return;
+            }
+
+            const storedPattern = firstPositive.data;
 
             // Normalize pattern for visualization
             const max = Math.max(...storedPattern);
@@ -4866,8 +4877,9 @@
             drawDownsampledPattern(storedPatternCtx, storedPatternCanvas, normalized);
 
             // Update pattern count display
-            const negCount = (calibrationData[letter].negativePatterns || []).length;
-            const countText = `${patterns.length} positive${negCount > 0 ? `, ${negCount} negative` : ''}`;
+            const posCount = snapshots.filter(s => !s.isNegative).length;
+            const negCount = snapshots.filter(s => s.isNegative).length;
+            const countText = `${posCount} positive${negCount > 0 ? `, ${negCount} negative` : ''}`;
             document.getElementById('patternCount').textContent = countText;
 
             console.log(`✅ Visualized stored pattern for ${letter} (${countText})`);
