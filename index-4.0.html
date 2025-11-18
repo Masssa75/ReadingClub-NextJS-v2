@@ -2544,7 +2544,7 @@
                     snapshots: profileSnapshots
                 };
 
-                // Update in Supabase
+                // Update in Supabase (use ilike for case-insensitive letter matching)
                 const { error } = await supabase
                     .from('calibrations')
                     .update({
@@ -2552,7 +2552,7 @@
                         updated_at: new Date().toISOString()
                     })
                     .eq('profile_id', profileId)
-                    .eq('letter', letter);
+                    .ilike('letter', letter);
 
                 if (error) {
                     console.error(`❌ Error saving scores for ${letter}:`, error);
