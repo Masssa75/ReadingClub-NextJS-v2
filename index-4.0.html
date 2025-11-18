@@ -2309,10 +2309,85 @@
                 });
 
                 console.log(`✅ Loaded ${Object.keys(calibrations).length} letters with ${totalSnapshots} total snapshots from ${data.length} profiles`);
+
+                // Auto-migrate old format calibrations to new format
+                await migrateOldCalibrationsToNewFormat(data);
+
                 return calibrations;
             } catch (error) {
                 console.error('❌ Error loading calibrations:', error);
                 return {};
+            }
+        }
+
+        // Migrate old format calibrations to new snapshot format
+        async function migrateOldCalibrationsToNewFormat(calibrationRecords) {
+            if (!calibrationRecords || calibrationRecords.length === 0) return;
+
+            let migratedCount = 0;
+            const migrations = [];
+
+            for (const cal of calibrationRecords) {
+                // Check if already in new format
+                if (cal.pattern_data.snapshots) {
+                    continue; // Already migrated
+                }
+
+                // Convert old format to new format
+                let snapshots = [];
+                if (cal.pattern_data.pattern) {
+                    // OLD FORMAT: { pattern: [[...], [...]] }
+                    snapshots = cal.pattern_data.pattern.map(data => ({
+                        data: data,
+                        score: 0,
+                        isNegative: false,
+                        profileId: cal.profile_id,
+                        createdAt: cal.created_at
+                    }));
+                } else {
+                    // VERY OLD FORMAT: pattern_data is just the array
+                    snapshots = [{
+                        data: cal.pattern_data,
+                        score: 0,
+                        isNegative: false,
+                        profileId: cal.profile_id,
+                        createdAt: cal.created_at
+                    }];
+                }
+
+                // Queue the migration update
+                migrations.push({
+                    profile_id: cal.profile_id,
+                    letter: cal.letter,
+                    pattern_data: { snapshots }
+                });
+
+                migratedCount++;
+            }
+
+            // Execute all migrations
+            if (migrations.length > 0) {
+                console.log(`🔄 Migrating ${migrations.length} calibrations to new snapshot format...`);
+
+                try {
+                    for (const migration of migrations) {
+                        const { error } = await supabase
+                            .from('calibrations')
+                            .update({
+                                pattern_data: migration.pattern_data,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('profile_id', migration.profile_id)
+                            .eq('letter', migration.letter);
+
+                        if (error) {
+                            console.error(`❌ Error migrating ${migration.letter}:`, error);
+                        }
+                    }
+                    console.log(`✅ Successfully migrated ${migratedCount} calibrations to new format`);
+                } catch (error) {
+                    console.error('❌ Error during migration:', error);
+                }
             }
         }
 
@@ -4958,7 +5033,11 @@
                 const positiveSnapshots = snapshots.filter(s => !s.isNegative);
                 const negativeSnapshots = snapshots.filter(s => s.isNegative);
 
-                console.log(`  ${positiveSnapshots.length} positive, ${negativeSnapshots.length} negative`);
+                // Sort by score (highest first)
+                positiveSnapshots.sort((a, b) => (b.score || 0) - (a.score || 0));
+                negativeSnapshots.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+                console.log(`  ${positiveSnapshots.length} positive, ${negativeSnapshots.length} negative (sorted by score)`);
 
                 // Add positive snapshots
                 positiveSnapshots.forEach((snapshot, index) => {
