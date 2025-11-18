@@ -1,8 +1,8 @@
 # ReadingClub
 
-**Version:** 1.15.0
+**Version:** 1.16.0
 **Last Updated:** November 18, 2025
-**Status:** ✅ Stable - Cross-profile snapshot pooling with scoring + migration tool (phonics4)
+**Status:** ✅ Stable - Snapshot scoring persistence FIXED + cross-profile pooling (phonics4)
 
 ## 📁 Project Structure Overview
 
@@ -377,18 +377,18 @@ When debugging issues, follow this systematic 5-step approach:
 **All session accomplishments are documented in the `logs/` folder.**
 
 See:
-- `logs/SESSION-LOG-INDEX.md` - Overview of all sessions (27 sessions total)
+- `logs/SESSION-LOG-INDEX.md` - Overview of all sessions (28 sessions total)
 - `logs/SESSION-LOG-2025-11-09.md` - Sessions 1-2 detailed logs
 - `logs/SESSION-LOG-2025-11-10.md` - Sessions 3-8 detailed logs
 - `logs/SESSION-LOG-2025-11-11.md` - Sessions 9-13 detailed logs
 - `logs/SESSION-LOG-2025-11-12.md` - Sessions 14-21 detailed logs
 - `logs/SESSION-LOG-2025-11-14.md` - Sessions 22-25 detailed logs
-- `logs/SESSION-LOG-2025-11-18.md` - Sessions 26-27 detailed logs
+- `logs/SESSION-LOG-2025-11-18.md` - Sessions 26-28 detailed logs
 
 **Recent Sessions:**
-- **Session 25:** Threshold meter refinements + mute button (1000% range, moved buttons, volume threshold fix, mute functionality). See [Session 25 log](logs/SESSION-LOG-2025-11-14.md#session-25---november-14-2025).
 - **Session 26:** Snapshot scoring system debugging (fixed indexOf bug, auto-migration, multi-profile display, nasal threshold reduction). See [Session 26 log](logs/SESSION-LOG-2025-11-18.md#session-26---november-18-2025).
 - **Session 27:** Cross-profile snapshot pooling with scoring system (loads calibrations from ALL profiles, snapshot scoring, manual migration button). See [Session 27 log](logs/SESSION-LOG-2025-11-18.md#session-27---november-18-2025).
+- **Session 28:** Snapshot score persistence debugging & fixes (fixed 4 layered bugs preventing scores from saving to database). See [Session 28 log](logs/SESSION-LOG-2025-11-18.md#session-28---november-18-2025).
 
 ## Current Status & Active Files
 

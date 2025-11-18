@@ -310,3 +310,154 @@ All changes deployed to:
 3. **Scoring Reveals Quality:** Over time, best snapshots naturally rise to top
 4. **Migration UX:** Clear progress feedback makes users confident in data migration
 5. **Backward Compatibility:** Critical for smooth transitions - no user disruption
+
+---
+
+## Session 28 - November 18, 2025
+**Focus:** Snapshot Score Persistence Debugging & Critical Bug Fixes
+**Time Spent:** ~3 hours
+**Status:** ✅ Complete - All scoring bugs fixed, scores now persist correctly
+
+### Context
+User reported that snapshot scores were incrementing in memory (visible in console logs) but not persisting to the database. Investigation revealed multiple layered bugs preventing scores from being saved.
+
+### Key Achievements
+
+#### 1. Fixed Score Flushing System
+- **Problem:** Scores were incremented in memory but debounced saves (2 seconds) never fired
+- **Root Cause:** Letter changes, page navigation, or continuous play prevented debounce timer from completing
+- **Solution:** Added immediate score flushing on critical events:
+  - Letter change (`startNewScoringRound`)
+  - Tab switching (`switchTab`)
+  - Page unload (`beforeunload` event)
+- **Implementation:** Created `flushAllPendingScores()` and `pendingSaves` tracking Set
+- **Files Modified:** `index-4.0.html` (lines 2451-2531)
+
+#### 2. Fixed Case Sensitivity Bug
+- **Problem:** Database stores letters as uppercase ('K') but code saved with lowercase ('k')
+- **Root Cause:** `.eq('letter', 'k')` doesn't match 'K' in PostgreSQL (case-sensitive)
+- **Solution:** Changed `.eq()` to `.ilike()` for case-insensitive matching
+- **Impact:** Scores were "saving" but UPDATE query found 0 rows to update
+- **Files Modified:** `index-4.0.html` (line 2555)
+- **Commit:** 4699667
+
+#### 3. Fixed Wrong Letter Scoring Bug
+- **Problem:** Matching letter 's' incremented score for letter 'j'
+- **Root Cause:** `window.lastMatchInfo.target` was from previous letter (stale data)
+- **Investigation:** Added detailed logging showing `targetsMatch: false`
+- **Solution:** Added validation check `lastMatchInfo.target === currentTarget`
+- **Files Modified:** `index-4.0.html` (lines 4494-4519)
+- **Commit:** 23d07f7
+
+#### 4. Fixed Stale lastMatchInfo Bug (CRITICAL)
+- **Problem:** `lastMatchInfo` always stale because strategy loops through ALL letters
+- **Root Cause:** `testAllPlosiveStrategies()` calls strategy for a,b,c...z, overwriting `lastMatchInfo` 26 times
+- **Discovery:** Strategy loop at lines 4735-4744 tests against all calibrated letters
+- **Solution:** After detecting success, call `strategy11_simpleSnapshot(patternBuffer, currentTarget)` again for JUST the current letter to get fresh match info
+- **Impact:** This was the final missing piece - without it, no scores would ever save
+- **Files Modified:** `index-4.0.html` (lines 4494-4518)
+- **Commit:** 3286751
+
+#### 5. Enhanced Debug Logging
+- **Added comprehensive logging throughout the scoring pipeline:**
+  - Snapshot lookup attempts (object reference vs data comparison)
+  - Data mismatch details (first 10 values + differences)
+  - Score increment conditions checking
+  - Target matching validation
+  - Fresh match info retrieval confirmation
+- **Created diagnostic tools:**
+  - `test-score-persistence.cjs` - Query database for all scores
+  - `check-recent-scores.cjs` - Show recent score updates with timestamps
+  - `find-profile-v3.cjs` - Find calibrations by profile ID prefix
+  - `check-letter-case.cjs` - Verify letter case in database
+
+### Technical Details
+
+#### Scoring Pipeline (Fixed)
+```
+1. testAllPlosiveStrategies() loops through ALL letters (a-z)
+   └→ Calls strategy11_simpleSnapshot() for each letter
+   └→ window.lastMatchInfo overwritten 26 times
+   └→ Result: lastMatchInfo.target = last letter in loop (stale)
+
+2. Success detected for currentTarget
+   └→ Call strategy11_simpleSnapshot(patternBuffer, currentTarget) AGAIN
+   └→ window.lastMatchInfo now fresh for currentTarget
+
+3. Validate lastMatchInfo.target === currentTarget
+   └→ If match: increment score
+   └→ If no match: log error and skip
+
+4. debounceSaveScores(letter, profileId)
+   └→ Add to pendingSaves Set
+   └→ Start 2-second timer
+
+5. On letter change/tab switch/page unload:
+   └→ flushAllPendingScores()
+   └→ Save immediately to database
+```
+
+#### Database Save Flow (Fixed)
+```
+1. Filter snapshots by profileId (cross-profile pooling)
+2. Build pattern_data object with updated scores
+3. UPDATE calibrations
+   SET pattern_data = {...}, updated_at = now()
+   WHERE profile_id = ? AND letter ILIKE ? ← Case-insensitive!
+```
+
+#### Bugs Timeline
+- **Before 08:46 AM:** All 4 bugs active, NO scores saving
+- **08:46 AM:** Case-insensitive fix deployed (bug #2 fixed)
+- **08:50 AM:** Target validation added (bug #3 detected)
+- **09:00 AM:** Fresh match info fix deployed (bug #4 fixed)
+- **Result:** Scores NOW saving correctly! ✅
+
+### Database Verification
+Before fix (profile 69420205):
+```
+M: score=0, updated 07:09 AM (over 1 hour ago)
+E: score=0, updated 07:09 AM
+S: score=0, updated 07:09 AM
+```
+
+After fix (profile 69420205):
+```
+✅ J: score=2, updated 08:57 AM (success!)
+✅ K: score=9, updated 08:56 AM (success!)
+```
+
+### Commits
+1. `de82045` - Add score flushing on letter change and tab switch
+2. `f86733a` - Add detailed logging to snapshot score increment
+3. `791d337` - Show actual data values when comparison fails
+4. `8e28b98` - Use lastMatchInfo.target instead of currentTarget
+5. `4255e28` - Use case-insensitive letter matching (ilike)
+6. `23d07f7` - Verify lastMatchInfo.target matches currentTarget
+7. `3286751` - Call strategy again after success to get fresh lastMatchInfo (CRITICAL FIX)
+
+### Deployment
+All changes deployed to:
+- **Production URL:** https://phuketcamp.com/phonics4/
+- **DRC Repo:** 7 commits
+- **Phuket-Camps Repo:** 7 corresponding commits
+- **Auto-Deploy:** Netlify triggered successfully
+
+### User Confirmation
+- User tested multiple letters (M, E, S) in manual mode
+- Console logs showed correct scoring pipeline
+- User confirmed: "it works!"
+- Cross-profile pooling verified: loads calibrations from ALL profiles, each snapshot tracks its `profileId`
+
+### Key Learnings
+1. **Debounced saves need explicit flushing** - Can't rely on timers alone for critical persistence
+2. **Case sensitivity matters** - PostgreSQL `.eq()` is case-sensitive, use `.ilike()` for text
+3. **Global state is fragile** - `window.lastMatchInfo` overwritten by loops, need validation
+4. **Strategy loops require fresh calls** - Testing all letters pollutes global state, must refresh
+5. **Layer by layer debugging** - Multiple bugs masked each other, fixed each one sequentially
+
+### Next Steps
+- Monitor score accumulation during real gameplay
+- Verify scores persist across page refreshes
+- Consider removing global `window.lastMatchInfo` in favor of return values
+- Potential optimization: Cache strategy results to avoid double-calling

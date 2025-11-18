@@ -1,7 +1,7 @@
 # Session Log Index
 
-**Total Sessions:** 27
-**Latest Session:** Session 27 - November 18, 2025
+**Total Sessions:** 28
+**Latest Session:** Session 28 - November 18, 2025
 
 ## All Sessions
 
@@ -423,4 +423,21 @@
 **Status:** ✅ Complete - Cross-profile pooling and migration system working
 
 **Details:** [Session Log 2025-11-18](SESSION-LOG-2025-11-18.md#session-27---november-18-2025)
+
+### Session 28 - November 18, 2025
+**Focus:** Snapshot Score Persistence Debugging & Critical Bug Fixes
+**Key Achievements:**
+- Fixed 4 layered bugs preventing snapshot scores from persisting to database
+- Added score flushing on letter change, tab switch, and page unload
+- Fixed case sensitivity bug (uppercase K vs lowercase k in database)
+- Fixed wrong letter scoring bug (stale lastMatchInfo from previous letter)
+- Fixed critical stale data bug (strategy loops through all letters, overwrites lastMatchInfo 26 times)
+- Created 4 diagnostic tools for database verification
+- User confirmed: "it works!" - scores now persist correctly
+
+**Time Spent:** ~3 hours
+
+**Status:** ✅ Complete - All scoring bugs fixed, persistence working
+
+**Details:** [Session Log 2025-11-18](SESSION-LOG-2025-11-18.md#session-28---november-18-2025)
 
