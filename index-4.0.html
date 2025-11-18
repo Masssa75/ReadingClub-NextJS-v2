@@ -2450,14 +2450,44 @@
 
         // Debounce score saves to avoid hammering the database
         let saveScoreTimers = {};
+        let pendingSaves = new Set(); // Track which letter/profile combos need saving
+
         function debounceSaveScores(letter, profileId) {
             const key = `${letter}_${profileId}`;
+            pendingSaves.add(key); // Mark as needing save
+
             if (saveScoreTimers[key]) {
                 clearTimeout(saveScoreTimers[key]);
             }
             saveScoreTimers[key] = setTimeout(() => {
                 saveSnapshotScoresToSupabase(letter, profileId);
+                pendingSaves.delete(key); // Remove from pending after save
             }, 2000); // Save 2 seconds after last score change
+        }
+
+        // Immediately flush all pending score saves (called on letter change or page unload)
+        async function flushAllPendingScores() {
+            const saves = Array.from(pendingSaves).map(key => {
+                const [letter, ...profileIdParts] = key.split('_');
+                const profileId = profileIdParts.join('_'); // Handle UUIDs with underscores
+                return { letter, profileId };
+            });
+
+            if (saves.length === 0) return;
+
+            console.log(`🔄 Flushing ${saves.length} pending score save(s)...`);
+
+            // Clear all timers
+            Object.values(saveScoreTimers).forEach(timer => clearTimeout(timer));
+            saveScoreTimers = {};
+
+            // Save all immediately
+            await Promise.all(saves.map(({ letter, profileId }) =>
+                saveSnapshotScoresToSupabase(letter, profileId)
+            ));
+
+            pendingSaves.clear();
+            console.log('✅ All pending scores flushed');
         }
 
         // Save snapshot scores back to Supabase
@@ -2495,7 +2525,10 @@
         }
 
         // Reset round tracking when letter changes
-        function startNewScoringRound(letter) {
+        async function startNewScoringRound(letter) {
+            // Flush any pending scores from previous letter
+            await flushAllPendingScores();
+
             currentScoringRound = {
                 letter: letter,
                 negativeSnapshotsAwarded: new Set()
@@ -5259,8 +5292,11 @@
             }
         }
 
-        function switchTab(tabName) {
+        async function switchTab(tabName) {
             console.log(`🔄 switchTab called with: "${tabName}"`);
+
+            // Flush pending scores before switching tabs
+            await flushAllPendingScores();
 
             // ===== STOP ALL RUNNING GAMES/ANIMATIONS BEFORE SWITCHING =====
 
@@ -6580,6 +6616,15 @@
                 lucide.createIcons();
             }, 100);
         }
+
+        // Flush pending scores before page unload
+        window.addEventListener('beforeunload', (event) => {
+            if (pendingSaves.size > 0) {
+                console.log('⚠️ Page unloading with pending saves, flushing...');
+                // Use sendBeacon for reliable save on page unload
+                flushAllPendingScores();
+            }
+        });
 
     </script>
 </body>
