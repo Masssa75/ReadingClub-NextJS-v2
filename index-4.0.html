@@ -4491,7 +4491,12 @@
                     console.log(`🎉 SUCCESS DETECTED! Letter: ${currentTarget}, Score: ${Math.round(score)}%`);
                     celebrateMatch();
 
-                    // SCORING: Increment score for winning positive snapshot
+                    // SCORING: Call strategy again for JUST currentTarget to get fresh match info
+                    // (testAllPlosiveStrategies tests ALL letters, so lastMatchInfo is stale)
+                    console.log(`🔄 Calling strategy again for ${currentTarget} to get fresh match info...`);
+                    strategy11_simpleSnapshot(patternBuffer, currentTarget);
+
+                    // Now lastMatchInfo should be fresh for currentTarget
                     console.log('🔍 Checking score increment conditions:', {
                         hasLastMatchInfo: !!window.lastMatchInfo,
                         hasPositiveSnapshot: !!(window.lastMatchInfo?.positiveSnapshot),
@@ -4501,8 +4506,6 @@
                         targetsMatch: window.lastMatchInfo?.target === currentTarget
                     });
 
-                    // CRITICAL: Only use lastMatchInfo if it's for the CURRENT letter!
-                    // If targets don't match, lastMatchInfo is stale from a previous letter
                     if (window.lastMatchInfo &&
                         window.lastMatchInfo.positiveSnapshot &&
                         window.lastMatchInfo.matchType === 'accepted' &&
@@ -4511,11 +4514,7 @@
                         console.log(`✅ All conditions met, calling incrementSnapshotScore for letter: ${currentTarget}`);
                         incrementSnapshotScore(currentTarget, window.lastMatchInfo.positiveSnapshot);
                     } else {
-                        if (window.lastMatchInfo?.target !== currentTarget) {
-                            console.log(`❌ Score increment SKIPPED: lastMatchInfo is for '${window.lastMatchInfo?.target}' but current letter is '${currentTarget}' (stale data)`);
-                        } else {
-                            console.log('❌ Score increment conditions NOT met');
-                        }
+                        console.error(`❌ Score increment FAILED even after fresh strategy call!`, window.lastMatchInfo);
                     }
 
                     // Record attempt in adaptive learning session
