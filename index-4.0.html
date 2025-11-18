@@ -2452,7 +2452,11 @@
                     // Compare first few values to confirm it's the same pattern
                     const matches = s.data.slice(0, 10).every((val, i) => Math.abs(val - snapshot.data[i]) < 0.0001);
                     if (!matches) {
-                        console.log('  Data mismatch in first 10 values');
+                        console.log('  Data mismatch in first 10 values:', {
+                            storedFirst10: s.data.slice(0, 10),
+                            searchFirst10: snapshot.data.slice(0, 10),
+                            differences: s.data.slice(0, 10).map((val, i) => Math.abs(val - snapshot.data[i]))
+                        });
                     }
                     return matches;
                 });
