@@ -2416,21 +2416,49 @@
         // Increment score for a snapshot (in memory)
         function incrementSnapshotScore(letter, snapshot) {
             if (!snapshot || !calibrationData[letter] || !calibrationData[letter].snapshots) {
-                console.log('❌ incrementSnapshotScore: Missing data');
+                console.log('❌ incrementSnapshotScore: Missing data', {
+                    hasSnapshot: !!snapshot,
+                    hasCalibrationData: !!calibrationData[letter],
+                    hasSnapshots: !!calibrationData[letter]?.snapshots
+                });
                 return;
             }
 
-            // Find the snapshot by matching data content (not object reference)
-            const snapshotIndex = calibrationData[letter].snapshots.findIndex(s => {
-                // Match by comparing the actual pattern data
-                if (!s.data || !snapshot.data) return false;
-                if (s.data.length !== snapshot.data.length) return false;
-
-                // Compare first few values to confirm it's the same pattern
-                return s.data.slice(0, 10).every((val, i) => Math.abs(val - snapshot.data[i]) < 0.0001);
+            console.log('🔍 incrementSnapshotScore called:', {
+                letter,
+                hasSnapshotData: !!snapshot.data,
+                snapshotDataLength: snapshot.data?.length,
+                snapshotProfileId: snapshot.profileId?.substring(0, 8),
+                totalSnapshotsInMemory: calibrationData[letter].snapshots.length
             });
 
-            console.log(`🔍 Looking for snapshot in ${letter}:`, {
+            // First try: Direct object reference lookup (fastest)
+            let snapshotIndex = calibrationData[letter].snapshots.indexOf(snapshot);
+
+            // Second try: Match by data content if direct reference fails
+            if (snapshotIndex === -1) {
+                console.log('⚠️ Direct object reference failed, trying data comparison...');
+                snapshotIndex = calibrationData[letter].snapshots.findIndex(s => {
+                    // Match by comparing the actual pattern data
+                    if (!s.data || !snapshot.data) {
+                        console.log('  Missing data:', { sHasData: !!s.data, snapshotHasData: !!snapshot.data });
+                        return false;
+                    }
+                    if (s.data.length !== snapshot.data.length) {
+                        console.log('  Length mismatch:', { sLength: s.data.length, snapshotLength: snapshot.data.length });
+                        return false;
+                    }
+
+                    // Compare first few values to confirm it's the same pattern
+                    const matches = s.data.slice(0, 10).every((val, i) => Math.abs(val - snapshot.data[i]) < 0.0001);
+                    if (!matches) {
+                        console.log('  Data mismatch in first 10 values');
+                    }
+                    return matches;
+                });
+            }
+
+            console.log(`🔍 Snapshot lookup result:`, {
                 snapshotsAvailable: calibrationData[letter].snapshots.length,
                 foundIndex: snapshotIndex,
                 searchingFor: snapshot.profileId?.substring(0, 8)
@@ -2444,7 +2472,15 @@
                 // Persist to Supabase (debounced to avoid too many DB calls)
                 debounceSaveScores(letter, foundSnapshot.profileId);
             } else {
-                console.log(`❌ Could not find matching snapshot in calibrationData for ${letter}`);
+                console.error(`❌ Could not find matching snapshot in calibrationData for ${letter}`, {
+                    snapshotObject: snapshot,
+                    availableSnapshots: calibrationData[letter].snapshots.map(s => ({
+                        profileId: s.profileId?.substring(0, 8),
+                        hasData: !!s.data,
+                        dataLength: s.data?.length,
+                        isNegative: s.isNegative
+                    }))
+                });
             }
         }
 
