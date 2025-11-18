@@ -4500,14 +4500,22 @@
                         lastMatchTarget: window.lastMatchInfo?.target,
                         targetsMatch: window.lastMatchInfo?.target === currentTarget
                     });
-                    if (window.lastMatchInfo && window.lastMatchInfo.positiveSnapshot && window.lastMatchInfo.matchType === 'accepted') {
-                        // CRITICAL: Use the target letter from lastMatchInfo, not currentTarget!
-                        // currentTarget might have changed if auto-advance happened
-                        const targetLetter = window.lastMatchInfo.target;
-                        console.log(`✅ All conditions met, calling incrementSnapshotScore for letter: ${targetLetter}`);
-                        incrementSnapshotScore(targetLetter, window.lastMatchInfo.positiveSnapshot);
+
+                    // CRITICAL: Only use lastMatchInfo if it's for the CURRENT letter!
+                    // If targets don't match, lastMatchInfo is stale from a previous letter
+                    if (window.lastMatchInfo &&
+                        window.lastMatchInfo.positiveSnapshot &&
+                        window.lastMatchInfo.matchType === 'accepted' &&
+                        window.lastMatchInfo.target === currentTarget) {
+
+                        console.log(`✅ All conditions met, calling incrementSnapshotScore for letter: ${currentTarget}`);
+                        incrementSnapshotScore(currentTarget, window.lastMatchInfo.positiveSnapshot);
                     } else {
-                        console.log('❌ Score increment conditions NOT met');
+                        if (window.lastMatchInfo?.target !== currentTarget) {
+                            console.log(`❌ Score increment SKIPPED: lastMatchInfo is for '${window.lastMatchInfo?.target}' but current letter is '${currentTarget}' (stale data)`);
+                        } else {
+                            console.log('❌ Score increment conditions NOT met');
+                        }
                     }
 
                     // Record attempt in adaptive learning session
