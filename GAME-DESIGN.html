@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReadingClub - Progressive Learning Game Design</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #667eea;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #764ba2;
+            margin-top: 40px;
+            border-left: 4px solid #764ba2;
+            padding-left: 15px;
+        }
+        h3 {
+            color: #667eea;
+            margin-top: 25px;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.working {
+            background: #4ade80;
+            color: white;
+        }
+        .status.todo {
+            background: #fbbf24;
+            color: #333;
+        }
+        .level-box {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .level-box h3 {
+            margin-top: 0;
+        }
+        ul {
+            margin: 10px 0;
+        }
+        li {
+            margin: 8px 0;
+        }
+        .highlight {
+            background: #fef3c7;
+            padding: 15px;
+            border-left: 4px solid #fbbf24;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .flow-diagram {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .flow-step {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        .flow-arrow {
+            font-size: 24px;
+            color: #764ba2;
+            margin: 0 10px;
+        }
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .batch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .batch-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .batch-card h4 {
+            margin-top: 0;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 ReadingClub - Progressive Learning Game Design</h1>
+
+    <p><strong>Version:</strong> 1.0 | <strong>Last Updated:</strong> November 10, 2025</p>
+
+    <h2>📋 Overview & Purpose</h2>
+    <ul>
+        <li><strong>Inspired by TypingClub:</strong> Progressive difficulty with locked advancement</li>
+        <li><strong>3-level learning progression:</strong> Listening → Guided Practice → Independent Recognition</li>
+        <li><strong>Batch-based curriculum:</strong> Master current letters before unlocking new ones</li>
+        <li><strong>Voice recognition powered:</strong> Uses modal calibration system (proven to work)</li>
+        <li><strong>Persistent progress:</strong> Tracks mastery across sessions (localStorage + Supabase)</li>
+    </ul>
+
+    <h2>🎯 The Three Learning Levels</h2>
+
+    <div class="level-box">
+        <h3>Level 1: Listen + Hit <span class="status working">✅ WORKING</span></h3>
+        <p><strong>Goal:</strong> Build letter-sound association through passive recognition</p>
+        <ul>
+            <li>Letter falls from top of screen</li>
+            <li>System plays the Sound City Reading audio automatically</li>
+            <li>Student clicks/taps the letter when they see it</li>
+            <li>✅ Correct click → Green explosion + score</li>
+            <li>❌ Miss (letter reaches bottom) → Lose 1 life</li>
+        </ul>
+        <p><strong>Learning Focus:</strong> Visual recognition + sound association (no production required)</p>
+    </div>
+
+    <div class="level-box">
+        <h3>Level 2: Listen + Choose <span class="status working">✅ WORKING</span></h3>
+        <p><strong>Goal:</strong> Strengthen discrimination between similar sounds</p>
+        <ul>
+            <li>3 letters displayed on screen (multiple choice)</li>
+            <li>System plays ONE letter's sound</li>
+            <li>Student clicks the correct letter</li>
+            <li>✅ Correct choice → Celebration + score</li>
+            <li>❌ Wrong choice → Try again (or lose life after 2 attempts)</li>
+        </ul>
+        <p><strong>Learning Focus:</strong> Auditory discrimination (telling sounds apart)</p>
+    </div>
+
+    <div class="level-box">
+        <h3>Level 3: Say + Hit <span class="status todo">⚠️ NEEDS WORK</span></h3>
+        <p><strong>Goal:</strong> Independent sound production with voice recognition</p>
+        <ul>
+            <li>Letter falls from top (NO audio plays)</li>
+            <li>Student must SAY the letter sound to make it explode</li>
+            <li>Voice recognition detects if sound matches (using calibrated patterns)</li>
+            <li>✅ Correct sound → Explosion + score</li>
+            <li>❌ Wrong/no sound → Letter reaches bottom, lose life</li>
+        </ul>
+        <p><strong>Learning Focus:</strong> Independent production (saying sounds without prompts)</p>
+        <div class="highlight">
+            <strong>🔧 Implementation Note:</strong> Requires calibrated voice patterns for current letter. If not calibrated → prompt student to calibrate via modal.
+        </div>
+    </div>
+
+    <h2>📚 Batch Progression System</h2>
+
+    <p><strong>Philosophy:</strong> Like TypingClub, students can't skip ahead. They must master current content before unlocking new letters.</p>
+
+    <div class="batch-grid">
+        <div class="batch-card">
+            <h4>Batch 0: Vowels</h4>
+            <p>A, E, I, O, U</p>
+            <p><em>Always starts here</em></p>
+        </div>
+        <div class="batch-card">
+            <h4>Batch 1: Consonants 1</h4>
+            <p>B, C, D, F, G</p>
+        </div>
+        <div class="batch-card">
+            <h4>Batch 2: Consonants 2</h4>
+            <p>H, J, K, L, M</p>
+        </div>
+        <div class="batch-card">
+            <h4>Batch 3: Consonants 3</h4>
+            <p>N, P, Q, R, S</p>
+        </div>
+        <div class="batch-card">
+            <h4>Batch 4: Consonants 4</h4>
+            <p>T, V, W, X, Y, Z</p>
+        </div>
+    </div>
+
+    <h2>🏆 Mastery & Advancement Rules</h2>
+
+    <h3>Per-Letter Mastery</h3>
+    <ul>
+        <li>Each letter needs <strong>8 successful hits</strong> to be considered "mastered" at current level</li>
+        <li>Hits are counted per level (separate counters for L1, L2, L3)</li>
+        <li>Progress persists across sessions</li>
+        <li>Visual indicator shows progress: <code>A: 5/8 ■■■■■□□□</code></li>
+    </ul>
+
+    <h3>Level Advancement</h3>
+    <div class="flow-diagram">
+        <div class="flow-step">All letters in current batch mastered at Level 1</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Unlock Level 2 for same batch</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Master all at Level 2</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Unlock Level 3</div>
+    </div>
+
+    <h3>Batch Advancement</h3>
+    <div class="flow-diagram">
+        <div class="flow-step">Complete Level 3 for all letters in Batch 0</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">🎉 Celebration!</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">Unlock Batch 1, start at Level 1</div>
+    </div>
+
+    <div class="highlight">
+        <strong>Key Rule:</strong> You CANNOT skip levels or batches. Sequential mastery enforced.
+    </div>
+
+    <h2>🎤 Calibration Integration</h2>
+
+    <h3>When Calibration is Needed</h3>
+    <ul>
+        <li><strong>Level 1-2:</strong> No calibration required (system plays audio, student just clicks)</li>
+        <li><strong>Level 3:</strong> Requires calibrated voice pattern for EACH letter</li>
+        <li>Before starting Level 3, game checks: "Is letter X calibrated?"</li>
+        <li>If NO → Show modal: "Let's calibrate the sound for 'A' first!"</li>
+    </ul>
+
+    <h3>Calibration Flow</h3>
+    <ol>
+        <li>Student reaches Level 3 for first time with letter 'A'</li>
+        <li>Game detects: "A is not calibrated"</li>
+        <li>Pause game, show message: "🎤 Before we play, let's teach the computer your voice!"</li>
+        <li>Open calibration modal (existing proven system)</li>
+        <li>Student completes 5 captures for 'A'</li>
+        <li>Modal closes, save to Supabase</li>
+        <li>Resume game at Level 3 - now voice recognition works!</li>
+    </ol>
+
+    <div class="highlight">
+        <strong>✅ Design Decision:</strong> Keep modal calibration SEPARATE from gameplay. Don't try to integrate calibration into falling letters (that was the failed experiment). Modal works great - use it!
+    </div>
+
+    <h2>🎨 Game Mechanics Details</h2>
+
+    <h3>Visual Elements</h3>
+    <ul>
+        <li><strong>Canvas:</strong> 600x800px game area</li>
+        <li><strong>Falling letters:</strong> Large, clear font (80px+)</li>
+        <li><strong>Fall speed:</strong> Consistent 2 pixels/frame (can increase with difficulty)</li>
+        <li><strong>Spawn rate:</strong> One letter every 2 seconds</li>
+        <li><strong>Lives:</strong> 3 hearts displayed at top</li>
+        <li><strong>Score:</strong> Running total, +10 per correct hit</li>
+    </ul>
+
+    <h3>Feedback Animations</h3>
+    <ul>
+        <li>✅ <strong>Correct hit:</strong> Green explosion particles radiating from letter</li>
+        <li>❌ <strong>Miss:</strong> Letter fades out at bottom, heart shakes/disappears</li>
+        <li>🎉 <strong>Letter mastered:</strong> Sparkle effect, "A mastered!" message</li>
+        <li>🏆 <strong>Level complete:</strong> Confetti animation, "Level 1 Complete! Moving to Level 2"</li>
+        <li>🎊 <strong>Batch complete:</strong> Big celebration, "You've mastered the vowels! Batch 2 unlocked!"</li>
+    </ul>
+
+    <h3>Game States</h3>
+    <ul>
+        <li><strong>Menu:</strong> "Start Game" button, current batch/level shown</li>
+        <li><strong>Playing:</strong> Letters falling, score counting</li>
+        <li><strong>Paused:</strong> Click anywhere to pause, resume button</li>
+        <li><strong>Game Over:</strong> All lives lost, show score, "Try Again" button</li>
+        <li><strong>Level Complete:</strong> Celebration screen, auto-advance after 3 seconds</li>
+        <li><strong>Calibration Prompt:</strong> Game paused, modal overlay</li>
+    </ul>
+
+    <h2>📊 Progress Tracking</h2>
+
+    <h3>Data Structure (localStorage + Supabase)</h3>
+    <pre><code>{
+  currentBatch: 0,           // Which batch (0-4)
+  currentLevel: 1,           // Which level (1-3)
+  letterProgress: {
+    'A': {
+      level1: 8,             // Hits at Level 1 (mastered)
+      level2: 5,             // Hits at Level 2 (in progress)
+      level3: 0              // Not started Level 3 yet
+    },
+    'E': { level1: 3, level2: 0, level3: 0 },
+    ...
+  },
+  totalScore: 1250,
+  gamesPlayed: 15
+}</code></pre>
+
+    <h3>UI Display</h3>
+    <ul>
+        <li><strong>Top bar:</strong> Current batch + level (e.g., "Batch 1 - Level 2")</li>
+        <li><strong>Progress panel:</strong> List all letters in current batch with mastery bars</li>
+        <li><strong>Overall progress:</strong> "12 of 26 letters mastered" circular progress indicator</li>
+    </ul>
+
+    <h2>✅ What's Currently Working</h2>
+    <ul>
+        <li>Canvas rendering and animation loop</li>
+        <li>Letter falling mechanics</li>
+        <li>Level 1: Listen + Hit (fully functional)</li>
+        <li>Level 2: Listen + Choose (fully functional)</li>
+        <li>Batch system implementation (batches defined)</li>
+        <li>Progress data structure (localStorage saving/loading)</li>
+        <li>Explosion animations</li>
+        <li>Modal calibration system (separate tab, proven to work)</li>
+    </ul>
+
+    <h2>🚧 What Needs Building</h2>
+
+    <h3>High Priority</h3>
+    <ol>
+        <li><strong>Calibration check system</strong> - Before Level 3, check if letter calibrated</li>
+        <li><strong>Calibration prompt UI</strong> - Overlay message → open modal → resume game</li>
+        <li><strong>Mastery tracking logic</strong> - Count hits per letter per level, check when 8/8 reached</li>
+        <li><strong>Level advancement</strong> - When all letters mastered → transition to next level</li>
+        <li><strong>Batch advancement</strong> - After Level 3 complete → unlock next batch</li>
+    </ol>
+
+    <h3>Medium Priority</h3>
+    <ol start="6">
+        <li><strong>Celebration animations</strong> - Letter mastered, level complete, batch complete</li>
+        <li><strong>Progress visualization</strong> - Per-letter mastery bars, overall progress circle</li>
+        <li><strong>Level 3 voice recognition</strong> - Integrate existing detection logic from Tuner tab</li>
+        <li><strong>Game over handling</strong> - When lives = 0, show summary, reset option</li>
+        <li><strong>Pause/resume functionality</strong> - Click to pause, overlay menu</li>
+    </ol>
+
+    <h3>Low Priority (Polish)</h3>
+    <ol start="11">
+        <li>Sound effects (whoosh, explosion, success chime)</li>
+        <li>Background music (optional, toggleable)</li>
+        <li>Difficulty settings (speed adjustment)</li>
+        <li>Leaderboard (high scores per batch/level)</li>
+        <li>Achievements system</li>
+    </ol>
+
+    <h2>🎯 User Flow Example</h2>
+
+    <div class="flow-diagram" style="text-align: left; max-width: 700px; margin: 20px auto;">
+        <p><strong>New Student - First Session:</strong></p>
+        <ol>
+            <li>Opens app → Selects/creates profile "Ophelia"</li>
+            <li>Clicks "🎮 Game" tab</li>
+            <li>Sees: "Batch 0: Vowels - Level 1" + "▶ Start Game" button</li>
+            <li>Clicks Start → Game begins (Level 1 = Listen + Hit)</li>
+            <li>Letter 'A' falls, audio plays "ahh", Ophelia clicks it → ✅ explosion!</li>
+            <li>Plays for 5 minutes, hits several As, Es, Is...</li>
+            <li>Clicks "⏸ Pause" or just closes tab → progress auto-saves</li>
+        </ol>
+
+        <p><strong>Second Session - Continuing:</strong></p>
+        <ol start="8">
+            <li>Returns, selects "Ophelia" profile</li>
+            <li>Game tab shows saved state: "Batch 0 - Level 1" with progress bars</li>
+            <li>A: 8/8 ✅, E: 6/8, I: 2/8, O: 0/8, U: 0/8</li>
+            <li>Continues playing until all vowels reach 8/8 at Level 1</li>
+            <li>🎉 "Level 1 Complete! You've mastered listening. Moving to Level 2..."</li>
+            <li>Level 2 starts automatically (Listen + Choose mode)</li>
+        </ol>
+
+        <p><strong>Reaching Level 3 - Calibration Prompt:</strong></p>
+        <ol start="14">
+            <li>After mastering Level 2 for all vowels...</li>
+            <li>Message appears: "🎉 Level 2 Complete! Ready for Level 3?"</li>
+            <li>Clicks "Yes" → Game starts Level 3</li>
+            <li>Before first letter 'A' spawns, check: "Is A calibrated?"</li>
+            <li>NO → Pause game, show: "🎤 Let's teach the computer your voice for 'A'!"</li>
+            <li>Opens calibration modal → Student completes 5 captures</li>
+            <li>Modal closes → "Great! Now say 'ahh' to make the letter explode!"</li>
+            <li>Game resumes, Level 3 works with voice recognition</li>
+        </ol>
+    </div>
+
+    <h2>🔧 Technical Implementation Notes</h2>
+
+    <h3>File Structure</h3>
+    <ul>
+        <li><strong>Main file:</strong> <code>index-1.4.html</code> (single HTML file, no build)</li>
+        <li><strong>Game code:</strong> Lines ~3833-4600 (Progressive Game section)</li>
+        <li><strong>Calibration modal:</strong> Lines ~1085-1338 (separate system)</li>
+        <li><strong>Voice detection:</strong> Reuse from Tuner tab (lines ~2400-2800)</li>
+    </ul>
+
+    <h3>Key Functions Needed</h3>
+    <pre><code>// Calibration check
+function isLetterCalibrated(letter) {
+    return calibrationData[letter] !== undefined;
+}
+
+// Prompt for calibration
+function promptCalibration(letter) {
+    pauseProgressGame();
+    showMessage(`Let's calibrate '${letter}' first!`);
+    openCalibrationModal(letter);
+}
+
+// Check mastery
+function isLetterMastered(letter, level) {
+    const progress = progressGame.letterProgress[letter];
+    return progress[`level${level}`] >= 8;
+}
+
+// Check if batch complete at current level
+function isBatchCompleteAtLevel(batchIndex, level) {
+    const batchLetters = progressGame.batches[batchIndex];
+    return batchLetters.every(letter =>
+        isLetterMastered(letter, level)
+    );
+}
+
+// Advance to next level
+function advanceToNextLevel() {
+    progressGame.currentLevel++;
+    showCelebration("Level Complete!");
+    saveProgressGameData();
+}</code></pre>
+
+    <h2>🎮 Technology Stack & Architecture</h2>
+
+    <h3>Core Stack (Current)</h3>
+    <ul>
+        <li><strong>Rendering:</strong> Vanilla JavaScript + HTML5 Canvas (no frameworks)</li>
+        <li><strong>Architecture:</strong> Single HTML file (~3600 lines, zero build process)</li>
+        <li><strong>Audio:</strong> Web Audio API (already implemented for voice recognition)</li>
+        <li><strong>Storage:</strong> Supabase (calibration data) + localStorage (progress tracking)</li>
+        <li><strong>Dependencies:</strong> None (clean, fast, portable)</li>
+    </ul>
+
+    <h3>Recommended Additions for Polish</h3>
+
+    <div class="level-box">
+        <h4>1. Sound Effects: Howler.js (~10KB)</h4>
+        <p><strong>CDN:</strong> <code>https://cdn.jsdelivr.net/npm/howler@2.2.3/dist/howler.min.js</code></p>
+        <p><strong>Why:</strong></p>
+        <ul>
+            <li>✅ Industry standard audio library (battle-tested)</li>
+            <li>✅ Cross-browser compatibility (handles iOS quirks automatically)</li>
+            <li>✅ Simple API: <code>new Howl({src: ['pop.mp3']}).play()</code></li>
+            <li>✅ Audio sprite support (combine multiple sounds into one file)</li>
+            <li>✅ Preloading + caching built-in</li>
+            <li>✅ Works alongside existing Web Audio API</li>
+        </ul>
+        <p><strong>Usage:</strong></p>
+        <pre><code>const sounds = {
+    pop: new Howl({ src: ['sounds/pop.mp3'], volume: 0.5 }),
+    success: new Howl({ src: ['sounds/success.mp3'], volume: 0.7 }),
+    levelComplete: new Howl({ src: ['sounds/levelcomplete.mp3'], volume: 0.8 }),
+    fail: new Howl({ src: ['sounds/fail.mp3'], volume: 0.4 })
+};
+
+// Play on game events
+sounds.pop.play(); // When letter is hit</code></pre>
+    </div>
+
+    <div class="level-box">
+        <h4>2. Particle Effects: Custom Canvas Particles (~150 lines)</h4>
+        <p><strong>Why Custom Instead of Library:</strong></p>
+        <ul>
+            <li>✅ Zero dependencies (keeps single-file philosophy)</li>
+            <li>✅ Full control over appearance and behavior</li>
+            <li>✅ Tiny footprint (~0.1KB vs 5-20KB for libraries)</li>
+            <li>✅ Perfect for simple effects (explosions, confetti, sparkles)</li>
+        </ul>
+        <p><strong>Implementation:</strong></p>
+        <pre><code>class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 8;  // Random velocity
+        this.vy = (Math.random() - 0.5) * 8;
+        this.life = 1.0;                      // Fades out
+        this.color = color;
+        this.size = Math.random() * 4 + 2;
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.3;        // Gravity effect
+        this.life -= 0.02;     // Fade out
+    }
+
+    draw(ctx) {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+    }
+}
+
+// Particle system manager
+class ParticleSystem {
+    constructor() {
+        this.particles = [];
+    }
+
+    explode(x, y, color, count = 30) {
+        for (let i = 0; i < count; i++) {
+            this.particles.push(new Particle(x, y, color));
+        }
+    }
+
+    update() {
+        this.particles.forEach(p => p.update());
+        this.particles = this.particles.filter(p => p.life > 0);
+    }
+
+    draw(ctx) {
+        this.particles.forEach(p => p.draw(ctx));
+        ctx.globalAlpha = 1.0; // Reset
+    }
+}</code></pre>
+    </div>
+
+    <h3>Why NOT Phaser.js or Pixi.js?</h3>
+    <div class="highlight">
+        <p><strong>Decision: Keep Vanilla Canvas</strong></p>
+        <ul>
+            <li>❌ <strong>Overkill:</strong> Phaser/Pixi adds 200-500KB+ for simple falling letters game</li>
+            <li>❌ <strong>Complexity:</strong> Learning curve + refactoring existing working code</li>
+            <li>❌ <strong>Bundle size:</strong> Breaks single HTML file architecture</li>
+            <li>❌ <strong>Unnecessary features:</strong> Physics engines, tilemap systems, sprite managers not needed</li>
+            <li>✅ <strong>Current approach works:</strong> Vanilla Canvas is perfect for this simple game</li>
+            <li>✅ <strong>Performance:</strong> Canvas is fast enough for 3-6 year olds on tablets</li>
+            <li>✅ <strong>Maintainability:</strong> Less code = easier debugging</li>
+        </ul>
+        <p><em>Frameworks are great for complex games with physics, collision detection, and many sprites. For falling letters + particle bursts, vanilla Canvas is ideal.</em></p>
+    </div>
+
+    <h3>Planned Visual Enhancements (Vanilla Canvas)</h3>
+    <ul>
+        <li><strong>Particle explosions:</strong> Green burst when letter hit correctly</li>
+        <li><strong>Confetti animations:</strong> Multi-color particles for level/batch complete</li>
+        <li><strong>Screen shake:</strong> Subtle camera shake on wrong answer</li>
+        <li><strong>Sparkle effects:</strong> Twinkling stars when letter mastered (8/8)</li>
+        <li><strong>Progress bars:</strong> Smooth filling animations (CSS transitions)</li>
+        <li><strong>Character mascot:</strong> Simple sprite that cheers/encourages (optional)</li>
+        <li><strong>Waveform visualization:</strong> Show voice input in Level 3 (already have)</li>
+    </ul>
+
+    <h3>Sound Effects Needed</h3>
+    <table style="width: 100%; background: white; color: #333; border-radius: 8px; padding: 15px; margin: 15px 0;">
+        <tr>
+            <th style="text-align: left; padding: 8px; border-bottom: 2px solid #ddd;">Event</th>
+            <th style="text-align: left; padding: 8px; border-bottom: 2px solid #ddd;">Sound Type</th>
+            <th style="text-align: left; padding: 8px; border-bottom: 2px solid #ddd;">Description</th>
+        </tr>
+        <tr>
+            <td style="padding: 8px;">Letter hit (correct)</td>
+            <td style="padding: 8px;">Pop/Burst</td>
+            <td style="padding: 8px;">Satisfying pop sound (50-100ms)</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;">Letter missed</td>
+            <td style="padding: 8px;">Gentle "oops"</td>
+            <td style="padding: 8px;">Non-scary negative sound</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;">Letter mastered (8/8)</td>
+            <td style="padding: 8px;">Success chime</td>
+            <td style="padding: 8px;">Uplifting "ding!" sound</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;">Level complete</td>
+            <td style="padding: 8px;">Fanfare (short)</td>
+            <td style="padding: 8px;">Celebratory 1-2 second melody</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;">Batch complete</td>
+            <td style="padding: 8px;">Big celebration</td>
+            <td style="padding: 8px;">Longer fanfare with cheering (3-5 sec)</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px;">Voice detected (Level 3)</td>
+            <td style="padding: 8px;">Confirmation beep</td>
+            <td style="padding: 8px;">Quick "acknowledged" sound</td>
+        </tr>
+    </table>
+
+    <h3>Total Added Footprint</h3>
+    <ul>
+        <li><strong>Howler.js:</strong> ~10KB (CDN, minified + gzipped)</li>
+        <li><strong>Custom particles:</strong> ~0.1KB (~150 lines of code)</li>
+        <li><strong>Sound files:</strong> ~50-100KB total (6 short MP3/OGG files)</li>
+        <li><strong>Total overhead:</strong> ~60-110KB (negligible for modern web)</li>
+    </ul>
+    <p><em>Compare to Phaser.js (~500KB) or Pixi.js (~200KB) - we're keeping it lean!</em></p>
+
+    <h2>🎓 Educational Philosophy</h2>
+
+    <div class="highlight">
+        <p><strong>Why This Progression Works:</strong></p>
+        <ul>
+            <li><strong>Level 1 (Passive):</strong> Builds neural connections between letter shapes and sounds without pressure</li>
+            <li><strong>Level 2 (Guided):</strong> Strengthens discrimination - can they tell sounds apart?</li>
+            <li><strong>Level 3 (Active):</strong> Independent production - the real test of mastery</li>
+        </ul>
+        <p><strong>Forced Sequential Mastery:</strong> Research shows distributed practice with mastery requirements is more effective than allowing students to skip ahead. Each level builds on the previous one.</p>
+    </div>
+
+    <h2>📝 Next Steps</h2>
+    <ol>
+        <li>Implement calibration check before Level 3</li>
+        <li>Add mastery tracking (+1 per hit, check if 8 reached)</li>
+        <li>Build level advancement logic</li>
+        <li>Create celebration animations</li>
+        <li>Test with real user (Ophelia)</li>
+        <li>Polish based on feedback</li>
+    </ol>
+
+    <hr>
+    <p style="text-align: center; color: #999; margin-top: 40px;">
+        <small>Last updated: November 11, 2025 | ReadingClub v1.5.1</small>
+    </p>
+</body>
+</html>

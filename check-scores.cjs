@@ -8,7 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 async function checkScores() {
     console.log('🔍 Checking scores for letters o and p...\n');
 
-    const letters = ['o', 'p'];
+    const letters = ['a', 'o', 'p'];
 
     for (const letter of letters) {
         console.log(`\n═══════════════════════════════════════`);
