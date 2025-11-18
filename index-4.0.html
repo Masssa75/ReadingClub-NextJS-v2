@@ -4496,11 +4496,16 @@
                         hasLastMatchInfo: !!window.lastMatchInfo,
                         hasPositiveSnapshot: !!(window.lastMatchInfo?.positiveSnapshot),
                         matchType: window.lastMatchInfo?.matchType,
-                        currentTarget: currentTarget
+                        currentTarget: currentTarget,
+                        lastMatchTarget: window.lastMatchInfo?.target,
+                        targetsMatch: window.lastMatchInfo?.target === currentTarget
                     });
                     if (window.lastMatchInfo && window.lastMatchInfo.positiveSnapshot && window.lastMatchInfo.matchType === 'accepted') {
-                        console.log('✅ All conditions met, calling incrementSnapshotScore');
-                        incrementSnapshotScore(currentTarget, window.lastMatchInfo.positiveSnapshot);
+                        // CRITICAL: Use the target letter from lastMatchInfo, not currentTarget!
+                        // currentTarget might have changed if auto-advance happened
+                        const targetLetter = window.lastMatchInfo.target;
+                        console.log(`✅ All conditions met, calling incrementSnapshotScore for letter: ${targetLetter}`);
+                        incrementSnapshotScore(targetLetter, window.lastMatchInfo.positiveSnapshot);
                     } else {
                         console.log('❌ Score increment conditions NOT met');
                     }
