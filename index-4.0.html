@@ -2415,16 +2415,36 @@
 
         // Increment score for a snapshot (in memory)
         function incrementSnapshotScore(letter, snapshot) {
-            if (!snapshot || !calibrationData[letter] || !calibrationData[letter].snapshots) return;
+            if (!snapshot || !calibrationData[letter] || !calibrationData[letter].snapshots) {
+                console.log('❌ incrementSnapshotScore: Missing data');
+                return;
+            }
 
-            // Find the snapshot in calibrationData and increment its score
-            const snapshotIndex = calibrationData[letter].snapshots.indexOf(snapshot);
+            // Find the snapshot by matching data content (not object reference)
+            const snapshotIndex = calibrationData[letter].snapshots.findIndex(s => {
+                // Match by comparing the actual pattern data
+                if (!s.data || !snapshot.data) return false;
+                if (s.data.length !== snapshot.data.length) return false;
+
+                // Compare first few values to confirm it's the same pattern
+                return s.data.slice(0, 10).every((val, i) => Math.abs(val - snapshot.data[i]) < 0.0001);
+            });
+
+            console.log(`🔍 Looking for snapshot in ${letter}:`, {
+                snapshotsAvailable: calibrationData[letter].snapshots.length,
+                foundIndex: snapshotIndex,
+                searchingFor: snapshot.profileId?.substring(0, 8)
+            });
+
             if (snapshotIndex !== -1) {
-                snapshot.score = (snapshot.score || 0) + 1;
-                console.log(`📊 Snapshot score incremented: ${letter} [${snapshot.isNegative ? 'NEG' : 'POS'}] → ${snapshot.score} (profile: ${snapshot.profileId?.substring(0, 8)}...)`);
+                const foundSnapshot = calibrationData[letter].snapshots[snapshotIndex];
+                foundSnapshot.score = (foundSnapshot.score || 0) + 1;
+                console.log(`📊 Snapshot score incremented: ${letter} [${foundSnapshot.isNegative ? 'NEG' : 'POS'}] → ${foundSnapshot.score} (profile: ${foundSnapshot.profileId?.substring(0, 8)}...)`);
 
                 // Persist to Supabase (debounced to avoid too many DB calls)
-                debounceSaveScores(letter, snapshot.profileId);
+                debounceSaveScores(letter, foundSnapshot.profileId);
+            } else {
+                console.log(`❌ Could not find matching snapshot in calibrationData for ${letter}`);
             }
         }
 
