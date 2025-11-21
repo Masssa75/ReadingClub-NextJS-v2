@@ -1,17 +1,18 @@
 import type { CalibrationData } from '@/app/lib/types';
-import { debounceSaveScores } from './snapshotScoring';
+import { debounceSaveScores, saveSnapshotScoresImmediately } from './snapshotScoring';
 
 /**
  * Add a positive snapshot to a letter's calibration data
  * Used when user successfully matches a letter
  */
-export function addPositivePattern(
+export async function addPositivePattern(
   letter: string,
   currentPattern: number[],
   profileId: string,
   calibrationData: Record<string, CalibrationData>,
-  audioUrl?: string
-): { success: boolean; message: string } {
+  audioUrl?: string,
+  immediate?: boolean
+): Promise<{ success: boolean; message: string }> {
   // Normalize letter to lowercase for consistent key access
   const normalizedLetter = letter.toLowerCase();
 
@@ -48,8 +49,13 @@ export function addPositivePattern(
     console.log(`  Audio URL:`, audioUrl);
   }
 
-  // Save to Supabase (debounced)
-  debounceSaveScores(normalizedLetter, profileId);
+  // Save to Supabase (immediate or debounced)
+  if (immediate) {
+    await saveSnapshotScoresImmediately(normalizedLetter, profileId, calibrationData);
+    console.log(`💾 Immediately saved snapshot to Supabase`);
+  } else {
+    debounceSaveScores(normalizedLetter, profileId);
+  }
 
   return {
     success: true,

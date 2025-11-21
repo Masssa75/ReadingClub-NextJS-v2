@@ -1,17 +1,18 @@
 import type { CalibrationData } from '@/app/lib/types';
-import { debounceSaveScores } from './snapshotScoring';
+import { debounceSaveScores, saveSnapshotScoresImmediately } from './snapshotScoring';
 
 /**
  * Add a negative snapshot to a letter's calibration data
  * Used to mark patterns that should NOT match this letter
  */
-export function addNegativePattern(
+export async function addNegativePattern(
   letter: string,
   currentPattern: number[],
   profileId: string,
   calibrationData: Record<string, CalibrationData>,
-  audioUrl?: string
-): { success: boolean; message: string } {
+  audioUrl?: string,
+  immediate?: boolean
+): Promise<{ success: boolean; message: string }> {
   // Normalize letter to lowercase for consistent key access
   const normalizedLetter = letter.toLowerCase();
 
@@ -45,8 +46,13 @@ export function addNegativePattern(
   console.log(`✗ Added negative pattern to ${normalizedLetter} (total: ${negativeCount})`);
   console.log(`  Pattern preview:`, currentPattern.slice(0, 5));
 
-  // Save to Supabase (debounced)
-  debounceSaveScores(normalizedLetter, profileId);
+  // Save to Supabase (immediate or debounced)
+  if (immediate) {
+    await saveSnapshotScoresImmediately(normalizedLetter, profileId, calibrationData);
+    console.log(`💾 Immediately saved snapshot to Supabase`);
+  } else {
+    debounceSaveScores(normalizedLetter, profileId);
+  }
 
   return {
     success: true,

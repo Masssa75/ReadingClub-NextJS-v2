@@ -8,7 +8,7 @@ import { setupAudio, stopAudio } from '@/app/utils/audioEngine';
 import { getFrequencyData, downsampleTo64Bins, calculateVolume, calculateEnergyConcentration, isNasal } from '@/app/utils/fftAnalysis';
 import { selectNextLetter } from '@/app/utils/adaptiveSelection';
 import { strategy11_simpleSnapshot, getLastMatchInfo } from '@/app/utils/patternMatching';
-import { incrementSnapshotScore, startNewScoringRound, setCalibrationDataRef } from '@/app/utils/snapshotScoring';
+import { incrementSnapshotScore, startNewScoringRound, setCalibrationDataRef, flushAllPendingScores } from '@/app/utils/snapshotScoring';
 import { addNegativePattern } from '@/app/utils/negativeSnapshot';
 import { addPositivePattern } from '@/app/utils/positiveSnapshot';
 import { uploadSnapshotAudio } from '@/app/utils/snapshotAudioUpload';
@@ -63,6 +63,22 @@ export default function PlayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Flush pending saves when page is about to unload (refresh, close tab, navigate away)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Synchronously flush all pending saves before page unloads
+      // Note: This must be synchronous to work in beforeunload
+      flushAllPendingScores(calibrationData);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Also flush when component unmounts
+      flushAllPendingScores(calibrationData);
+    };
+  }, [calibrationData]);
+
   const loadCalibrations = async () => {
     try {
       // Load ALL calibrations (cross-profile pooling)
@@ -100,6 +116,7 @@ export default function PlayPage() {
       setShowCelebration(false);
       setIsRunning(true);
       isRunningRef.current = true;
+      patternBufferRef.current = []; // Clear old patterns from previous letter
       pickNextLetter();
       startVoiceDetection();
     } else if (isRunning) {
@@ -315,35 +332,36 @@ export default function PlayPage() {
       incrementSnapshotScore(letter, matchedSnapshot, calibrationData);
     }
 
-    // Upload audio and create positive snapshot (audio capture was triggered at peak detection)
-    // Note: Audio will be available ~1 second after peak, so we schedule this after a brief delay
+    // Upload audio and create positive snapshot (audio should already be captured by now)
     if (currentPattern && currentProfileId) {
-      setTimeout(async () => {
-        let audioUrl: string | undefined;
+      // Try to upload audio immediately (no setTimeout to avoid fast-refresh cancellation)
+      let audioUrl: string | undefined;
 
-        if (lastCapturedAudioRef.current) {
-          try {
-            audioUrl = await uploadSnapshotAudio(
-              lastCapturedAudioRef.current,
-              currentProfileId,
-              letter,
-              false // positive snapshot
-            ) || undefined;
+      if (lastCapturedAudioRef.current) {
+        console.log('📦 Found captured audio, uploading now...');
+        try {
+          audioUrl = await uploadSnapshotAudio(
+            lastCapturedAudioRef.current,
+            currentProfileId,
+            letter,
+            false // positive snapshot
+          ) || undefined;
 
-            lastCapturedAudioRef.current = null;
-          } catch (error) {
-            console.error('❌ Error uploading snapshot audio:', error);
-          }
+          lastCapturedAudioRef.current = null;
+        } catch (error) {
+          console.error('❌ Error uploading snapshot audio:', error);
         }
+      } else {
+        console.log('⚠️ No captured audio available (ref is null)');
+      }
 
-        // Create positive snapshot (with or without audio)
-        addPositivePattern(letter, currentPattern, currentProfileId, calibrationData, audioUrl);
-        if (audioUrl) {
-          console.log('✅ Positive snapshot with audio created');
-        } else {
-          console.log('⚠️ Positive snapshot created without audio');
-        }
-      }, 1100); // Wait 1.1 seconds for audio capture to complete
+      // Create positive snapshot (with or without audio) with immediate save
+      await addPositivePattern(letter, currentPattern, currentProfileId, calibrationData, audioUrl, true);
+      if (audioUrl) {
+        console.log('✅ Positive snapshot with audio created');
+      } else {
+        console.log('⚠️ Positive snapshot created without audio');
+      }
     }
 
     // Show "Not X" button for 5 seconds
@@ -402,8 +420,8 @@ export default function PlayPage() {
       }
     }
 
-    const result = addNegativePattern(notXLetter, currentPattern, currentProfileId, calibrationData, audioUrl);
-    setFeedbackMessage(result.message);
+    const result = await addNegativePattern(notXLetter, currentPattern, currentProfileId, calibrationData, audioUrl, true);
+    setFeedbackMessage(result.message + ' ✓ Saved');
     setShowNotXButton(false);
     setNotXLetter(null);
 
@@ -445,9 +463,9 @@ export default function PlayPage() {
       }
     }
 
-    // Create positive snapshot
-    const result = addPositivePattern(currentLetter, currentPattern, currentProfileId, calibrationData, audioUrl);
-    setFeedbackMessage(result.message);
+    // Create positive snapshot with immediate save
+    const result = await addPositivePattern(currentLetter, currentPattern, currentProfileId, calibrationData, audioUrl, true);
+    setFeedbackMessage(result.message + ' ✓ Saved');
 
     // Brief feedback
     setTimeout(() => setFeedbackMessage(''), 2000);

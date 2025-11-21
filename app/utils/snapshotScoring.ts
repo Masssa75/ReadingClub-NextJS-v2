@@ -138,6 +138,18 @@ export async function flushAllPendingScores(
 }
 
 /**
+ * Save snapshot scores immediately (no debounce)
+ * Use this for manual snapshot additions where immediate save is required
+ */
+export async function saveSnapshotScoresImmediately(
+  letter: string,
+  profileId: string,
+  calibrationData: Record<string, CalibrationData>
+): Promise<void> {
+  return saveSnapshotScoresToSupabase(letter, profileId, calibrationData);
+}
+
+/**
  * Save snapshot scores back to Supabase
  * Updates pattern_data for the given letter and profile
  */

@@ -20,9 +20,9 @@ export async function uploadSnapshotAudio(
 
     console.log(`📤 Uploading snapshot audio: ${fileName} (${audioBlob.size} bytes)`);
 
-    // Upload to Supabase Storage (bucket: 'audio')
+    // Upload to Supabase Storage (bucket: 'calibration-audio')
     const { data, error } = await supabase.storage
-      .from('audio')
+      .from('calibration-audio')
       .upload(fileName, audioBlob, {
         contentType: 'audio/wav',
         upsert: false // Don't overwrite if exists (unlikely due to timestamp)
@@ -35,7 +35,7 @@ export async function uploadSnapshotAudio(
 
     // Get public URL
     const { data: urlData } = supabase.storage
-      .from('audio')
+      .from('calibration-audio')
       .getPublicUrl(fileName);
 
     console.log(`✅ Snapshot audio uploaded: ${urlData.publicUrl}`);
