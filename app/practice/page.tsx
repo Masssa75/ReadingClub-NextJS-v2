@@ -57,13 +57,11 @@ export default function PlayPage() {
   const isRunningRef = useRef(false); // Ref for voice detection loop (avoids closure bug)
   const currentLetterRef = useRef<string | null>(null); // Ref for current letter (avoids state timing issues)
 
-  // Load calibrations
+  // Load calibrations on mount (matches /play behavior)
   useEffect(() => {
-    if (currentProfileId) {
-      loadCalibrations();
-    }
+    loadCalibrations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProfileId]);
+  }, []);
 
   const loadCalibrations = async () => {
     try {
