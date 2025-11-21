@@ -252,7 +252,7 @@ export default function Learn1() {
         ) : (
           <button
             onClick={stopGame}
-            className="px-24 py-6 text-2xl font-medium text-white/90 rounded-full border-2 border-red-400/40 backdrop-blur-sm bg-red-500/20 hover:bg-red-500/30 transition-all"
+            className="px-24 py-6 text-2xl font-bold text-white rounded-full border-2 border-red-500/80 backdrop-blur-sm bg-red-500/70 hover:bg-red-600/80 transition-all shadow-lg"
           >
             Stop
           </button>
