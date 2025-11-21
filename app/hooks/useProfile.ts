@@ -85,6 +85,7 @@ export function useProfile() {
     } catch (error) {
       console.error('❌ Error initializing profile:', error);
     } finally {
+      console.log('🔄 Setting isLoading = false');
       setIsLoading(false);
     }
   };
