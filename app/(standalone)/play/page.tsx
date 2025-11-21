@@ -6,6 +6,7 @@ import { useProfileContext } from '@/app/contexts/ProfileContext';
 import { useSession } from '@/app/hooks/useSession';
 import { useProficiency } from '@/app/hooks/useProficiency';
 import { selectNextLetter } from '@/app/utils/adaptiveSelection';
+import ParentsMenu from '@/app/components/ParentsMenu';
 
 export default function Learn1() {
   const [currentLetter, setCurrentLetter] = useState<string | null>(null);
@@ -194,6 +195,11 @@ export default function Learn1() {
     <div className="fixed inset-0 w-screen h-screen overflow-hidden flex flex-col">
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(/images/background.jpg)` }} />
       <div className="absolute inset-0 bg-cover bg-center hidden md:block" style={{ backgroundImage: `url(/images/background-wide.jpg)` }} />
+
+      {/* Parents Menu - Top Right */}
+      <div className="absolute top-6 right-6 z-20">
+        <ParentsMenu />
+      </div>
 
       <div className="relative z-10 flex flex-col items-center justify-center h-full gap-24">
         <div className="text-white text-2xl font-light tracking-[0.3em] uppercase opacity-70">Wunderkind</div>

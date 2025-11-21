@@ -14,7 +14,11 @@ const GROUP_LABELS = {
   advanced: 'ADVANCED',
 };
 
-export default function CalibrationGrid() {
+interface CalibrationGridProps {
+  variant?: 'admin' | 'kid';
+}
+
+export default function CalibrationGrid({ variant = 'admin' }: CalibrationGridProps = {}) {
   const { currentProfileId, isLoading: profileLoading } = useProfileContext();
   console.log('🔍 CalibrationGrid render - profileLoading:', profileLoading, 'profileId:', currentProfileId);
   const [calibratedLetters, setCalibratedLetters] = useState<Set<string>>(new Set());
@@ -107,7 +111,15 @@ export default function CalibrationGrid() {
     <div>
       {Object.entries(groupedPhonemes).map(([group, phonemes]) => (
         <div key={group} className="mb-6">
-          <div className="pt-4 pb-2 text-base font-bold text-yellow-400 border-b-2 border-yellow-400/30 mb-4">
+          <div
+            className="pt-4 pb-2 text-base border-b-2 border-yellow-400/30 mb-4"
+            style={{
+              color: '#8B5A00',
+              textShadow: '0 1px 2px rgba(255,255,255,0.7)',
+              fontWeight: 900,
+              letterSpacing: '0.5px'
+            }}
+          >
             {GROUP_LABELS[group as keyof typeof GROUP_LABELS]}
           </div>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-4">
@@ -130,6 +142,7 @@ export default function CalibrationGrid() {
           letter={modalLetter}
           onClose={handleModalClose}
           onSuccess={handleCalibrationSuccess}
+          variant={variant}
         />
       )}
     </div>

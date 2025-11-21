@@ -24,13 +24,23 @@ export default function LetterCard({ phoneme, isCalibrated, isRecording, onClick
 
   return (
     <div className={cardClass} onClick={onClick}>
-      <div className={`text-5xl font-bold mb-2 ${letterStyle}`}>
+      <div
+        className={`text-5xl font-bold mb-2 ${letterStyle}`}
+        style={!isCalibrated ? {
+          color: '#6B4423',
+          textShadow: '0 2px 4px rgba(255,255,255,0.5)'
+        } : undefined}
+      >
         {phoneme.letter}
       </div>
-      <div className="text-sm text-gray-400 mb-1">
-        {phoneme.hint}
-      </div>
-      <div className="text-xs mt-2">
+      <div
+        className="text-xs mt-2"
+        style={{
+          color: '#6B4423',
+          fontWeight: 700,
+          textShadow: '0 1px 2px rgba(255,255,255,0.5)'
+        }}
+      >
         {isCalibrated ? '✓ Calibrated' : 'Click to record'}
       </div>
     </div>

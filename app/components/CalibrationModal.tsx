@@ -12,9 +12,10 @@ interface CalibrationModalProps {
   letter: string;
   onClose: () => void;
   onSuccess: (letter: string) => void;
+  variant?: 'admin' | 'kid';
 }
 
-export default function CalibrationModal({ letter, onClose, onSuccess }: CalibrationModalProps) {
+export default function CalibrationModal({ letter, onClose, onSuccess, variant = 'admin' }: CalibrationModalProps) {
   const { currentProfileId } = useProfileContext();
   const [statusMessage, setStatusMessage] = useState('Click letter to hear sound, then click box 1');
   const [showArrow, setShowArrow] = useState(true);
@@ -33,8 +34,16 @@ export default function CalibrationModal({ letter, onClose, onSuccess }: Calibra
 
   useEffect(() => {
     initAudio();
+
+    // Prevent body scrolling when modal is open
+    document.body.style.overflow = 'hidden';
+
+    // Scroll to top of page when modal opens
+    window.scrollTo(0, 0);
+
     return () => {
       cleanup();
+      document.body.style.overflow = '';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -337,9 +346,34 @@ export default function CalibrationModal({ letter, onClose, onSuccess }: Calibra
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  // Conditional styling based on variant
+  const styles = variant === 'kid' ? {
+    backdrop: 'fixed inset-0 bg-black/40 flex items-start justify-center pt-8 z-[10000] overflow-y-auto',
+    modal: 'bg-white/95 backdrop-blur-xl rounded-[30px] p-10 w-[90%] max-w-[700px] max-h-[85vh] overflow-y-auto border-4 border-white/50 shadow-[0_20px_60px_rgba(0,0,0,0.3)] relative',
+    text: 'text-gray-700',
+    letter: 'text-purple-500',
+    letterShadow: '0 10px 30px rgba(147, 51, 234, 0.3)',
+    iconFill: '#a855f7',
+    captureBox: 'bg-white/50 border-pink-200',
+    captureBoxReady: 'border-green-400 shadow-[0_0_15px_rgba(74,222,128,0.4)]',
+    captureBoxRecording: 'border-orange-400 shadow-[0_0_20px_rgba(251,146,60,0.6)] animate-pulse',
+    captureBoxCaptured: 'border-green-500 bg-green-50',
+  } : {
+    backdrop: 'fixed inset-0 bg-black/90 flex items-start justify-center pt-8 z-[10000] overflow-y-auto',
+    modal: 'bg-[rgba(30,30,30,0.98)] rounded-[30px] p-10 w-[90%] max-w-[700px] max-h-[85vh] overflow-y-auto border-3 border-[#7CB342] shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative',
+    text: 'text-[#ddd]',
+    letter: 'text-[#FDD835]',
+    letterShadow: '0 10px 30px rgba(253, 216, 53, 0.5)',
+    iconFill: '#FDD835',
+    captureBox: 'bg-[rgba(60,60,60,0.7)] border-gray-500',
+    captureBoxReady: 'border-[#7CB342] shadow-[0_0_15px_rgba(124,179,66,0.6)]',
+    captureBoxRecording: 'border-orange-400 shadow-[0_0_20px_rgba(251,146,60,0.8)] animate-pulse',
+    captureBoxCaptured: 'border-green-500 bg-[rgba(76,175,80,0.2)]',
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[10000]">
-      <div className="bg-[rgba(30,30,30,0.98)] rounded-[30px] p-10 w-[90%] max-w-[700px] max-h-[90vh] overflow-y-auto border-3 border-[#7CB342] shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative">
+    <div className={styles.backdrop}>
+      <div className={styles.modal}>
 
         {/* Close Button */}
         <button
@@ -350,7 +384,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess }: Calibra
         </button>
 
         {/* Instructions */}
-        <div className="text-center text-[#ddd] text-base mb-5">
+        <div className={`text-center ${styles.text} text-base mb-5`}>
           Click the letter to hear its sound. Click each box below to record 5 sounds.
         </div>
 
@@ -358,17 +392,16 @@ export default function CalibrationModal({ letter, onClose, onSuccess }: Calibra
         <div className="flex items-center justify-center gap-5 my-5">
           <div
             onClick={playLetterSound}
-            className="text-[180px] font-bold text-[#FDD835] cursor-pointer inline-block transition-all hover:scale-110"
-            style={{ textShadow: '0 10px 30px rgba(253, 216, 53, 0.5)' }}
+            className={`text-[180px] font-bold ${styles.letter} cursor-pointer inline-block transition-all hover:scale-110`}
+            style={{ textShadow: styles.letterShadow }}
           >
             {letter}
           </div>
           <div
             onClick={playLetterSound}
             className="w-[60px] h-[60px] cursor-pointer opacity-70 transition-all hover:opacity-100 hover:scale-115"
-            style={{ filter: 'drop-shadow(0 2px 8px rgba(253, 216, 53, 0.4))' }}
           >
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-full h-full fill-[#FDD835]">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-full h-full" style={{ fill: styles.iconFill }}>
               <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
             </svg>
           </div>
@@ -385,22 +418,28 @@ export default function CalibrationModal({ letter, onClose, onSuccess }: Calibra
             </div>
           )}
 
-          {Array.from({ length: SNAPSHOTS_NEEDED }).map((_, i) => (
+          {Array.from({ length: SNAPSHOTS_NEEDED }).map((_, i) => {
+            let boxClass = `w-[100px] h-[80px] border-2 rounded-[10px] transition-all relative ${styles.captureBox}`;
+            if (boxStates[i] === 'ready') {
+              boxClass += ` ${styles.captureBoxReady} animate-pulse cursor-pointer`;
+            } else if (boxStates[i] === 'recording') {
+              boxClass += ` ${styles.captureBoxRecording} cursor-wait`;
+            } else if (boxStates[i] === 'captured') {
+              boxClass += ` ${styles.captureBoxCaptured} cursor-default`;
+            } else {
+              boxClass += ' opacity-50 cursor-not-allowed';
+            }
+
+            return (
             <div
               key={i}
               onClick={() => handleBoxClick(i)}
-              className={`
-                w-[100px] h-[80px] bg-black/50 border-2 rounded-[10px] transition-all relative
-                ${boxStates[i] === 'ready' ? 'border-[#FDD835] shadow-[0_0_15px_rgba(253,216,53,0.5)] animate-pulse cursor-pointer' : ''}
-                ${boxStates[i] === 'recording' ? 'border-[#F44336] bg-[rgba(244,67,54,0.2)] animate-pulse cursor-wait' : ''}
-                ${boxStates[i] === 'captured' ? 'border-[#7CB342] bg-[rgba(124,179,66,0.1)] cursor-default' : ''}
-                ${boxStates[i] === 'empty' ? 'border-[rgba(124,179,66,0.3)] cursor-not-allowed' : ''}
-              `}
+              className={boxClass}
             >
               {/* Mic Icon */}
               {boxStates[i] === 'ready' && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 opacity-70">
-                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-full h-full fill-[#FDD835]" style={{ filter: 'drop-shadow(0 0 5px rgba(253, 216, 53, 0.5))' }}>
+                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-full h-full" style={{ fill: styles.iconFill }}>
                     <path d="M12 2C10.9 2 10 2.9 10 4V12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12V4C14 2.9 13.1 2 12 2Z"/>
                     <path d="M17 11C17 13.76 14.76 16 12 16C9.24 16 7 13.76 7 11H5C5 14.53 7.61 17.43 11 17.92V21H13V17.92C16.39 17.43 19 14.53 19 11H17Z"/>
                   </svg>
@@ -414,11 +453,12 @@ export default function CalibrationModal({ letter, onClose, onSuccess }: Calibra
                 className="w-full h-full"
               />
             </div>
-          ))}
+          );
+          })}
         </div>
 
         {/* Status Message */}
-        <div className="text-center text-[#ddd] text-lg mt-5">
+        <div className={`text-center ${styles.text} text-lg mt-5`}>
           {statusMessage}
         </div>
 
