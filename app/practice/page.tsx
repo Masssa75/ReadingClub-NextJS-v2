@@ -66,8 +66,6 @@ export default function PlayPage() {
   }, [currentProfileId]);
 
   const loadCalibrations = async () => {
-    if (!currentProfileId) return;
-
     try {
       // Load ALL calibrations (cross-profile pooling)
       const { data, error } = await supabase
