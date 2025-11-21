@@ -8,7 +8,7 @@ export default function Tabs() {
 
   const tabs = [
     { path: '/calibrate', label: '📊 Calibrate' },
-    { path: '/play', label: '▶ Play' },
+    { path: '/practice', label: '▶ Practice' },
   ];
 
   return (
