@@ -1,27 +1,24 @@
 # ReadingClub
 
-**Version:** 1.16.0
-**Last Updated:** November 18, 2025
-**Status:** ✅ Stable - Snapshot scoring persistence FIXED + cross-profile pooling (phonics4)
+**Version:** 1.24.0
+**Last Updated:** November 21, 2025
+**Status:** ✅ Production Deployed at https://wunderkind.world
 
 ## 📁 Project Structure Overview
 
 ```
 ReadingClub/
-├── index-1.4.html                  # CURRENT: Linear lessons system + golden letters
-├── app/                            # NEW: Next.js migration (Session 12)
-│   ├── MIGRATION-PLAN.md          # Phases 1-3 complete (Foundation, Audio, Calibration)
+├── app/                            # PRIMARY: Next.js production app (DEPLOYED)
+│   ├── MIGRATION-PLAN.md          # Migration history and phases
 │   ├── README.md                  # Next.js app documentation
-│   ├── package.json               # Next.js 16 + React 19 + TypeScript
+│   ├── package.json               # Next.js 16 + React 19 + TypeScript + Tailwind v3
+│   ├── tailwind.config.ts         # Tailwind CSS v3 config (CRITICAL: v4 breaks Netlify)
 │   ├── app/                       # Next.js App Router
-│   ├── components/                # React components (CalibrationModal)
+│   ├── components/                # React components (CalibrationModal, etc.)
 │   ├── lib/                       # Hooks, types, constants, Supabase
 │   └── utils/                     # Audio engine, pattern matching, recording
+├── index-1.4.html                  # LEGACY: Archived HTML version (stable-versions/)
 ├── serve.cjs                       # Local HTTP server for CORS-free testing
-├── test-auth-flow.js               # Playwright test for profile persistence
-├── test-profile-switching.js       # Playwright test for profile switching
-├── voice-instructions/             # Audio files for game instructions
-│   └── Congratulation level 1.mp3 # Celebration audio
 ├── PHONICS-SYSTEM-README.md       # Technical documentation
 ├── CLAUDE.md                       # Project instructions (this file)
 ├── SUPABASE-SETUP.md              # Supabase configuration guide
@@ -29,19 +26,15 @@ ReadingClub/
 ├── supabase/                       # Supabase migrations
 │   └── migrations/                 # Database migrations
 └── logs/                           # Session logs
-    ├── SESSION-LOG-INDEX.md       # Master session index (25 sessions total)
-    ├── SESSION-LOG-2025-11-09.md  # Sessions 1-2 logs
-    ├── SESSION-LOG-2025-11-10.md  # Sessions 3-8 logs
-    ├── SESSION-LOG-2025-11-11.md  # Sessions 9-13 logs
-    └── SESSION-LOG-2025-11-14.md  # Sessions 14-25 logs
+    ├── SESSION-LOG-INDEX.md       # Master session index (36+ sessions)
+    └── SESSION-LOG-2025-11-*.md   # Daily session logs
 
-Production:
-└── BambooValley/phuket-camps/
-    └── public/phonics/
-        └── index.html              # DEPLOYED: https://phuketcamp.com/phonics
+Production Deployment:
+└── GitHub: Masssa75/ReadingClub-NextJS-v2
+    └── Netlify: learn2-parent-sharing → https://wunderkind.world
 ```
 
-**Current State:** Single HTML file MVP deployed to production, Supabase backend, optimized audio, linear lessons system. Next.js migration in parallel development (Phases 1-3 complete).
+**Current State:** Next.js production app deployed at wunderkind.world. Full voice-based phonics learning with calibration, adaptive play mode, pattern visualization, and Supabase backend.
 
 ## Project Vision & Goals
 
@@ -101,50 +94,57 @@ Based on homeschooling best practices, students advance through mastery:
 
 ### Deployment Process - How to Push to Production
 
-**IMPORTANT:** This project deploys to https://phuketcamp.com/phonics2/ via GitHub + Netlify auto-deploy.
+**IMPORTANT:** This project deploys to https://wunderkind.world via GitHub + Netlify auto-deploy.
 
-#### Step 1: Make changes in DRC project
+**Production Site:**
+- **URL:** https://wunderkind.world
+- **GitHub Repo:** https://github.com/Masssa75/ReadingClub-NextJS-v2
+- **Netlify Site:** learn2-parent-sharing (Site ID: 0d9c7411-304b-40d3-94bf-73d979c8bf33)
+
+#### Step 1: Work in the app folder
 ```bash
-cd /Users/marcschwyn/Desktop/projects/DRC
-# Make your changes to index-2.0.html
-git add -A
-git commit -m "feat: description"
-# Note: No remote configured in DRC repo - commits are local only
+cd /Users/marcschwyn/Desktop/projects/DRC/app
+# Make your changes to Next.js app files
+# Test locally: npm run dev (port 3001)
+# Build locally: npm run build (verify no errors)
 ```
 
-#### Step 2: Copy to deployment repo and push
+#### Step 2: Deploy to production
 ```bash
-# Copy updated file to deployment location
-cp /Users/marcschwyn/Desktop/projects/DRC/index-2.0.html \
-   /Users/marcschwyn/Desktop/projects/BambooValley/phuket-camps/public/phonics2/index.html
-
 # Navigate to deployment repo
-cd /Users/marcschwyn/Desktop/projects/BambooValley/phuket-camps
+cd /Users/marcschwyn/Desktop/projects/ReadingClub-NextJS-v2-deploy
 
-# If git lock exists, remove it:
-rm -f .git/index.lock
+# Copy latest changes from DRC/app to deployment repo
+# (Or work directly in deployment repo)
 
 # Commit and push to GitHub
-git add public/phonics2/index.html
-git commit -m "feat: description of changes"
+git add -A
+git commit -m "feat: description of changes
+
+🤖 Generated with Claude Code
+Co-Authored-By: Claude <noreply@anthropic.com>"
 git push origin main
 ```
 
 #### Step 3: Verify deployment
 ```bash
-# Netlify auto-deploys from GitHub (takes ~1-2 minutes)
-# Check https://phuketcamp.com/phonics2/ to verify changes
+# Netlify auto-deploys from GitHub (takes 1-2 minutes)
+# Monitor: netlify watch
+# Or check: https://wunderkind.world
 ```
 
-**Deployment URLs:**
-- **phonics2** (active development): https://phuketcamp.com/phonics2/
-- **phonics** (stable version): https://phuketcamp.com/phonics/
+**CRITICAL TECH REQUIREMENTS:**
+- ✅ **Tailwind CSS v3** (NOT v4 - v4 breaks Netlify builds)
+- ✅ **Next.js 16** + React 19 + TypeScript
+- ✅ Environment variables set in Netlify:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 **NEVER**:
+- Use Tailwind CSS v4 (causes CSS not to load in production)
 - Wait to push code "until it's ready"
 - Test only locally
 - Skip deployment verification
-- Leave broken code undeployed
 
 ### Your Full Permissions
 
@@ -205,6 +205,59 @@ supabase db push
 - Performance optimizations (minor = do, major = ask)
 - UI/UX changes (small = do, significant = ask)
 - New dependencies (common = do, unusual = ask)
+
+## Voice Generator Tool
+
+**Purpose:** Generate AI voice audio files for phonics instructions using OpenAI TTS.
+
+**How to Start:**
+```bash
+# Kill any existing server on port 3333
+lsof -ti:3333 | xargs kill -9 2>/dev/null
+
+# Start the voice generator server
+node voice-generator-server.js
+# Server runs on port 3333 in background
+```
+
+**Access:** Open http://localhost:3333/voice-generator.html in browser
+
+**Features:**
+- Generate MP3 files using OpenAI TTS API (tts-1-hd model)
+- Multiple voices available (nova, alloy, echo, fable, onyx, shimmer)
+- Adjustable speed (0.25x to 4.0x)
+- Folder organization support
+- Saves to `voice-instructions/` directory
+- Stores metadata (text, voice, speed) in `voice-instructions/metadata.json`
+- Play/preview generated files
+- Rename and favorite files
+
+**Common Use Cases:**
+- Generate phonics letter sounds (A → "ah", B → "buh")
+- Create game instructions ("Click the letter you hear")
+- Build celebration audio ("Great job! You got it!")
+- Test different phonetic spellings for AI pronunciation
+
+**API Access (for scripts):**
+```bash
+# Generate a voice file
+curl -X POST http://localhost:3333/generate-voice \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "buh",
+    "filename": "letter-b",
+    "voice": "nova",
+    "speed": 1.0,
+    "folder": ""
+  }'
+
+# List existing files
+curl http://localhost:3333/list-voices?folder=
+```
+
+**Requirements:**
+- OpenAI API key in `.env` file (`OPENAI_API_KEY`)
+- Node.js with Express and OpenAI package installed
 
 
 ## Project Overview
@@ -377,153 +430,93 @@ When debugging issues, follow this systematic 5-step approach:
 **All session accomplishments are documented in the `logs/` folder.**
 
 See:
-- `logs/SESSION-LOG-INDEX.md` - Overview of all sessions (28 sessions total)
+- `logs/SESSION-LOG-INDEX.md` - Overview of all sessions (36 sessions total)
 - `logs/SESSION-LOG-2025-11-09.md` - Sessions 1-2 detailed logs
 - `logs/SESSION-LOG-2025-11-10.md` - Sessions 3-8 detailed logs
 - `logs/SESSION-LOG-2025-11-11.md` - Sessions 9-13 detailed logs
 - `logs/SESSION-LOG-2025-11-12.md` - Sessions 14-21 detailed logs
 - `logs/SESSION-LOG-2025-11-14.md` - Sessions 22-25 detailed logs
 - `logs/SESSION-LOG-2025-11-18.md` - Sessions 26-28 detailed logs
+- `logs/SESSION-LOG-2025-11-19.md` - Session 29 detailed logs
+- `logs/SESSION-LOG-2025-11-20.md` - Sessions 30-34 detailed logs
+- `logs/SESSION-LOG-2025-11-21.md` - Sessions 35-36 detailed logs
 
 **Recent Sessions:**
-- **Session 26:** Snapshot scoring system debugging (fixed indexOf bug, auto-migration, multi-profile display, nasal threshold reduction). See [Session 26 log](logs/SESSION-LOG-2025-11-18.md#session-26---november-18-2025).
-- **Session 27:** Cross-profile snapshot pooling with scoring system (loads calibrations from ALL profiles, snapshot scoring, manual migration button). See [Session 27 log](logs/SESSION-LOG-2025-11-18.md#session-27---november-18-2025).
-- **Session 28:** Snapshot score persistence debugging & fixes (fixed 4 layered bugs preventing scores from saving to database). See [Session 28 log](logs/SESSION-LOG-2025-11-18.md#session-28---november-18-2025).
+- **Session 34:** Next.js migration Phase 3 & 6 complete - Built PatternVisualization, snapshotScoring, negativeSnapshot components. Full Play tab (435 lines) with voice detection, adaptive learning, celebrations. Fixed 6 critical bugs (AudioContext, thresholds, closure bugs, case sensitivity). User testing verified working. See [Session 34 log](logs/SESSION-LOG-2025-11-20.md#session-34---november-20-2025).
+- **Session 35:** Next.js app bug fixes - Fixed audio meters/visualization persistence, pattern matching case sensitivity, 5 TypeScript errors, added complete snapshot display grid. Created autonomous error detection system (Playwright + npm build). Achieved full feature parity with HTML version - zero runtime errors, zero TypeScript errors. See [Session 35 log](logs/SESSION-LOG-2025-11-21.md#session-35---november-21-2025).
+- **Session 36:** Production deployment to wunderkind.world - Deployed Next.js app via Netlify, fixed critical Tailwind CSS v4→v3 styling issue (v4 incompatible with Netlify builds), created Playwright verification test, updated CLAUDE.md to mark app/ as PRIMARY and HTML as LEGACY. Verified full styling with automated testing. See [Session 36 log](logs/SESSION-LOG-2025-11-21.md#session-36---november-21-2025).
 
 ## Current Status & Active Files
 
-### Main Application
-**File:** `index-1.4.html` (~4500 lines, single HTML file)
-**Deployed:** https://phuketcamp.com/phonics
-**Stable:** `index-1.2.html` (~2700 lines, moved to stable-versions folder)
-**Technology:** Vanilla JavaScript + Web Audio API + Supabase + Supabase Auth
+### Production Application (PRIMARY)
+**Location:** `/app` folder
+**Deployed:** https://wunderkind.world
+**Technology:** Next.js 16 + React 19 + TypeScript + Tailwind CSS v3
+**Status:** ✅ Production-ready with full feature parity
 
-**Latest Features (Session 21):**
-- ✅ **Pattern Comparison Visualization** - Side-by-side view of stored calibration vs current recording in Play tab
-- ✅ **Real-time Pattern Display** - 64-bin frequency patterns shown as colored bars during voice detection
-- ✅ **Debug Visualization** - Helps understand why matches succeed or fail, shows calibration quality
+**Core Features:**
+- ✅ **26 letters** - Full alphabet phonics training (A-Z)
+- ✅ **Multi-user profiles** - Profile selector with voice calibration per user
+- ✅ **Voice calibration** - 5-snapshot capture system per letter with peak detection
+- ✅ **2 main tabs:**
+  - **Calibrate:** Pattern-based voice recording with pedagogical letter grouping (Vowels, Easy/Common/Advanced Consonants)
+  - **Play:** Real-time voice recognition game with adaptive learning
+- ✅ **Pattern visualization** - Live comparison of current voice vs stored calibration + complete snapshot grid
+- ✅ **Adaptive learning** - Session management, proficiency tracking, success celebrations
+- ✅ **Snapshot scoring** - Positive/negative training patterns for improved accuracy
 
-**Session 13 Features:**
-- ✅ **Linear Lessons System** - TypingClub-style progression with 5 lessons (A listen, A solo, E listen, E solo, Mix A+E)
-- ✅ **Visual Lesson States** - Completed (green ✅), Current (yellow glowing ▶), Locked (grey 🔒)
-- ✅ **Golden Letters** - Completed calibrations display with golden gradient effect
-
-**Session 11 Features:**
-- ✅ **Pedagogical Letter Grouping** - Calibration grid organized by learning difficulty
-- ✅ **Visual Group Headers** - "Vowels", "Easy Consonants", "Common Consonants", "Advanced"
-
-**Session 10 Features:**
-- ✅ **Voice Instruction Popup** - Auto-plays "game play 1_v2.mp3" when starting game
-- ✅ **Celebration Modal** - Confetti animation + "A success B start.mp3" for Level 1 completion
-- ✅ **Audio MIME Type Fix** - `decodeURIComponent()` in serve.cjs for files with spaces
-
-**Session 9 Features:**
-- ✅ **Game 2 Level 1** - Complete beginner mode with auto-play audio + voice recognition
-- ✅ **Success Counter** - ⭐ 0/10 tracker with completion celebration at 10 consecutive matches
-- ✅ **Per-Letter Sensitivity** - Settings button in calibration cards with Easy/Normal/Strict slider
-
-**Previous Features (Session 6):**
-- ✅ **Optimized Audio** - 5-10KB files (24x smaller), 12x faster uploads (247ms vs 2700ms)
-- ✅ **Production Deployment** - Live at phuketcamp.com/phonics via Netlify
-
-**Core Features (Session 1):**
-- ✅ **26 letters** - Full alphabet in phonics sounds (A-Z)
-- ✅ **Multi-user profiles** - Each person calibrates their own voice
-- ✅ **Audio recording** - Records calibration for playback reference
-- ✅ **6 tabs:**
-  - Calibrate: Pausable voice pattern recording (snapshot → pause → continue) with per-letter sensitivity
-  - Level 1: Listen & learn mode (flashcards)
-  - Tuner: Flashcard practice with LISTEN button and mastery tracking
-  - Game: Falling letters game (3 lives, increasing speed)
-  - Game 2: Level 1 beginner mode (auto-play audio, voice recognition, success counter)
-  - 📚 Lessons: Linear progression system (5 lessons with clear completion states)
-- ✅ **Detection algorithm:** S11-Snapshot (80%+ accuracy)
-- ✅ **Dynamic thresholds:** Adjusted per phoneme type
-
-**Technical Details:**
+**Technical Architecture:**
 - **Algorithm:** Peak frequency spectrum matching with cluster-based outlier removal
-- **Storage:** Supabase (calibration data + audio files) + localStorage (attempt history, profile names)
-- **Audio:** Individual 5-10KB WebM clips per letter (optimized from 120KB)
-- **Recording:** 400ms pre-delay + peak detection + 700ms post-peak = complete sound
-- **Detection:** FFT analysis (4096 bins) → 64-bin downsampling → L1 distance
-- **Negative Snapshots:** When incorrect match occurs, clicking "✗ Not 'X'" stores snapshot as negative example for letter X. Future attempts compare against both positive (should match) and negative (should reject) patterns. Negative must be >5% stronger than positive to trigger rejection.
-- **Latency:** <100ms from peak to detection
-- **Frame rate:** 60fps continuous analysis
-- **Performance:** 247ms upload + 277ms DB save = 525ms total (5.7x faster than before)
+- **Storage:** Supabase (calibration data + audio files) + localStorage (session state)
+- **Audio Engine:** FFT analysis (2048 bins) → 64-bin downsampling → L1 distance matching
+- **Recording:** 400ms pre-delay + peak detection + 700ms post-peak capture
+- **Detection:** <100ms latency from peak to match, 60fps continuous analysis
+- **Negative Snapshots:** Cross-letter rejection (stores mismatches to prevent false positives)
+- **Performance:** Optimized WebM audio (5-10KB per letter), fast DB writes (525ms total)
 
-### Next.js Migration (Session 12)
-**Location:** `/app` folder (parallel development)
-**Status:** ✅ Phases 1-3 complete (Foundation, Audio System, Calibration)
-**Running:** Port 3001 (`npm run dev`)
-**Plan:** See `app/MIGRATION-PLAN.md` for full roadmap
+**Key Components:**
+- `app/calibrate/page.tsx` - Calibration interface with letter grid
+- `app/play/page.tsx` - Voice recognition gameplay (435 lines)
+- `app/components/CalibrationModal.tsx` - 5-snapshot capture UI
+- `app/components/PatternVisualization.tsx` - Debug visualization
+- `app/utils/audioEngine.ts` - Web Audio API wrapper
+- `app/utils/fftAnalysis.ts` - Frequency analysis (CRITICAL: 2048 bins, 0.5 threshold)
+- `app/utils/patternMatching.ts` - L1 distance comparison
+- `app/utils/snapshotScoring.ts` - Positive/negative pattern scoring
 
-**What's Built:**
-- ✅ Complete audio engine (audioEngine, frequencyAnalysis, patternMatching, audioRecording)
-- ✅ Calibration modal with 5-snapshot capture and peak detection
-- ✅ Supabase integration (profiles, calibrations, audio storage)
-- ✅ Type-safe with TypeScript
-- ✅ Next button auto-advances to next uncalibrated letter
+**Recent Deployment (Session 36):**
+- Deployed Next.js app to wunderkind.world via Netlify
+- Fixed Tailwind CSS v4 → v3 downgrade (v4 incompatible with Netlify)
+- Verified with Playwright: full styling, gradient background, proper component rendering
+- See [Session 36 log](logs/SESSION-LOG-2025-11-21.md) for deployment details
 
-**What's Next:**
-- Phase 4: Profile Management UI (optional)
-- Phase 5: Tuner component (required)
-- Phase 6: Game 3 component (required)
+### Next Development Priorities
 
-**Details:** See [Session 12 log](logs/SESSION-LOG-2025-11-11.md#session-12---november-11-2025) for full migration details.
-
-### Documentation
-**File:** `PHONICS-SYSTEM-README.md`
-- Complete technical documentation
-- Algorithm explanations
-- Evolution history (10+ approaches tried)
-- Troubleshooting guide
-
-### Next Development Phase
-See [Session Log Index](logs/SESSION-LOG-INDEX.md) for all 20 sessions.
-
-**🚨 Pending User Testing (Session 20):**
-
-User is testing current system with daughter (quiet voice issue). Awaiting feedback to determine which solutions to implement:
-1. **Minimum Volume Check** - Reject quiet calibrations during capture (15 mins)
-2. **Visual Volume Meter** - Real-time feedback green/yellow/red (30 mins)
-3. **Multi-Calibration Per Letter** - Handle day-to-day voice variation (2 hours)
-4. **Pattern Sanity Validation** - Phoneme-specific checks (1 hour)
-
-**🚨 CRITICAL - Next.js App Development:**
-
-1. **Adaptive Learning System** - IN PROGRESS (Phases 6.1-6.4 complete, 20-25 hours total)
-   - **Full Spec**: See `/app/ADAPTIVE-TUNER-SPEC.md` for complete implementation details
-   - **Why**: User testing revealed kids interact more naturally with self-paced Tuner than structured lessons
-   - **What**: Transform Tuner into adaptive system that tracks proficiency and adjusts letter selection
-   - **Key Phases**:
-     - Phase 6.1: Database + Proficiency Storage (add proficiency column to Supabase)
-     - Phase 6.2: Session Management (localStorage for attempts, 30-min timeout)
-     - Phase 6.3: Adaptive Algorithm (warmup → new letter → 5 reps → 50/50 mix → graduation)
-     - Phase 6.4: Tuner Integration (track LISTEN clicks, replace random selection)
-     - Phase 6.5: Progress Display (mastered/known/learning stats)
-     - Phase 6.6: Celebrations (KNOWN and MASTERED graduations)
-     - Phase 6.7: Testing & Tuning (with Ophelia and siblings)
-   - **Key Insight**: Letter only reaches MASTERED if correct in NEXT session (spaced repetition)
-   - **Location**: `/app` folder (Next.js migration, parallel to index-1.4.html)
-   - **Migration Plan**: See `/app/MIGRATION-PLAN.md` Phase 6
-
-**HTML Version (index-1.4.html) - Maintenance Only:**
-- Keep stable for production at phuketcamp.com/phonics
-- No major new features (focus on Next.js app)
-- Bug fixes only if critical
+**High Priority:**
+1. **Cross-Device Testing** - Verify app works on tablets/phones (touch events, audio permissions)
+2. **User Testing Feedback** - Implement improvements based on real child usage
+3. **Performance Monitoring** - Track calibration success rates, false positives/negatives
 
 **Medium Priority:**
-2. **Cross-Device Testing** - Verify Next.js app works on tablets/phones
-3. **Profile Management UI** - Add profile selector dropdown in Next.js app
-4. **Visual Polish** - More celebration effects in adaptive system
+4. **Enhanced Celebrations** - More visual feedback for successful letter recognition
+5. **Progress Dashboard** - Show parent/teacher view of student progress over time
+6. **Calibration Improvements** - Volume meter, minimum volume check, multi-calibration support
 
-**Future:**
-5. **Letter combinations** - sh, ch, th, etc.
-6. **3-letter words** - cat, dog, etc.
-7. **Parent Dashboard** - Weekly progress reports, letter difficulty heatmap
-8. **Onboarding flow** - Guide new users through calibration
-9. **Stripe integration** - $1-5/month subscription
-10. **Spam Protection** (if needed):
-    - RLS policies: Max 26 calibrations per profile, file size limits
-    - Auto-delete anonymous profiles inactive for 7+ days
+**Future Features:**
+7. **Letter Combinations** - Digraphs (sh, ch, th, etc.)
+8. **Simple Words** - 3-letter CVC words (cat, dog, etc.)
+9. **Onboarding Flow** - Guided tutorial for first-time users
+10. **Stripe Integration** - $1-5/month subscription model
+11. **Spam Protection** - RLS policies (max 26 calibrations per profile, file size limits, auto-delete inactive profiles)
+
+### Documentation
+**File:** `PHONICS-SYSTEM-README.md` - Complete technical documentation with algorithm evolution history
+
+### Legacy HTML Version (Archived)
+**File:** `index-1.4.html` (~4500 lines, single HTML file)
+**Previous URL:** https://phuketcamp.com/phonics
+**Status:** Archived in `stable-versions/` folder
+**Technology:** Vanilla JavaScript + Web Audio API + Supabase
+
+This version was the MVP prototype and has been superseded by the Next.js production app. All features have been migrated with full parity. See session logs 1-35 for development history.
 

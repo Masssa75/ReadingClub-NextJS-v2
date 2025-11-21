@@ -1,7 +1,7 @@
 # Session Log Index
 
-**Total Sessions:** 28
-**Latest Session:** Session 28 - November 18, 2025
+**Total Sessions:** 36
+**Latest Session:** Session 36 - November 21, 2025
 
 ## All Sessions
 
@@ -440,4 +440,124 @@
 **Status:** ✅ Complete - All scoring bugs fixed, persistence working
 
 **Details:** [Session Log 2025-11-18](SESSION-LOG-2025-11-18.md#session-28---november-18-2025)
+
+### Session 29 - November 19, 2025
+**Focus:** Nasal Threshold Tuning, 5yo Memory Research, Video Generation, Netlify Debugging
+**Key Achievements:**
+- Reduced nasal thresholds (M/N) by 50% for volume (4→2) and 20% for concentration (1.5→1.2)
+- Compiled comprehensive 5-year-old memory retention research (working memory: 1-2 items vs 3-4 adults)
+- Researched AI video generation platforms (Gemini/Veo 3.1 has native audio, Midjourney silent)
+- Created phonics video prompts for letter characters and sound tests
+- Researched phonics best practices: lowercase letters recommended (95% of text)
+- Debugged wunderkind.world Netlify build failure (missing Supabase env vars)
+- Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY via Netlify API
+- Identified Next.js 16 compatibility issues with Netlify (Edge Functions bundling failures)
+- Recommended downgrade to Next.js 15 for production stability
+
+**Status:** ✅ Complete - Nasal thresholds deployed, research compiled, env vars configured (Next.js 16 issue pending user decision)
+
+**Details:** [Session Log 2025-11-19](SESSION-LOG-2025-11-19.md#session-29---november-19-2025)
+
+### Session 30 - November 20, 2025
+**Focus:** Next.js Migration Prep - Code Trimming & Critical Bug Fix
+**Key Achievements:**
+- Trimmed index-5.0.html from 288KB/6,683 lines → 206KB/4,870 lines (27% reduction)
+- Removed deprecated features: Migration code, Progressive Game, Experimental strategies, Stats tab
+- Removed Sensitivity Modal and Audio Recording features (~176 lines)
+- Fixed critical JavaScript parse error (missing space in destructuring: `error}` → `error }`)
+- Replaced recorded audio playback with official phoneme sounds
+- Created comprehensive Playwright test suite for verification
+- Successfully deployed to phuketcamp.com/phonics5/
+
+**Critical Bug:** Single-character typo (`const { data, error}`) caused "missing ) after argument list" parse error, preventing entire script from loading. Systematic debugging with backup restoration and diff comparison identified the issue.
+
+**Status:** ✅ Complete - All features working, file trimmed and ready for Next.js migration analysis
+
+**Details:** [Session Log 2025-11-20](SESSION-LOG-2025-11-20.md#session-30---november-20-2025)
+
+### Session 31 - November 20, 2025
+**Focus:** Database Cleanup - Remove Zero-Match Snapshots
+**Key Achievements:**
+- Analyzed snapshot accumulation in calibrations table (letter U had 1,048 snapshots!)
+- Created 4 analysis scripts using Supabase REST API
+- Removed 2,160 snapshots with score 0 from letters U, u, A, a (90% reduction)
+- Preserved 320 working snapshots (all with score > 0)
+- Database-only operation (no code changes required)
+- Used jq filtering to clean pattern_data JSON field
+
+**Findings:** Profile ca92ac17 had accumulated 952 zero-match snapshots for letter U (90.8% unused), 128 for letter A (66.7% unused). System intentionally allows unlimited snapshots for new calibration method, but zero-score patterns were dead weight.
+
+**Status:** ✅ Complete - Database cleaned, faster pattern matching, no user impact
+
+**Details:** [Session Log 2025-11-20](SESSION-LOG-2025-11-20.md#session-31---november-20-2025)
+
+### Session 32 - November 20, 2025
+**Focus:** Next.js Migration - Phase 1 Foundation & Phase 2 Audio Engine
+**Key Achievements:**
+- Completed Phase 1: Next.js 15 app structure, TypeScript types, PHONEMES constants, routing, tabs
+- Completed Phase 2: Audio engine (5 utils files, 391 lines) - Web Audio, FFT, peak detection, pattern matching
+- Created migration specs: NEXTJS-MIGRATION-SPEC.md, NEXTJS-FEATURE-INVENTORY.md
+- User confirmed: Keep ALL core features (calibration, adaptive learning, voice detection)
+- Established cross-instance verification protocol for handoff
+- Fixed lib/ file location (app/app/lib/ not app/lib/)
+- Layout overlap bug identified (deferred to Phase 3)
+
+**Status:** ✅ Phase 1-2 Complete - Ready for Phase 3 (Calibration UI)
+
+**Details:** [Session Log 2025-11-20](SESSION-LOG-2025-11-20.md#session-32---november-20-2025)
+
+### Session 33 - November 20, 2025
+**Focus:** Next.js Migration - Phase 2 Audio Engine & Phase 3A Calibration Grid
+**Key Achievements:**
+- Completed Phase 2: Created 8 audio utility files (audioEngine, fftAnalysis, peakDetection, bufferManager, patternMatching)
+- **CRITICAL FIX:** Corrected FFT constants (4096→2048, 0.3→0.5) to match index-5.0.html exactly
+- Completed Phase 3A: Built CalibrationGrid and LetterCard components with pedagogical grouping
+- Fixed TypeScript lint error (variable reassignment → reduce pattern)
+- Layout spacing bug identified and deferred (browser caching suspected)
+
+**Status:** ✅ Phases 2-3A Complete - Ready for CalibrationModal integration
+
+**Details:** [Session Log 2025-11-20](SESSION-LOG-2025-11-20.md#session-33---november-20-2025)
+
+### Session 34 - November 20, 2025
+**Focus:** Next.js Migration - Complete Phase 3 & Phase 6 (Play Tab)
+**Key Achievements:**
+- Completed Phase 3: Built PatternVisualization, snapshotScoring, negativeSnapshot components
+- Completed Phase 6: Full Play tab (435 lines) with voice detection, adaptive learning, celebrations
+- Fixed critical AudioContext closed error (added state check before closing)
+- Fixed voice detection not working (6 bugs: thresholds, imports, closure bugs, case sensitivity)
+- Integrated all phases: Audio Engine (2), Calibration (3), Profiles (4), Adaptive Learning (5), Play Tab (6)
+- User testing verified working with real user (daughter)
+
+**Status:** ✅ Phases 3 & 6 Complete - Full gameplay working, ready for Phase 7 (polish & testing)
+
+**Details:** [Session Log 2025-11-20](SESSION-LOG-2025-11-20.md#session-34---november-20-2025)
+
+### Session 35 - November 21, 2025
+**Focus:** Next.js App Bug Fixes - TypeScript Compilation, Case Sensitivity, Pattern Matching, Snapshot Display
+**Key Achievements:**
+- Fixed audio meters and pattern visualization to persist during success celebrations
+- Fixed pattern matching (case sensitivity bug - database uppercase vs code lowercase)
+- Fixed 5 TypeScript compilation errors (refs, null checks, type assertions)
+- Created autonomous error detection system (Playwright + npm build)
+- Extended PatternVisualization to show ALL snapshots in 3-column grid with scores
+- Achieved complete feature parity with HTML version
+
+**Status:** ✅ Complete - Zero runtime errors, zero TypeScript errors, ready for production testing
+
+**Details:** [Session Log 2025-11-21](SESSION-LOG-2025-11-21.md#session-35---november-21-2025)
+
+### Session 36 - November 21, 2025
+**Focus:** Production Deployment to wunderkind.world - Next.js App with Tailwind CSS Fix
+**Key Achievements:**
+- Deployed Next.js app to production (https://wunderkind.world via Netlify)
+- Fixed critical Tailwind CSS styling issue (v4 → v3 downgrade for Netlify compatibility)
+- Created Playwright verification test for styling validation
+- Updated CLAUDE.md: Restructured for production context (app/ PRIMARY, HTML LEGACY)
+- Set environment variables in Netlify (Supabase URL and anon key)
+- Verified deployment with automated testing (gradient, styling, components)
+
+**Status:** ✅ Complete - Production deployment successful, fully styled, verified with automation
+
+**Details:** [Session Log 2025-11-21](SESSION-LOG-2025-11-21.md#session-36---november-21-2025)
 
