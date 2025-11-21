@@ -21,16 +21,23 @@ export default function CalibrationGrid() {
   const [modalLetter, setModalLetter] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('🔍 useEffect triggered - currentProfileId:', currentProfileId);
     if (currentProfileId) {
+      console.log('🔍 Calling loadCalibrations...');
       loadCalibrations();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProfileId]);
 
   const loadCalibrations = async () => {
-    if (!currentProfileId) return;
+    console.log('🔍 loadCalibrations called - currentProfileId:', currentProfileId);
+    if (!currentProfileId) {
+      console.log('🔍 No profileId, returning');
+      return;
+    }
 
     try {
+      console.log('🔍 Querying calibrations for profile:', currentProfileId);
       const { data, error } = await supabase
         .from('calibrations')
         .select('letter')
@@ -38,6 +45,7 @@ export default function CalibrationGrid() {
 
       if (error) throw error;
 
+      console.log('🔍 Calibrations loaded:', data?.length || 0);
       if (data) {
         const calibrated = new Set(data.map(c => c.letter));
         setCalibratedLetters(calibrated);
