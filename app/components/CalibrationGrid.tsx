@@ -16,6 +16,7 @@ const GROUP_LABELS = {
 
 export default function CalibrationGrid() {
   const { currentProfileId, isLoading: profileLoading } = useProfileContext();
+  console.log('🔍 CalibrationGrid render - profileLoading:', profileLoading, 'profileId:', currentProfileId);
   const [calibratedLetters, setCalibratedLetters] = useState<Set<string>>(new Set());
   const [modalLetter, setModalLetter] = useState<string | null>(null);
 
