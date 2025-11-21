@@ -26,10 +26,11 @@ export default function Learn1() {
   // Use the shared voice game hook
   const { state, actions } = useVoiceGame(handleSuccess);
 
-  // Load calibrations on mount
+  // Load calibrations on mount (empty array to prevent infinite loop)
   useEffect(() => {
     actions.loadCalibrations();
-  }, [actions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openVideo = () => {
     setShowVideo(true);
