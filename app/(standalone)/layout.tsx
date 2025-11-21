@@ -1,4 +1,3 @@
-import '../globals.css';
 import { ProfileProvider } from '@/app/contexts/ProfileContext';
 
 export default function StandaloneLayout({
@@ -7,12 +6,8 @@ export default function StandaloneLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="m-0 p-0 overflow-hidden">
-        <ProfileProvider>
-          {children}
-        </ProfileProvider>
-      </body>
-    </html>
+    <ProfileProvider>
+      {children}
+    </ProfileProvider>
   );
 }
