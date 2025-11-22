@@ -112,8 +112,9 @@ function Learn1() {
   const openVideo = () => {
     // Check if video exists for this letter
     const videoMap: Record<string, string> = {
-      'A': '/Videos/a-Apple.mp4',
+      'A': '/Videos/a-Apple2.mp4',
       'B': '/Videos/Bear.mp4',
+      'E': '/Videos/e.mp4',
     };
 
     const hasVideo = currentLetter && videoMap[currentLetter.toUpperCase()];
@@ -348,12 +349,12 @@ function Learn1() {
         </div>
       )}
 
-      <div className="relative z-10 flex flex-col items-center justify-center h-full gap-24">
+      <div className="relative z-10 flex flex-col items-center justify-center h-full gap-8">
         <div className="text-white text-2xl font-light tracking-[0.3em] uppercase opacity-70">Wunderkind</div>
 
         {/* Letter - click to watch video */}
         <div
-          className={`text-[280px] leading-none font-black text-white drop-shadow-2xl cursor-pointer hover:scale-110 transition-transform ${showSuccess ? 'animate-bounce' : ''}`}
+          className={`text-[240px] md:text-[280px] leading-none font-black text-white drop-shadow-2xl cursor-pointer hover:scale-110 transition-transform ${showSuccess ? 'animate-bounce' : ''}`}
           onClick={openVideo}
         >
           {currentLetter || '?'}
@@ -396,7 +397,7 @@ function Learn1() {
         )}
 
         {/* Learn button - starts voice recognition game */}
-        {!state.isActive ? (
+        {!state.isActive && !showSuccess ? (
           <button
             onClick={() => startGame()}
             className="px-24 py-6 text-2xl font-medium text-white/90 rounded-full border-2 border-white/40 backdrop-blur-sm bg-white/10 hover:bg-white/20 transition-all"
@@ -406,7 +407,7 @@ function Learn1() {
         ) : (
           <button
             onClick={stopGame}
-            className="px-24 py-6 text-2xl font-bold text-white rounded-full border-2 border-red-500/80 backdrop-blur-sm bg-red-500/70 hover:bg-red-600/80 transition-all shadow-lg"
+            className="px-16 py-4 text-lg font-medium text-white/90 rounded-full border-2 border-red-400/50 backdrop-blur-sm bg-red-400/40 hover:bg-red-500/50 transition-all"
           >
             Stop
           </button>
@@ -420,8 +421,9 @@ function Learn1() {
             {(() => {
               // Map letters to their video files
               const videoMap: Record<string, string> = {
-                'A': '/Videos/a-Apple.mp4',
+                'A': '/Videos/a-Apple2.mp4',
                 'B': '/Videos/Bear.mp4',
+                'E': '/Videos/e.mp4',
               };
 
               const videoSrc = currentLetter ? videoMap[currentLetter.toUpperCase()] : null;
