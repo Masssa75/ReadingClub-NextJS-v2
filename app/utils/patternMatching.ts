@@ -87,6 +87,12 @@ export function matchAgainstLetter(
   }
 
   const snapshots = calibrationData[letter].snapshots;
+
+  // DEBUG: Log snapshot counts
+  const posCount = snapshots.filter(s => !s.isNegative).length;
+  const negCount = snapshots.filter(s => s.isNegative).length;
+  console.log(`🔍 Testing letter "${letter}": ${snapshots.length} total (${posCount} pos, ${negCount} neg)`);
+
   let bestPositiveScore = 0;
   let bestPositiveSnapshot: Snapshot | null = null;
   let bestNegativeScore = 0;
