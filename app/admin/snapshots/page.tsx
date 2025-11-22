@@ -28,8 +28,9 @@ export default function AdminSnapshotsPage() {
       const counts: Record<string, number> = {};
       data?.forEach((cal) => {
         const letter = cal.letter.toLowerCase();
-        const snapshotCount = cal.pattern_data?.snapshots?.length || 0;
-        counts[letter] = (counts[letter] || 0) + snapshotCount;
+        // Only count positive snapshots (matching what we display)
+        const positiveSnapshotCount = cal.pattern_data?.snapshots?.filter((s: any) => !s.isNegative).length || 0;
+        counts[letter] = (counts[letter] || 0) + positiveSnapshotCount;
       });
 
       setSnapshotCounts(counts);
@@ -43,11 +44,11 @@ export default function AdminSnapshotsPage() {
     setSelectedLetter(letter);
 
     try {
-      // Load all calibrations for this letter (cross-profile)
+      // Load all calibrations for this letter (cross-profile, case-insensitive)
       const { data, error } = await supabase
         .from('calibrations')
         .select('*')
-        .eq('letter', letter.toLowerCase());
+        .ilike('letter', letter);
 
       if (error) throw error;
 
