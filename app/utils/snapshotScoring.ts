@@ -63,13 +63,46 @@ export function incrementSnapshotScore(
   // Second try: Match by data content if direct reference fails
   if (snapshotIndex === -1) {
     console.log('⚠️ Direct object reference failed, trying data comparison...');
+
+    // Debug: Log what we're trying to match
+    console.log('🔍 Looking for snapshot:', {
+      hasData: !!snapshot.data,
+      dataLength: snapshot.data?.length,
+      dataPreview: snapshot.data?.slice(0, 5),
+      profileId: snapshot.profileId?.substring(0, 8)
+    });
+
+    console.log('🔍 Available snapshots:', calibrationData[normalizedLetter].snapshots.map((s, idx) => ({
+      index: idx,
+      hasData: !!s.data,
+      dataLength: s.data?.length,
+      dataPreview: s.data?.slice(0, 5),
+      profileId: s.profileId?.substring(0, 8)
+    })));
+
     snapshotIndex = calibrationData[normalizedLetter].snapshots.findIndex(s => {
       // Match by comparing the actual pattern data
-      if (!s.data || !snapshot.data) return false;
-      if (s.data.length !== snapshot.data.length) return false;
+      if (!s.data || !snapshot.data) {
+        console.log('  ❌ Missing data arrays');
+        return false;
+      }
+      if (s.data.length !== snapshot.data.length) {
+        console.log(`  ❌ Length mismatch: ${s.data.length} vs ${snapshot.data.length}`);
+        return false;
+      }
 
       // Compare first 10 values to confirm it's the same pattern
-      const matches = s.data.slice(0, 10).every((val, i) => Math.abs(val - snapshot.data[i]) < 0.0001);
+      const matches = s.data.slice(0, 10).every((val, i) => {
+        const diff = Math.abs(val - snapshot.data[i]);
+        if (diff >= 0.0001) {
+          console.log(`  ❌ Value mismatch at index ${i}: ${val} vs ${snapshot.data[i]} (diff: ${diff})`);
+          return false;
+        }
+        return true;
+      });
+      if (matches) {
+        console.log('  ✅ Found matching snapshot by data comparison!');
+      }
       return matches;
     });
   }
