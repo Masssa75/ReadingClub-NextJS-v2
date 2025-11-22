@@ -393,9 +393,8 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     }
   };
 
-  const handlePlayExistingSnapshot = (audioUrl: string) => {
+  const handlePlayExistingSnapshot = async (audioUrl: string) => {
     console.log('🎵 Attempting to play audio:', audioUrl);
-    console.log('📱 User agent:', navigator.userAgent);
 
     if (!audioUrl) {
       console.error('❌ No audio URL provided');
@@ -403,100 +402,57 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
       return;
     }
 
-    // For Safari iOS: Create audio element early and set attributes before loading
-    const audio = new Audio();
-    audio.crossOrigin = 'anonymous';  // Enable CORS
-    audio.preload = 'auto';
+    setStatusMessage('Fetching audio...');
 
-    audio.onloadstart = () => {
-      console.log('🎵 Audio loading started...', {
-        src: audioUrl,
-        srcLength: audioUrl.length
+    try {
+      // Fetch as blob first (works around Safari CORS issues)
+      // This is the same approach that works for fresh recordings
+      const response = await fetch(audioUrl);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      console.log('✅ Audio blob fetched:', {
+        size: blob.size,
+        type: blob.type
       });
-      setStatusMessage('Loading audio...');
-    };
 
-    audio.onloadedmetadata = () => {
-      const info = {
-        duration: audio.duration,
-        volume: audio.volume,
-        muted: audio.muted,
-        networkState: audio.networkState,
-        readyState: audio.readyState
+      if (blob.size === 0) {
+        throw new Error('Audio file is empty');
+      }
+
+      // Create object URL from blob (same as fresh recordings)
+      const blobUrl = URL.createObjectURL(blob);
+      const audio = new Audio(blobUrl);
+
+      audio.oncanplay = () => {
+        console.log('✅ Audio ready to play');
+        setStatusMessage('Playing...');
       };
-      console.log('📊 Audio metadata loaded:', info);
 
-      // Show on screen for iPad debugging
-      setStatusMessage(`Duration: ${audio.duration.toFixed(2)}s, Vol: ${audio.volume}, Muted: ${audio.muted}`);
-    };
+      audio.onended = () => {
+        console.log('✅ Audio playback ended');
+        setStatusMessage('');
+        URL.revokeObjectURL(blobUrl);  // Clean up
+      };
 
-    audio.oncanplay = () => {
-      console.log('✅ Audio ready to play', {
-        duration: audio.duration,
-        volume: audio.volume,
-        muted: audio.muted,
-        readyState: audio.readyState
-      });
+      audio.onerror = (e) => {
+        console.error('❌ Audio playback error:', e);
+        setStatusMessage('❌ Playback failed');
+        URL.revokeObjectURL(blobUrl);
+      };
 
-      // Ensure volume is set and not muted
-      audio.volume = 1.0;
-      audio.muted = false;
-
-      setStatusMessage('Playing...');
-    };
-
-    audio.onplay = () => {
+      // Play immediately (user gesture is fresh)
+      await audio.play();
       console.log('✅ Audio playback started');
-    };
 
-    audio.onended = () => {
-      console.log('✅ Audio playback ended');
-      setStatusMessage('');
-    };
-
-    audio.onerror = (e) => {
-      const audioElement = e && typeof e === 'object' && 'target' in e ? e.target as HTMLAudioElement : audio;
-      const error = audioElement.error;
-      console.error('❌ Audio loading error:', {
-        code: error?.code,
-        message: error?.message,
-        MEDIA_ERR_ABORTED: error?.code === 1,
-        MEDIA_ERR_NETWORK: error?.code === 2,
-        MEDIA_ERR_DECODE: error?.code === 3,
-        MEDIA_ERR_SRC_NOT_SUPPORTED: error?.code === 4
-      });
-
-      let errorMsg = 'Failed to load audio';
-      if (error?.code === 2) errorMsg = 'Network error - check CORS';
-      if (error?.code === 4) errorMsg = 'Audio format not supported';
-
-      setStatusMessage(`❌ ${errorMsg}`);
-    };
-
-    // Set source AFTER setting up event listeners
-    audio.src = audioUrl;
-
-    // Attempt playback with detailed error handling
-    audio.play()
-      .then(() => {
-        console.log('✅ Audio playback promise resolved');
-      })
-      .catch(err => {
-        console.error('❌ Audio playback failed:', {
-          name: err.name,
-          message: err.message,
-          stack: err.stack
-        });
-
-        let userMsg = err.message;
-        if (err.name === 'NotAllowedError') {
-          userMsg = 'Safari blocked autoplay - try again';
-        } else if (err.name === 'NotSupportedError') {
-          userMsg = 'Audio format not supported';
-        }
-
-        setStatusMessage(`❌ ${userMsg}`);
-      });
+    } catch (err) {
+      console.error('❌ Failed to fetch/play audio:', err);
+      const error = err as Error;
+      setStatusMessage(`❌ ${error.message}`);
+    }
   };
 
   const playLetterSound = () => {
