@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import type { CalibrationData } from '@/app/lib/types';
-import { synthesizeSnapshot } from '@/app/utils/snapshotSynthesis';
 
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
@@ -274,6 +273,7 @@ interface SnapshotCardProps {
 
 function SnapshotCard({ snapshot, index, onDelete }: SnapshotCardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
@@ -305,22 +305,24 @@ function SnapshotCard({ snapshot, index, onDelete }: SnapshotCardProps) {
     });
   }, [snapshot.data]);
 
-  const playAudio = async () => {
-    if (!snapshot.data || snapshot.data.length === 0) {
-      console.error('No snapshot data to synthesize');
-      return;
+  const playAudio = () => {
+    if (!snapshot.audio_url) return;
+
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
 
     setIsPlaying(true);
 
-    try {
-      // Synthesize audio from frequency spectrum (1.5 seconds)
-      await synthesizeSnapshot(snapshot.data, 1.5);
+    // Play the snapshot audio
+    audioRef.current = new Audio(snapshot.audio_url);
+    audioRef.current.onended = () => setIsPlaying(false);
+    audioRef.current.play().catch(err => {
+      console.error('Error playing snapshot audio:', err);
       setIsPlaying(false);
-    } catch (err) {
-      console.error('Error synthesizing snapshot audio:', err);
-      setIsPlaying(false);
-    }
+    });
   };
 
   const isNegative = snapshot.isNegative || false;
@@ -342,17 +344,19 @@ function SnapshotCard({ snapshot, index, onDelete }: SnapshotCardProps) {
           </div>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={playAudio}
-            className={`px-3 py-1 rounded transition-colors ${
-              isPlaying
-                ? 'bg-blue-600 text-white'
-                : 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/40'
-            }`}
-            title="Synthesize audio from spectrum"
-          >
-            {isPlaying ? '⏸' : '▶'}
-          </button>
+          {snapshot.audio_url && (
+            <button
+              onClick={playAudio}
+              className={`px-3 py-1 rounded transition-colors ${
+                isPlaying
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-blue-600/20 text-blue-400 hover:bg-blue-600/40'
+              }`}
+              title="Play audio"
+            >
+              {isPlaying ? '⏸' : '▶'}
+            </button>
+          )}
           <button
             onClick={onDelete}
             className="px-3 py-1 rounded bg-red-600/20 text-red-400 hover:bg-red-600/40 transition-colors"
