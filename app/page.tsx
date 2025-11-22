@@ -8,6 +8,7 @@ import { useProficiency } from '@/app/hooks/useProficiency';
 import { selectNextLetter } from '@/app/utils/adaptiveSelection';
 import ParentsMenu from '@/app/components/ParentsMenu';
 import SuccessCelebration from '@/app/components/SuccessCelebration';
+import CalibrationModal from '@/app/components/CalibrationModal';
 import { ProfileProvider } from '@/app/contexts/ProfileContext';
 
 // Audio URLs for letter sounds (from SoundCity Reading)
@@ -48,6 +49,7 @@ function Learn1() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [showCalibrationModal, setShowCalibrationModal] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -240,26 +242,12 @@ function Learn1() {
     }, 3000);
   }
 
-  // Handle manual override: IS X (correct)
-  const handleManualCorrect = async () => {
-    if (!currentProfileId) return;
-
-    setFeedbackMessage('Recording...');
-    const result = await actions.handleManualCorrect(currentProfileId);
-
-    if (result.success) {
-      setFeedbackMessage(result.message + ' ✓ Saved');
-    } else {
-      setFeedbackMessage('❌ ' + result.message);
-    }
-
-    // Clear feedback after 2 seconds
-    if (feedbackTimeoutRef.current) {
-      clearTimeout(feedbackTimeoutRef.current);
-    }
-    feedbackTimeoutRef.current = setTimeout(() => {
-      setFeedbackMessage('');
-    }, 2000);
+  // Handle manual override: IS X (correct) - Opens calibration modal
+  const handleManualCorrect = () => {
+    if (!currentProfileId || !currentLetter) return;
+    // Stop the game before opening modal
+    stopGame();
+    setShowCalibrationModal(true);
   };
 
   // Handle manual override: NOT X (incorrect)
@@ -498,6 +486,27 @@ function Learn1() {
       {/* Success Celebration - Sound + Confetti */}
       {showSuccess && currentLetter && (
         <SuccessCelebration letter={currentLetter} />
+      )}
+
+      {/* Calibration Modal - for "IS X" manual override */}
+      {showCalibrationModal && currentLetter && (
+        <CalibrationModal
+          letter={currentLetter}
+          variant="kid"
+          onClose={async () => {
+            // Reload calibrations BEFORE closing modal to ensure new snapshot is loaded
+            console.log('🔄 Reloading calibrations...');
+            await actions.loadCalibrations();
+            console.log('✅ Calibrations reloaded');
+            setShowCalibrationModal(false);
+
+            // Don't auto-restart - let user click "Learn" when ready to test
+            // The letter stays on screen, game is stopped, user controls when to try
+          }}
+          onSuccess={(letter) => {
+            console.log(`✅ Added calibration for ${letter}`);
+          }}
+        />
       )}
     </div>
   );
