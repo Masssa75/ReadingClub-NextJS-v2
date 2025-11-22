@@ -163,10 +163,12 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
         .single();
 
       if (data?.pattern_data?.snapshots) {
-        const snapshots = data.pattern_data.snapshots;
-        const count = snapshots.length;
+        // Only show positive snapshots (exclude negative/rejection snapshots from manual override)
+        const allSnapshots = data.pattern_data.snapshots;
+        const positiveSnapshots = allSnapshots.filter((s: any) => !s.isNegative);
+        const count = positiveSnapshots.length;
         setExistingSnapshotCount(count);
-        setExistingSnapshots(snapshots);
+        setExistingSnapshots(positiveSnapshots);
         setStatusMessage(`Adding calibration #${count + 1} for "${letter}". Click microphone to record.`);
       }
     } catch (error) {
