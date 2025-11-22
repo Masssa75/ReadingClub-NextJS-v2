@@ -111,7 +111,7 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
 
               {/* Calibrate - Star Button */}
               <Link
-                href="/calibrate2"
+                href="/admin/calibrate"
                 onClick={() => setIsOpen(false)}
                 className="w-full py-[18px] px-6 rounded-[22px] font-black text-[17px] text-white
                   bg-gradient-to-r from-blue-400 to-purple-400

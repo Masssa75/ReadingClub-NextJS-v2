@@ -1,4 +1,4 @@
-import CalibrationGrid from '../components/CalibrationGrid';
+import CalibrationGrid from '@/app/components/CalibrationGrid';
 
 export default function CalibratePage() {
   return (

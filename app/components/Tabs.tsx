@@ -7,8 +7,8 @@ export default function Tabs() {
   const pathname = usePathname();
 
   const tabs = [
-    { path: '/calibrate', label: '📊 Calibrate' },
-    { path: '/practice', label: '▶ Practice' },
+    { path: '/admin/calibrate', label: '📊 Calibrate' },
+    { path: '/admin/practice', label: '▶ Practice' },
     { path: '/admin/snapshots', label: '🗂️ Snapshots' },
   ];
 

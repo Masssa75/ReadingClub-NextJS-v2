@@ -12,15 +12,15 @@ interface ClientLayoutProps {
 
 export default function ClientLayout({ children }: ClientLayoutProps) {
   const pathname = usePathname();
-  const isStandalonePage = pathname === '/play';
+  const isAdminPage = pathname?.startsWith('/admin');
 
   const handleProfileChange = () => {
     // Trigger page reload to refresh calibrations
     window.location.reload();
   };
 
-  // For standalone pages, just render children without navigation chrome
-  if (isStandalonePage) {
+  // For non-admin pages, just render children without navigation chrome
+  if (!isAdminPage) {
     return <>{children}</>;
   }
 
