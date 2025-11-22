@@ -38,15 +38,37 @@ export function createSimpleAudioCapture(stream: MediaStream): SimpleAudioCaptur
         const chunks: Blob[] = [];
 
         // Create MediaRecorder with supported format
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : 'audio/ogg';
+        // Check formats in order of preference, with Safari iOS compatibility
+        let mimeType = '';
+        const formats = [
+          'audio/webm;codecs=opus',  // Modern browsers + recent Safari
+          'audio/webm',              // Chrome, Firefox
+          'audio/mp4',               // Safari iOS preference
+          'audio/aac',               // Safari fallback
+          'audio/ogg;codecs=opus',   // Firefox
+          'audio/ogg'                // Old Firefox
+        ];
 
-        const recorder = new MediaRecorder(stream, { mimeType });
+        for (const format of formats) {
+          if (MediaRecorder.isTypeSupported(format)) {
+            mimeType = format;
+            console.log(`📱 Using audio format: ${format}`);
+            break;
+          }
+        }
+
+        if (!mimeType) {
+          console.warn('⚠️ No supported mime type found, using browser default');
+        }
+
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
 
         recorder.ondataavailable = (event) => {
           if (event.data.size > 0) {
             chunks.push(event.data);
+            console.log(`📊 Chunk received: ${event.data.size} bytes (total: ${chunks.length} chunks)`);
+          } else {
+            console.warn('⚠️ Received empty data chunk');
           }
         };
 
@@ -72,9 +94,10 @@ export function createSimpleAudioCapture(stream: MediaStream): SimpleAudioCaptur
           resolve(null);
         };
 
-        // Start recording
-        recorder.start();
-        console.log('🎤 Started recording...');
+        // Start recording with timeslice to ensure data collection
+        // Safari requires timeslice to reliably trigger ondataavailable
+        recorder.start(100);  // Collect data every 100ms
+        console.log(`🎤 Started recording... (${mimeType || 'browser default'})`);
 
         // Stop after 1 second
         setTimeout(() => {
