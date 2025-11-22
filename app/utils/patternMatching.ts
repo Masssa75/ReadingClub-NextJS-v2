@@ -54,7 +54,7 @@ export function testPattern(
 
   // Test against all calibrated letters
   Object.keys(calibrationData).forEach(letter => {
-    const score = matchAgainstLetter(currentSnapshot, letter, calibrationData);
+    const score = matchAgainstLetter(currentSnapshot, letter, calibrationData, letter === normalizedTarget);
     if (score > bestScore) {
       bestScore = score;
       bestLetter = letter;
@@ -74,7 +74,8 @@ export function testPattern(
 export function matchAgainstLetter(
   currentSnapshot: number[],
   letter: string,
-  calibrationData: Record<string, CalibrationData>
+  calibrationData: Record<string, CalibrationData>,
+  isTargetLetter: boolean = false
 ): number {
   if (!calibrationData[letter] || !calibrationData[letter].snapshots) {
     return 0;
@@ -106,21 +107,25 @@ export function matchAgainstLetter(
     }
   });
 
-  // Store match info globally for highlighting and score tracking
-  lastMatchInfo = {
-    target: letter,
-    positiveSnapshot: bestPositiveSnapshot,
-    positiveScore: bestPositiveScore,
-    negativeSnapshot: bestNegativeSnapshot,
-    negativeScore: bestNegativeScore,
-    matchType: null
-  };
+  // Store match info globally ONLY for the target letter (not for all letters during comparison)
+  if (isTargetLetter) {
+    lastMatchInfo = {
+      target: letter,
+      positiveSnapshot: bestPositiveSnapshot,
+      positiveScore: bestPositiveScore,
+      negativeSnapshot: bestNegativeSnapshot,
+      negativeScore: bestNegativeScore,
+      matchType: null
+    };
+  }
 
   // Reject if negative is SIGNIFICANTLY stronger (5% margin)
   if (bestNegativeScore > bestPositiveScore + NEGATIVE_MARGIN) {
     const diff = bestNegativeScore - bestPositiveScore;
     console.log(`❌ REJECTED: Negative (${bestNegativeScore.toFixed(1)}%) beats positive (${bestPositiveScore.toFixed(1)}%) by ${diff.toFixed(1)}%`);
-    lastMatchInfo.matchType = 'rejected';
+    if (isTargetLetter && lastMatchInfo) {
+      lastMatchInfo.matchType = 'rejected';
+    }
 
     // Note: Snapshot scoring logic will be added in Phase 3
     return 0; // Reject completely
@@ -134,7 +139,9 @@ export function matchAgainstLetter(
     console.log(`✅ ACCEPTED: Positive match (${bestPositiveScore.toFixed(1)}%), no negatives`);
   }
 
-  lastMatchInfo.matchType = 'accepted';
+  if (isTargetLetter && lastMatchInfo) {
+    lastMatchInfo.matchType = 'accepted';
+  }
   return bestPositiveScore;
 }
 
