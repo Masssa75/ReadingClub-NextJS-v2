@@ -191,6 +191,12 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
       const audioState = await setupAudio();
       audioStateRef.current = audioState;
 
+      // Override smoothing for instant response in calibration modal
+      if (audioState.analyser) {
+        audioState.analyser.smoothingTimeConstant = 0;
+        console.log('🎤 Audio smoothing disabled for calibration');
+      }
+
       // Setup audio capture
       if (audioState.stream) {
         audioCaptureRef.current = createSimpleAudioCapture(audioState.stream);
