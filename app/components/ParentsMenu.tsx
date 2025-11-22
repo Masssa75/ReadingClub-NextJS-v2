@@ -5,7 +5,12 @@ import { useProfileContext } from '@/app/contexts/ProfileContext';
 import Link from 'next/link';
 import { User } from 'lucide-react';
 
-export default function ParentsMenu() {
+interface ParentsMenuProps {
+  advancedMode?: boolean;
+  onAdvancedModeChange?: (enabled: boolean) => void;
+}
+
+export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange }: ParentsMenuProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { currentProfile, profileNames, switchProfile, createNewProfile, loadProfileNames } = useProfileContext();
@@ -117,6 +122,24 @@ export default function ParentsMenu() {
                 <span>🎤</span>
                 <span>Calibrate</span>
               </Link>
+
+              {/* Advanced Mode Toggle (only show if callback provided) */}
+              {onAdvancedModeChange && (
+                <button
+                  onClick={() => onAdvancedModeChange(!advancedMode)}
+                  className={`w-full py-[18px] px-6 rounded-[22px] font-black text-[17px] text-white
+                    shadow-lg hover:shadow-xl transition-all duration-300
+                    hover:scale-105 flex items-center justify-center gap-3
+                    ${advancedMode
+                      ? 'bg-gradient-to-r from-orange-400 to-red-400'
+                      : 'bg-gradient-to-r from-gray-400 to-gray-500'
+                    }`}
+                  style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' }}
+                >
+                  <span>{advancedMode ? '🔧' : '⚙️'}</span>
+                  <span>Advanced Mode: {advancedMode ? 'ON' : 'OFF'}</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

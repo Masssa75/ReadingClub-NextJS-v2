@@ -7,6 +7,7 @@ import { useSession } from '@/app/hooks/useSession';
 import { useProficiency } from '@/app/hooks/useProficiency';
 import { selectNextLetter } from '@/app/utils/adaptiveSelection';
 import ParentsMenu from '@/app/components/ParentsMenu';
+import SuccessCelebration from '@/app/components/SuccessCelebration';
 
 export default function Learn1() {
   const [currentLetter, setCurrentLetter] = useState<string | null>(null);
@@ -14,10 +15,13 @@ export default function Learn1() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [gameMessage, setGameMessage] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [advancedMode, setAdvancedMode] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const currentLetterRef = useRef<string | null>(null);
   const listenClickedThisRound = useRef(false);
+  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Profile, session, and proficiency tracking (same as /play)
   const { currentProfileId, isLoading: profileLoading } = useProfileContext();
@@ -31,6 +35,28 @@ export default function Learn1() {
   useEffect(() => {
     actions.loadCalibrations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load advanced mode from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('advancedMode');
+    if (saved === 'true') {
+      setAdvancedMode(true);
+    }
+  }, []);
+
+  // Save advanced mode to localStorage
+  useEffect(() => {
+    localStorage.setItem('advancedMode', advancedMode.toString());
+  }, [advancedMode]);
+
+  // Cleanup feedback timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+    };
   }, []);
 
   const openVideo = () => {
@@ -135,28 +161,6 @@ export default function Learn1() {
       recordAttempt(letter, true, listenClickedThisRound.current);
     }
 
-    // Play success sound (C-E-G major chord)
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (AudioContext) {
-      const audioContext = new AudioContext();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      // C-E-G major chord (rising)
-      oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
-      oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
-      oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.4);
-    }
-
     // Auto-advance to next letter (same as /play with autoNext enabled)
     setTimeout(async () => {
       setShowSuccess(false);
@@ -173,6 +177,49 @@ export default function Learn1() {
       }
     }, 3000);
   }
+
+  // Handle manual override: IS X (correct)
+  const handleManualCorrect = async () => {
+    if (!currentProfileId) return;
+
+    setFeedbackMessage('Recording...');
+    const result = await actions.handleManualCorrect(currentProfileId);
+
+    if (result.success) {
+      setFeedbackMessage(result.message + ' ✓ Saved');
+    } else {
+      setFeedbackMessage('❌ ' + result.message);
+    }
+
+    // Clear feedback after 2 seconds
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current);
+    }
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setFeedbackMessage('');
+    }, 2000);
+  };
+
+  // Handle manual override: NOT X (incorrect)
+  const handleManualIncorrect = async () => {
+    if (!currentProfileId) return;
+
+    const result = await actions.handleManualIncorrect(currentProfileId);
+
+    if (result.success) {
+      setFeedbackMessage(result.message + ' ✓ Saved');
+    } else {
+      setFeedbackMessage('❌ ' + result.message);
+    }
+
+    // Clear feedback after 2 seconds
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current);
+    }
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setFeedbackMessage('');
+    }, 2000);
+  };
 
   // Loading state
   if (profileLoading) {
@@ -198,8 +245,38 @@ export default function Learn1() {
 
       {/* Parents Menu - Top Right */}
       <div className="absolute top-6 right-6 z-20">
-        <ParentsMenu />
+        <ParentsMenu
+          advancedMode={advancedMode}
+          onAdvancedModeChange={setAdvancedMode}
+        />
       </div>
+
+      {/* Manual Override Buttons - Option 5 (Compact Corner, 50% bigger) */}
+      {advancedMode && state.currentLetter && (
+        <div className="absolute top-24 right-6 z-20 flex flex-col gap-3">
+          <button
+            onClick={handleManualCorrect}
+            className="px-7 py-5 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-[18px] font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            title="Mark current sound as correct (creates positive snapshot)"
+          >
+            ✓ IS {state.currentLetter.toUpperCase()}
+          </button>
+          <button
+            onClick={handleManualIncorrect}
+            className="px-7 py-5 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-[18px] font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            title="Mark current sound as incorrect (creates negative snapshot)"
+          >
+            ✗ NOT {state.currentLetter.toUpperCase()}
+          </button>
+        </div>
+      )}
+
+      {/* Feedback Message */}
+      {feedbackMessage && (
+        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 px-8 py-4 bg-black/80 backdrop-blur-md text-white rounded-full text-lg font-medium shadow-xl">
+          {feedbackMessage}
+        </div>
+      )}
 
       <div className="relative z-10 flex flex-col items-center justify-center h-full gap-24">
         <div className="text-white text-2xl font-light tracking-[0.3em] uppercase opacity-70">Wunderkind</div>
@@ -326,6 +403,11 @@ export default function Learn1() {
             })()}
           </div>
         </div>
+      )}
+
+      {/* Success Celebration - Sound + Confetti */}
+      {showSuccess && currentLetter && (
+        <SuccessCelebration letter={currentLetter} />
       )}
     </div>
   );
