@@ -91,8 +91,22 @@ export default function Learn1() {
   }, []);
 
   const openVideo = () => {
-    setShowVideo(true);
-    setIsPlaying(true);
+    // Check if video exists for this letter
+    const videoMap: Record<string, string> = {
+      'A': '/Videos/a-Apple.mp4',
+      'B': '/Videos/Bear.mp4',
+    };
+
+    const hasVideo = currentLetter && videoMap[currentLetter.toUpperCase()];
+
+    if (hasVideo) {
+      // Open video modal if video exists
+      setShowVideo(true);
+      setIsPlaying(true);
+    } else {
+      // Just play audio if no video
+      playLetterSound();
+    }
   };
 
   const closeVideo = () => {
