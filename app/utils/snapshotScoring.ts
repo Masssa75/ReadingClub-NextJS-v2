@@ -13,6 +13,7 @@ let currentScoringRound: {
 // Debounce timers and pending saves
 let saveScoreTimers: Record<string, NodeJS.Timeout> = {};
 const pendingSaves = new Set<string>();
+const pendingData: Record<string, Record<string, CalibrationData>> = {}; // Store data for each pending save
 
 // Store reference to calibrationData for debounced saves
 let calibrationDataRef: Record<string, CalibrationData> | null = null;
@@ -95,13 +96,21 @@ export function debounceSaveScores(letter: string, profileId: string): void {
   const key = `${letter}_${profileId}`;
   pendingSaves.add(key); // Mark as needing save
 
+  // Capture current calibrationData reference for this save
+  if (calibrationDataRef) {
+    pendingData[key] = calibrationDataRef;
+  }
+
   if (saveScoreTimers[key]) {
     clearTimeout(saveScoreTimers[key]);
   }
 
   saveScoreTimers[key] = setTimeout(() => {
-    saveSnapshotScoresToSupabase(letter, profileId);
+    // Use the captured data for this specific save
+    const dataToSave = pendingData[key];
+    saveSnapshotScoresToSupabase(letter, profileId, dataToSave);
     pendingSaves.delete(key); // Remove from pending after save
+    delete pendingData[key]; // Clean up stored data
   }, 2000); // Save 2 seconds after last score change
 }
 
@@ -134,6 +143,8 @@ export async function flushAllPendingScores(
   );
 
   pendingSaves.clear();
+  // Clear pending data storage
+  Object.keys(pendingData).forEach(key => delete pendingData[key]);
   console.log('✅ All pending scores flushed');
 }
 
