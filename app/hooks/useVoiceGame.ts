@@ -135,7 +135,14 @@ export function useVoiceGame(
     }
 
     try {
-      audioStateRef.current = await setupAudio();
+      // Setup audio ONLY if it doesn't exist (reuse across letters like /practice does)
+      if (!audioStateRef.current) {
+        audioStateRef.current = await setupAudio();
+        console.log('🎤 Audio state created');
+      } else {
+        console.log('🎤 Reusing existing audio state');
+      }
+
       setIsActive(true);
       isActiveRef.current = true;
       currentLetterRef.current = letter;

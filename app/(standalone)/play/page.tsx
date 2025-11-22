@@ -227,7 +227,7 @@ export default function Learn1() {
               <div className="text-white/70 text-sm mb-2 text-center">Microphone Volume</div>
               <div className="h-6 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden border border-white/30">
                 <div
-                  className="h-full bg-gradient-to-r from-green-400 to-blue-400 transition-all duration-100"
+                  className="h-full bg-gradient-to-r from-green-400 to-blue-400"
                   style={{ width: `${Math.min(100, (state.volume / 30) * 100)}%` }}
                 />
               </div>
@@ -239,7 +239,7 @@ export default function Learn1() {
               <div className="text-white/70 text-sm mb-2 text-center">Sound Focus</div>
               <div className="h-6 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden border border-white/30">
                 <div
-                  className="h-full bg-gradient-to-r from-yellow-400 to-orange-400 transition-all duration-100"
+                  className="h-full bg-gradient-to-r from-yellow-400 to-orange-400"
                   style={{ width: `${Math.min(100, (state.concentration / 5) * 100)}%` }}
                 />
               </div>
