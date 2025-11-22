@@ -22,8 +22,8 @@ import SuccessCelebration from '@/app/components/SuccessCelebration';
 
 export default function PlayPage() {
   const { currentProfileId, isLoading: profileLoading } = useProfileContext();
-  const { currentSession, recordAttempt, getSession } = useSession(currentProfileId);
-  const { proficiencies } = useProficiency(currentProfileId);
+  const { currentSession, recordAttempt, getSession, endSession } = useSession(currentProfileId);
+  const { proficiencies, updateProficienciesFromSession } = useProficiency(currentProfileId);
 
   // Game state
   const [isRunning, setIsRunning] = useState(false);
@@ -78,6 +78,22 @@ export default function PlayPage() {
       flushAllPendingScores(calibrationData);
     };
   }, [calibrationData]);
+
+  // Save proficiency updates when leaving page or switching profiles
+  useEffect(() => {
+    return () => {
+      // On unmount, save proficiency updates
+      const sessionData = endSession();
+      if (sessionData) {
+        updateProficienciesFromSession(
+          sessionData.letterStats,
+          sessionData.lettersGraduated
+        );
+        console.log('💾 Saved proficiency updates on unmount');
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProfileId]); // Re-run when profile changes
 
   const loadCalibrations = async (): Promise<Record<string, CalibrationData>> => {
     try {

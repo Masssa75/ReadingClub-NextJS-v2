@@ -56,8 +56,8 @@ export default function Learn1() {
 
   // Profile, session, and proficiency tracking (same as /play)
   const { currentProfileId, isLoading: profileLoading } = useProfileContext();
-  const { currentSession, recordAttempt, getSession } = useSession(currentProfileId);
-  const { proficiencies } = useProficiency(currentProfileId);
+  const { currentSession, recordAttempt, getSession, endSession } = useSession(currentProfileId);
+  const { proficiencies, updateProficienciesFromSession } = useProficiency(currentProfileId);
 
   // Use the shared voice game hook
   const { state, actions } = useVoiceGame(handleSuccess);
@@ -89,6 +89,22 @@ export default function Learn1() {
       }
     };
   }, []);
+
+  // Save proficiency updates when leaving page or switching profiles
+  useEffect(() => {
+    return () => {
+      // On unmount, save proficiency updates
+      const sessionData = endSession();
+      if (sessionData) {
+        updateProficienciesFromSession(
+          sessionData.letterStats,
+          sessionData.lettersGraduated
+        );
+        console.log('💾 Saved proficiency updates on unmount');
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProfileId]); // Re-run when profile changes
 
   const openVideo = () => {
     // Check if video exists for this letter

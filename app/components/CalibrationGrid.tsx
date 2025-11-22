@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PHONEMES } from '@/app/lib/constants';
+import { LetterProficiency } from '@/app/lib/types';
 import LetterCard from './LetterCard';
 import CalibrationModal from './CalibrationModal';
 import { supabase } from '@/app/lib/supabase';
@@ -22,6 +23,7 @@ export default function CalibrationGrid({ variant = 'admin' }: CalibrationGridPr
   const { currentProfileId, isLoading: profileLoading } = useProfileContext();
   console.log('🔍 CalibrationGrid render - profileLoading:', profileLoading, 'profileId:', currentProfileId);
   const [calibratedLetters, setCalibratedLetters] = useState<Set<string>>(new Set());
+  const [proficiencies, setProficiencies] = useState<Record<string, number>>({});
   const [modalLetter, setModalLetter] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,7 +46,7 @@ export default function CalibrationGrid({ variant = 'admin' }: CalibrationGridPr
       console.log('🔍 Querying calibrations for profile:', currentProfileId);
       const { data, error } = await supabase
         .from('calibrations')
-        .select('letter')
+        .select('letter, proficiency')
         .eq('profile_id', currentProfileId);
 
       if (error) throw error;
@@ -53,6 +55,14 @@ export default function CalibrationGrid({ variant = 'admin' }: CalibrationGridPr
       if (data) {
         const calibrated = new Set(data.map(c => c.letter));
         setCalibratedLetters(calibrated);
+
+        // Load proficiency levels
+        const profMap: Record<string, number> = {};
+        data.forEach((cal) => {
+          profMap[cal.letter] = cal.proficiency ?? LetterProficiency.UNKNOWN;
+        });
+        setProficiencies(profMap);
+        console.log('📊 Loaded proficiencies:', profMap);
       }
     } catch (error) {
       console.error('Error loading calibrations:', error);
@@ -116,6 +126,7 @@ export default function CalibrationGrid({ variant = 'admin' }: CalibrationGridPr
                 key={phoneme.letter}
                 phoneme={phoneme}
                 isCalibrated={calibratedLetters.has(phoneme.letter)}
+                proficiency={proficiencies[phoneme.letter]}
                 isRecording={false}
                 onClick={() => handleLetterClick(phoneme.letter)}
               />
