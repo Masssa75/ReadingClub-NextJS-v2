@@ -36,6 +36,14 @@ function SnapshotCard({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    // Log snapshot data for debugging
+    console.log(`Snapshot #${index + 1}:`, {
+      hasData: !!snapshot.data,
+      hasAudioUrl: !!snapshot.audio_url,
+      audioUrl: snapshot.audio_url,
+      dataLength: snapshot.data?.length
+    });
+
     // Draw waveform pattern
     if (canvasRef.current && snapshot.data) {
       const canvas = canvasRef.current;
@@ -54,7 +62,7 @@ function SnapshotCard({
         ctx.fillRect(x, y, barWidth - 1, barHeight);
       }
     }
-  }, [snapshot.data]);
+  }, [snapshot.data, snapshot.audio_url, index]);
 
   return (
     <div className="relative">
@@ -67,8 +75,8 @@ function SnapshotCard({
           className="w-full h-full"
         />
 
-        {/* Play Button - Always visible, centered */}
-        {snapshot.audio_url && (
+        {/* Play Button - Always visible if audio exists, or show "No Audio" badge */}
+        {snapshot.audio_url ? (
           <button
             onClick={(e) => {
               e.preventDefault();
@@ -83,6 +91,10 @@ function SnapshotCard({
               <path d="M8 5v14l11-7z"/>
             </svg>
           </button>
+        ) : (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 py-1 bg-gray-500/80 text-white text-xs rounded-full shadow-lg">
+            No Audio
+          </div>
         )}
       </div>
 
