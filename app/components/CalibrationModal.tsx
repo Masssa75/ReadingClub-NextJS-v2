@@ -67,17 +67,21 @@ function SnapshotCard({
           className="w-full h-full"
         />
 
-        {/* Play Button Overlay */}
+        {/* Play Button - Always visible, centered */}
         {snapshot.audio_url && (
           <button
-            onClick={() => onPlay(snapshot.audio_url)}
-            className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-all group"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('🎵 Playing snapshot audio:', snapshot.audio_url);
+              onPlay(snapshot.audio_url);
+            }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-110 active:scale-95 z-10"
+            style={{ touchAction: 'manipulation' }}
           >
-            <div className="w-12 h-12 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-lg transition-all group-hover:scale-110">
-              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 fill-white ml-1">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-            </div>
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 fill-white ml-1">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
           </button>
         )}
       </div>
@@ -378,10 +382,31 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
   };
 
   const handlePlayExistingSnapshot = (audioUrl: string) => {
+    console.log('🎵 Attempting to play audio:', audioUrl);
+
+    if (!audioUrl) {
+      console.error('❌ No audio URL provided');
+      setStatusMessage('❌ No audio URL found');
+      return;
+    }
+
     const audio = new Audio(audioUrl);
-    audio.play().catch(err => {
-      console.error('Audio playback failed:', err);
-    });
+
+    audio.onloadstart = () => console.log('🎵 Audio loading started...');
+    audio.oncanplay = () => console.log('✅ Audio ready to play');
+    audio.onerror = (e) => {
+      console.error('❌ Audio loading error:', e);
+      setStatusMessage('❌ Failed to load audio');
+    };
+
+    audio.play()
+      .then(() => {
+        console.log('✅ Audio playback started successfully');
+      })
+      .catch(err => {
+        console.error('❌ Audio playback failed:', err);
+        setStatusMessage(`❌ Playback failed: ${err.message}`);
+      });
   };
 
   const playLetterSound = () => {
