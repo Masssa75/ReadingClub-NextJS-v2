@@ -250,10 +250,12 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
 
           console.log(`📸 PEAK DETECTED for ${letter}! Vol: ${vol.toFixed(1)} (>${volumeThreshold}), Conc: ${conc.toFixed(2)} (>${concentrationThreshold})`);
 
-          // Final snapshot already drawn above, just capture audio
+          // Draw final snapshot once and freeze the display
+          drawPattern(normalized);
 
-          // Stop listening for more peaks immediately
+          // Stop listening and stop updating the canvas
           isListeningRef.current = false;
+          isRecordingRef.current = false; // Stop canvas updates immediately
           setStatusMessage('Processing audio...');
 
           // Capture audio (records 1 second starting NOW)
