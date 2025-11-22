@@ -191,10 +191,10 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
       const audioState = await setupAudio();
       audioStateRef.current = audioState;
 
-      // Override smoothing for instant response in calibration modal
+      // Use light smoothing for responsive but stable readings in calibration modal
       if (audioState.analyser) {
-        audioState.analyser.smoothingTimeConstant = 0;
-        console.log('🎤 Audio smoothing disabled for calibration');
+        audioState.analyser.smoothingTimeConstant = 0.2;
+        console.log('🎤 Audio smoothing set to 0.2 for calibration (responsive + stable)');
       }
 
       // Setup audio capture
@@ -248,7 +248,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
           capturedPatternRef.current = normalized;
           lastPeakTimeRef.current = now;
 
-          console.log(`📸 Captured snapshot for ${letter}`);
+          console.log(`📸 PEAK DETECTED for ${letter}! Vol: ${vol.toFixed(1)} (>${volumeThreshold}), Conc: ${conc.toFixed(2)} (>${concentrationThreshold})`);
 
           // Final snapshot already drawn above, just capture audio
 
