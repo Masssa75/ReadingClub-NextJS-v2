@@ -26,9 +26,17 @@ export async function addNegativePattern(
     return { success: false, message: `No calibration found for letter ${normalizedLetter}` };
   }
 
+  // CRITICAL FIX: Normalize pattern to 0-1 range (same as pattern matching does)
+  const maxValue = Math.max(...currentPattern);
+  const normalizedPattern = maxValue > 0
+    ? currentPattern.map(v => v / maxValue)
+    : currentPattern;
+
+  console.log(`🔧 Normalizing negative snapshot: max=${maxValue.toFixed(2)} → normalized to 0-1 range`);
+
   // Create negative snapshot
   const newSnapshot = {
-    data: currentPattern,
+    data: normalizedPattern,
     score: 0,
     isNegative: true,
     profileId: profileId,
