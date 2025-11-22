@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+
+export const dynamic = 'force-dynamic';
 import { useProfileContext } from '@/app/contexts/ProfileContext';
 import { useSession } from '@/app/hooks/useSession';
 import { useProficiency } from '@/app/hooks/useProficiency';

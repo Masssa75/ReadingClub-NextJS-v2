@@ -8,6 +8,7 @@ import { useProficiency } from '@/app/hooks/useProficiency';
 import { selectNextLetter } from '@/app/utils/adaptiveSelection';
 import ParentsMenu from '@/app/components/ParentsMenu';
 import SuccessCelebration from '@/app/components/SuccessCelebration';
+import CalibrationModal from '@/app/components/CalibrationModal';
 
 // Audio URLs for letter sounds (from SoundCity Reading)
 const LETTER_AUDIO_URLS: Record<string, string> = {
@@ -47,6 +48,7 @@ export default function Learn1() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [showCalibrationModal, setShowCalibrationModal] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -239,26 +241,12 @@ export default function Learn1() {
     }, 3000);
   }
 
-  // Handle manual override: IS X (correct)
-  const handleManualCorrect = async () => {
-    if (!currentProfileId) return;
-
-    setFeedbackMessage('Recording...');
-    const result = await actions.handleManualCorrect(currentProfileId);
-
-    if (result.success) {
-      setFeedbackMessage(result.message + ' ✓ Saved');
-    } else {
-      setFeedbackMessage('❌ ' + result.message);
-    }
-
-    // Clear feedback after 2 seconds
-    if (feedbackTimeoutRef.current) {
-      clearTimeout(feedbackTimeoutRef.current);
-    }
-    feedbackTimeoutRef.current = setTimeout(() => {
-      setFeedbackMessage('');
-    }, 2000);
+  // Handle manual override: IS X (correct) - Opens calibration modal
+  const handleManualCorrect = () => {
+    if (!currentProfileId || !currentLetter) return;
+    // Stop the game before opening modal
+    stopGame();
+    setShowCalibrationModal(true);
   };
 
   // Handle manual override: NOT X (incorrect)
@@ -359,12 +347,12 @@ export default function Learn1() {
         </div>
       )}
 
-      <div className="relative z-10 flex flex-col items-center justify-center h-full gap-24">
+      <div className="relative z-10 flex flex-col items-center justify-center h-full gap-8">
         <div className="text-white text-2xl font-light tracking-[0.3em] uppercase opacity-70">Wunderkind</div>
 
         {/* Letter - click to watch video */}
         <div
-          className={`text-[280px] leading-none font-black text-white drop-shadow-2xl cursor-pointer hover:scale-110 transition-transform ${showSuccess ? 'animate-bounce' : ''}`}
+          className={`text-[240px] md:text-[280px] leading-none font-black text-white drop-shadow-2xl cursor-pointer hover:scale-110 transition-transform ${showSuccess ? 'animate-bounce' : ''}`}
           onClick={openVideo}
         >
           {currentLetter || '?'}
@@ -417,7 +405,7 @@ export default function Learn1() {
         ) : (
           <button
             onClick={stopGame}
-            className="px-24 py-6 text-2xl font-bold text-white rounded-full border-2 border-red-500/80 backdrop-blur-sm bg-red-500/70 hover:bg-red-600/80 transition-all shadow-lg"
+            className="px-16 py-4 text-lg font-medium text-white/90 rounded-full border-2 border-red-400/50 backdrop-blur-sm bg-red-400/40 hover:bg-red-500/50 transition-all"
           >
             Stop
           </button>
@@ -497,6 +485,38 @@ export default function Learn1() {
       {/* Success Celebration - Sound + Confetti */}
       {showSuccess && currentLetter && (
         <SuccessCelebration letter={currentLetter} />
+      )}
+
+      {/* Calibration Modal - for "IS X" manual override */}
+      {showCalibrationModal && currentLetter && (
+        <CalibrationModal
+          letter={currentLetter}
+          variant="kid"
+          onClose={async () => {
+            // Save current letter to restart on same letter after reload
+            const letterToRestart = currentLetter;
+
+            // Reload calibrations BEFORE closing modal to ensure new snapshot is loaded
+            console.log('🔄 Reloading calibrations...');
+            await actions.loadCalibrations();
+            console.log('✅ Calibrations reloaded');
+            setShowCalibrationModal(false);
+
+            // Restart game on same letter so user can test the new snapshot
+            if (letterToRestart) {
+              try {
+                await actions.startGame(letterToRestart);
+                setGameMessage(`Say the letter sound: "${letterToRestart}"`);
+                console.log(`🔄 Restarted game on letter ${letterToRestart}`);
+              } catch (err: any) {
+                setGameMessage(err.message || 'Microphone access denied');
+              }
+            }
+          }}
+          onSuccess={(letter) => {
+            console.log(`✅ Added calibration for ${letter}`);
+          }}
+        />
       )}
     </div>
   );
