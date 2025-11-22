@@ -409,12 +409,39 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     audio.preload = 'auto';
 
     audio.onloadstart = () => {
-      console.log('🎵 Audio loading started...');
+      console.log('🎵 Audio loading started...', {
+        src: audioUrl,
+        srcLength: audioUrl.length
+      });
       setStatusMessage('Loading audio...');
     };
 
+    audio.onloadedmetadata = () => {
+      const info = {
+        duration: audio.duration,
+        volume: audio.volume,
+        muted: audio.muted,
+        networkState: audio.networkState,
+        readyState: audio.readyState
+      };
+      console.log('📊 Audio metadata loaded:', info);
+
+      // Show on screen for iPad debugging
+      setStatusMessage(`Duration: ${audio.duration.toFixed(2)}s, Vol: ${audio.volume}, Muted: ${audio.muted}`);
+    };
+
     audio.oncanplay = () => {
-      console.log('✅ Audio ready to play');
+      console.log('✅ Audio ready to play', {
+        duration: audio.duration,
+        volume: audio.volume,
+        muted: audio.muted,
+        readyState: audio.readyState
+      });
+
+      // Ensure volume is set and not muted
+      audio.volume = 1.0;
+      audio.muted = false;
+
       setStatusMessage('Playing...');
     };
 
