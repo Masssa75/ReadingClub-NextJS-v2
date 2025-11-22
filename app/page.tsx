@@ -50,6 +50,7 @@ function Learn1() {
   const [advancedMode, setAdvancedMode] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [showCalibrationModal, setShowCalibrationModal] = useState(false);
+  const [showNegativeRejection, setShowNegativeRejection] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -62,8 +63,14 @@ function Learn1() {
   const { currentSession, recordAttempt, getSession, endSession } = useSession(currentProfileId);
   const { proficiencies, updateProficienciesFromSession } = useProficiency(currentProfileId);
 
+  // Handle negative rejection (show visual feedback)
+  const handleNegativeRejection = (negativeScore: number, positiveScore: number) => {
+    setShowNegativeRejection(true);
+    setTimeout(() => setShowNegativeRejection(false), 800); // Flash for 800ms
+  };
+
   // Use the shared voice game hook
-  const { state, actions } = useVoiceGame(handleSuccess);
+  const { state, actions } = useVoiceGame(handleSuccess, handleNegativeRejection);
 
   // Load calibrations on mount (empty array to prevent infinite loop)
   useEffect(() => {
@@ -321,6 +328,15 @@ function Learn1() {
           onAdvancedModeChange={setAdvancedMode}
         />
       </div>
+
+      {/* Negative Rejection Indicator - Top Left */}
+      {showNegativeRejection && (
+        <div className="absolute top-6 left-6 z-20 animate-pulse">
+          <div className="w-16 h-16 rounded-full bg-red-500/60 backdrop-blur-md border-4 border-red-400/80 shadow-lg shadow-red-500/50 flex items-center justify-center">
+            <span className="text-3xl">🚫</span>
+          </div>
+        </div>
+      )}
 
       {/* Manual Override Buttons - Option 5 (Compact Corner, 50% bigger) */}
       {advancedMode && state.currentLetter && (

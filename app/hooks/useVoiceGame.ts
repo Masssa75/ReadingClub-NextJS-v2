@@ -30,7 +30,8 @@ export interface VoiceGameActions {
 }
 
 export function useVoiceGame(
-  onSuccess: (letter: string, matchedSnapshot: any, similarity: number) => void
+  onSuccess: (letter: string, matchedSnapshot: any, similarity: number) => void,
+  onNegativeRejection?: (negativeScore: number, positiveScore: number) => void
 ) {
   const [isActive, setIsActive] = useState(false);
   const [volume, setVolume] = useState(0);
@@ -143,6 +144,14 @@ export function useVoiceGame(
 
           console.log(`📊 Match check - predicted: ${result.predictedLetter}, target: ${targetLetter}, score: ${result.score}, matchType: ${matchInfo?.matchType}`);
 
+          // Check for negative rejection (call callback for visual feedback)
+          if (matchInfo && matchInfo.matchType === 'rejected') {
+            console.log(`🚫 NEGATIVE REJECTION: negative=${matchInfo.negativeScore}, positive=${matchInfo.positiveScore}`);
+            if (onNegativeRejection) {
+              onNegativeRejection(matchInfo.negativeScore || 0, matchInfo.positiveScore || 0);
+            }
+          }
+
           // Check if predicted letter matches target and score is above threshold (case-insensitive)
           const predictedMatch = result.predictedLetter.toLowerCase() === targetLetter.toLowerCase();
           console.log(`🔍 Match conditions - matchType: ${matchInfo?.matchType}, predictedMatch: ${predictedMatch} (${result.predictedLetter} vs ${targetLetter}), score: ${result.score} > 60`);
@@ -172,7 +181,7 @@ export function useVoiceGame(
     };
 
     detectVoice();
-  }, [calibrationData, onSuccess]);
+  }, [calibrationData, onSuccess, onNegativeRejection]);
 
   // Start game
   const startGame = useCallback(async (letter: string) => {

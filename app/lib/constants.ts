@@ -60,7 +60,7 @@ export const SNAPSHOTS_NEEDED = 5;
 export const PEAK_COOLDOWN = 500; // ms
 
 // Pattern matching constants
-export const NEGATIVE_MARGIN = 5; // percent
+export const NEGATIVE_MARGIN = 0; // percent (negative wins if even slightly higher)
 export const MATCH_THRESHOLD = 80; // percent (fixed for all letters)
 
 // ========== PHASE 5: ADAPTIVE LEARNING CONSTANTS ==========
