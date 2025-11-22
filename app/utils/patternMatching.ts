@@ -2,6 +2,11 @@
 
 import type { Snapshot, CalibrationData, MatchInfo, MatchResult } from '@/app/lib/types';
 import { NEGATIVE_MARGIN, MATCH_THRESHOLD } from '@/app/lib/constants';
+import {
+  incrementSnapshotScore as incrementScore,
+  canAwardNegativePoint,
+  markNegativeSnapshotAwarded
+} from './snapshotScoring';
 
 let lastMatchInfo: MatchInfo | null = null;
 
@@ -127,7 +132,16 @@ export function matchAgainstLetter(
       lastMatchInfo.matchType = 'rejected';
     }
 
-    // Note: Snapshot scoring logic will be added in Phase 3
+    // SCORING: Award point to negative snapshot (max 1 per round)
+    if (bestNegativeSnapshot && canAwardNegativePoint(bestNegativeSnapshot)) {
+      // Only award if the positive match would have been strong enough (>80%) without the negative
+      if (bestPositiveScore > MATCH_THRESHOLD) {
+        incrementScore(letter, bestNegativeSnapshot, calibrationData);
+        markNegativeSnapshotAwarded(bestNegativeSnapshot);
+        console.log(`📊 Negative snapshot awarded point for blocking false positive`);
+      }
+    }
+
     return 0; // Reject completely
   }
 
