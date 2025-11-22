@@ -395,6 +395,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
 
   const handlePlayExistingSnapshot = (audioUrl: string) => {
     console.log('🎵 Attempting to play audio:', audioUrl);
+    console.log('📱 User agent:', navigator.userAgent);
 
     if (!audioUrl) {
       console.error('❌ No audio URL provided');
@@ -402,22 +403,72 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
       return;
     }
 
-    const audio = new Audio(audioUrl);
+    // For Safari iOS: Create audio element early and set attributes before loading
+    const audio = new Audio();
+    audio.crossOrigin = 'anonymous';  // Enable CORS
+    audio.preload = 'auto';
 
-    audio.onloadstart = () => console.log('🎵 Audio loading started...');
-    audio.oncanplay = () => console.log('✅ Audio ready to play');
-    audio.onerror = (e) => {
-      console.error('❌ Audio loading error:', e);
-      setStatusMessage('❌ Failed to load audio');
+    audio.onloadstart = () => {
+      console.log('🎵 Audio loading started...');
+      setStatusMessage('Loading audio...');
     };
 
+    audio.oncanplay = () => {
+      console.log('✅ Audio ready to play');
+      setStatusMessage('Playing...');
+    };
+
+    audio.onplay = () => {
+      console.log('✅ Audio playback started');
+    };
+
+    audio.onended = () => {
+      console.log('✅ Audio playback ended');
+      setStatusMessage('');
+    };
+
+    audio.onerror = (e) => {
+      const audioElement = e && typeof e === 'object' && 'target' in e ? e.target as HTMLAudioElement : audio;
+      const error = audioElement.error;
+      console.error('❌ Audio loading error:', {
+        code: error?.code,
+        message: error?.message,
+        MEDIA_ERR_ABORTED: error?.code === 1,
+        MEDIA_ERR_NETWORK: error?.code === 2,
+        MEDIA_ERR_DECODE: error?.code === 3,
+        MEDIA_ERR_SRC_NOT_SUPPORTED: error?.code === 4
+      });
+
+      let errorMsg = 'Failed to load audio';
+      if (error?.code === 2) errorMsg = 'Network error - check CORS';
+      if (error?.code === 4) errorMsg = 'Audio format not supported';
+
+      setStatusMessage(`❌ ${errorMsg}`);
+    };
+
+    // Set source AFTER setting up event listeners
+    audio.src = audioUrl;
+
+    // Attempt playback with detailed error handling
     audio.play()
       .then(() => {
-        console.log('✅ Audio playback started successfully');
+        console.log('✅ Audio playback promise resolved');
       })
       .catch(err => {
-        console.error('❌ Audio playback failed:', err);
-        setStatusMessage(`❌ Playback failed: ${err.message}`);
+        console.error('❌ Audio playback failed:', {
+          name: err.name,
+          message: err.message,
+          stack: err.stack
+        });
+
+        let userMsg = err.message;
+        if (err.name === 'NotAllowedError') {
+          userMsg = 'Safari blocked autoplay - try again';
+        } else if (err.name === 'NotSupportedError') {
+          userMsg = 'Audio format not supported';
+        }
+
+        setStatusMessage(`❌ ${userMsg}`);
       });
   };
 
