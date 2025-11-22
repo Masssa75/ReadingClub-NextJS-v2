@@ -270,28 +270,60 @@ export default function Learn1() {
       {showVideo && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <div className="relative bg-black rounded-3xl overflow-hidden shadow-2xl max-w-4xl w-full mx-4">
-            <video
-              ref={videoRef}
-              className="w-full"
-              onEnded={() => setIsPlaying(false)}
-            >
-              <source src="/videos/Bear.mp4" type="video/mp4" />
-            </video>
+            {(() => {
+              // Map letters to their video files
+              const videoMap: Record<string, string> = {
+                'A': '/Videos/a-Apple.mp4',
+                'B': '/Videos/Bear.mp4',
+              };
 
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
-              <button
-                onClick={togglePlayPause}
-                className="px-8 py-3 text-xl font-bold text-white rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all"
-              >
-                {isPlaying ? '⏸ Pause' : '▶ Play'}
-              </button>
-              <button
-                onClick={closeVideo}
-                className="px-8 py-3 text-xl font-bold text-white rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all"
-              >
-                ✕ Close
-              </button>
-            </div>
+              const videoSrc = currentLetter ? videoMap[currentLetter.toUpperCase()] : null;
+
+              if (videoSrc) {
+                return (
+                  <>
+                    <video
+                      ref={videoRef}
+                      className="w-full"
+                      onEnded={() => setIsPlaying(false)}
+                    >
+                      <source src={videoSrc} type="video/mp4" />
+                    </video>
+
+                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+                      <button
+                        onClick={togglePlayPause}
+                        className="px-8 py-3 text-xl font-bold text-white rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all"
+                      >
+                        {isPlaying ? '⏸ Pause' : '▶ Play'}
+                      </button>
+                      <button
+                        onClick={closeVideo}
+                        className="px-8 py-3 text-xl font-bold text-white rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all"
+                      >
+                        ✕ Close
+                      </button>
+                    </div>
+                  </>
+                );
+              } else {
+                return (
+                  <div className="flex flex-col items-center justify-center p-16 min-h-[400px]">
+                    <div className="text-white text-6xl mb-8">{currentLetter}</div>
+                    <div className="text-white/90 text-3xl font-bold mb-4">Coming Soon!</div>
+                    <div className="text-white/70 text-xl mb-8">
+                      Video for letter {currentLetter} is being created
+                    </div>
+                    <button
+                      onClick={closeVideo}
+                      className="px-8 py-3 text-xl font-bold text-white rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all"
+                    >
+                      ✕ Close
+                    </button>
+                  </div>
+                );
+              }
+            })()}
           </div>
         </div>
       )}
