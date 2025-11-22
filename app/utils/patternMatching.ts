@@ -99,10 +99,13 @@ export function matchAgainstLetter(
   let bestNegativeSnapshot: Snapshot | null = null;
 
   // Test against ALL snapshots (both positive and negative)
-  snapshots.forEach((snapshot) => {
+  snapshots.forEach((snapshot, idx) => {
     if (!snapshot || !snapshot.data) return;
 
     const similarity = compareSnapshots(currentSnapshot, snapshot.data);
+
+    // DEBUG: Log each snapshot check
+    console.log(`  [${idx}] isNegative=${snapshot.isNegative} (type: ${typeof snapshot.isNegative}), similarity=${similarity.toFixed(1)}%`);
 
     // Track best positive and negative separately
     if (snapshot.isNegative) {
