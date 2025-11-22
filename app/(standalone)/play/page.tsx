@@ -395,7 +395,7 @@ export default function Learn1() {
         )}
 
         {/* Learn button - starts voice recognition game */}
-        {!state.isActive ? (
+        {!state.isActive && !showSuccess ? (
           <button
             onClick={() => startGame()}
             className="px-24 py-6 text-2xl font-medium text-white/90 rounded-full border-2 border-white/40 backdrop-blur-sm bg-white/10 hover:bg-white/20 transition-all"
@@ -493,25 +493,14 @@ export default function Learn1() {
           letter={currentLetter}
           variant="kid"
           onClose={async () => {
-            // Save current letter to restart on same letter after reload
-            const letterToRestart = currentLetter;
-
             // Reload calibrations BEFORE closing modal to ensure new snapshot is loaded
             console.log('🔄 Reloading calibrations...');
             await actions.loadCalibrations();
             console.log('✅ Calibrations reloaded');
             setShowCalibrationModal(false);
 
-            // Restart game on same letter so user can test the new snapshot
-            if (letterToRestart) {
-              try {
-                await actions.startGame(letterToRestart);
-                setGameMessage(`Say the letter sound: "${letterToRestart}"`);
-                console.log(`🔄 Restarted game on letter ${letterToRestart}`);
-              } catch (err: any) {
-                setGameMessage(err.message || 'Microphone access denied');
-              }
-            }
+            // Don't auto-restart - let user click "Learn" when ready to test
+            // The letter stays on screen, game is stopped, user controls when to try
           }}
           onSuccess={(letter) => {
             console.log(`✅ Added calibration for ${letter}`);
