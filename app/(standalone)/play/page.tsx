@@ -9,6 +9,36 @@ import { selectNextLetter } from '@/app/utils/adaptiveSelection';
 import ParentsMenu from '@/app/components/ParentsMenu';
 import SuccessCelebration from '@/app/components/SuccessCelebration';
 
+// Audio URLs for letter sounds (from SoundCity Reading)
+const LETTER_AUDIO_URLS: Record<string, string> = {
+  'a': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-a.mp3',
+  'b': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-b.mp3',
+  'c': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-c.mp3',
+  'd': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-d.mp3',
+  'e': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-e.mp3',
+  'f': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-f.mp3',
+  'g': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-g.mp3',
+  'h': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-h.mp3',
+  'i': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-i.mp3',
+  'j': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-j.mp3',
+  'k': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-k.mp3',
+  'l': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-l.mp3',
+  'm': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-m.mp3',
+  'n': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-n.mp3',
+  'o': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-o-sh.mp3',
+  'p': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-p-2.mp3',
+  'q': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-q.mp3',
+  'r': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-r.mp3',
+  's': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-z.mp3',
+  't': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-t.mp3',
+  'u': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-u-sh.mp3',
+  'v': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-v.mp3',
+  'w': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-w.mp3',
+  'x': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-x.mp3',
+  'y': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/btalpha-i-long.mp3',
+  'z': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-z.mp3',
+};
+
 export default function Learn1() {
   const [currentLetter, setCurrentLetter] = useState<string | null>(null);
   const [showVideo, setShowVideo] = useState(false);
@@ -19,6 +49,7 @@ export default function Learn1() {
   const [feedbackMessage, setFeedbackMessage] = useState('');
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentLetterRef = useRef<string | null>(null);
   const listenClickedThisRound = useRef(false);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -221,6 +252,26 @@ export default function Learn1() {
     }, 2000);
   };
 
+  // Play letter sound audio
+  const playLetterSound = () => {
+    if (!currentLetter) return;
+
+    const audioUrl = LETTER_AUDIO_URLS[currentLetter.toLowerCase()];
+    if (!audioUrl) return;
+
+    // Stop current audio if playing
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    // Play new audio
+    audioRef.current = new Audio(audioUrl);
+    audioRef.current.play().catch(err => {
+      console.error('Audio playback failed:', err);
+    });
+  };
+
   // Loading state
   if (profileLoading) {
     return (
@@ -391,12 +442,20 @@ export default function Learn1() {
                     <div className="text-white/70 text-xl mb-8">
                       Video for letter {currentLetter} is being created
                     </div>
-                    <button
-                      onClick={closeVideo}
-                      className="px-8 py-3 text-xl font-bold text-white rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all"
-                    >
-                      ✕ Close
-                    </button>
+                    <div className="flex gap-4">
+                      <button
+                        onClick={playLetterSound}
+                        className="px-8 py-3 text-xl font-bold text-white rounded-full bg-blue-500/80 backdrop-blur-md hover:bg-blue-600/80 transition-all"
+                      >
+                        🔊 Listen
+                      </button>
+                      <button
+                        onClick={closeVideo}
+                        className="px-8 py-3 text-xl font-bold text-white rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all"
+                      >
+                        ✕ Close
+                      </button>
+                    </div>
                   </div>
                 );
               }
