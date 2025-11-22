@@ -228,21 +228,42 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
 
           // Final snapshot already drawn above, just capture audio
 
+          // Stop listening for more peaks immediately
+          isListeningRef.current = false;
+          setStatusMessage('Processing audio...');
+
           // Capture audio (records 1 second starting NOW)
           if (audioCaptureRef.current && !audioCaptureRef.current.isRecording) {
             audioCaptureRef.current.captureAudio().then(blob => {
               if (blob) {
                 capturedAudioRef.current = blob;
                 console.log('🎤 Audio captured:', blob.size, 'bytes');
-              }
-            });
-          }
 
-          // Stop listening and recording
-          isListeningRef.current = false;
-          isRecordingRef.current = false;
-          setRecordingState('captured');
-          setStatusMessage('✅ Captured! Play it back or try again');
+                // NOW set to captured state (audio is ready!)
+                isRecordingRef.current = false;
+                setRecordingState('captured');
+                setStatusMessage('✅ Captured! Play it back or try again');
+              } else {
+                // Audio capture failed
+                console.error('❌ Audio capture failed');
+                isRecordingRef.current = false;
+                setRecordingState('ready');
+                setStatusMessage('❌ Audio capture failed. Try again.');
+              }
+            }).catch(error => {
+              // Handle any errors from captureAudio
+              console.error('❌ Error capturing audio:', error);
+              isRecordingRef.current = false;
+              setRecordingState('ready');
+              setStatusMessage('❌ Audio capture error. Try again.');
+            });
+          } else {
+            // No audio capture available
+            console.error('❌ No audio capture available');
+            isRecordingRef.current = false;
+            setRecordingState('ready');
+            setStatusMessage('❌ No audio capture. Try again.');
+          }
         }
       }
     };
