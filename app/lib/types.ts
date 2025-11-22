@@ -14,6 +14,7 @@ export interface Snapshot {
   isNegative: boolean;
   score: number;
   audio_url?: string; // Optional audio recording of the snapshot
+  createdAt?: string; // Timestamp when snapshot was created
 }
 
 export interface CalibrationData {

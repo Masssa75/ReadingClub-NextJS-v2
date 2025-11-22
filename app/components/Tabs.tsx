@@ -9,6 +9,7 @@ export default function Tabs() {
   const tabs = [
     { path: '/calibrate', label: '📊 Calibrate' },
     { path: '/practice', label: '▶ Practice' },
+    { path: '/admin/snapshots', label: '🗂️ Snapshots' },
   ];
 
   return (

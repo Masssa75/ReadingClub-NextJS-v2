@@ -4,9 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { setupAudio, stopAudio } from '@/app/utils/audioEngine';
 import { getFrequencyData, downsampleTo64Bins, normalizePattern, calculateVolume, calculateEnergyConcentration, isNasal } from '@/app/utils/fftAnalysis';
 import { supabase } from '@/app/lib/supabase';
-import { SNAPSHOTS_NEEDED, PHONEMES } from '@/app/lib/constants';
+import { PHONEMES } from '@/app/lib/constants';
 import type { AudioEngineState, CalibrationData } from '@/app/lib/types';
 import { useProfileContext } from '@/app/contexts/ProfileContext';
+import { createSimpleAudioCapture, type SimpleAudioCapture } from '@/app/utils/simpleAudioCapture';
+import { uploadSnapshotAudio } from '@/app/utils/snapshotAudioUpload';
 
 interface CalibrationModalProps {
   letter: string;
@@ -15,25 +17,110 @@ interface CalibrationModalProps {
   variant?: 'admin' | 'kid';
 }
 
+type RecordingState = 'idle' | 'ready' | 'recording' | 'captured';
+
+// Snapshot Card Component
+function SnapshotCard({
+  snapshot,
+  index,
+  onPlay,
+  onDelete,
+  styles
+}: {
+  snapshot: any;
+  index: number;
+  onPlay: (url: string) => void;
+  onDelete: (index: number) => void;
+  styles: any;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    // Draw waveform pattern
+    if (canvasRef.current && snapshot.data) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const barWidth = canvas.width / snapshot.data.length;
+      for (let j = 0; j < snapshot.data.length; j++) {
+        const barHeight = snapshot.data[j] * canvas.height;
+        const x = j * barWidth;
+        const y = canvas.height - barHeight;
+
+        ctx.fillStyle = '#7CB342';
+        ctx.fillRect(x, y, barWidth - 1, barHeight);
+      }
+    }
+  }, [snapshot.data]);
+
+  return (
+    <div className="relative">
+      {/* Waveform Box */}
+      <div className={`w-[140px] h-[100px] border-2 rounded-[10px] ${styles.captureBox} ${styles.captureBoxCaptured} relative overflow-hidden`}>
+        <canvas
+          ref={canvasRef}
+          width={140}
+          height={100}
+          className="w-full h-full"
+        />
+
+        {/* Play Button Overlay */}
+        {snapshot.audio_url && (
+          <button
+            onClick={() => onPlay(snapshot.audio_url)}
+            className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/40 transition-all group"
+          >
+            <div className="w-12 h-12 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-lg transition-all group-hover:scale-110">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 fill-white ml-1">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+          </button>
+        )}
+      </div>
+
+      {/* Delete Button - Top Right Corner */}
+      <button
+        onClick={() => onDelete(index)}
+        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs shadow-lg transition-all hover:scale-110"
+      >
+        ✕
+      </button>
+
+      {/* Label */}
+      <div className={`text-center ${styles.text} text-xs mt-1`}>
+        #{index + 1}
+      </div>
+    </div>
+  );
+}
+
 export default function CalibrationModal({ letter, onClose, onSuccess, variant = 'admin' }: CalibrationModalProps) {
   const { currentProfileId } = useProfileContext();
-  const [statusMessage, setStatusMessage] = useState('Click letter to hear sound, then click box 1');
+  const [statusMessage, setStatusMessage] = useState('Click letter to hear sound, then click microphone');
   const [showArrow, setShowArrow] = useState(true);
-  const [showNextButton, setShowNextButton] = useState(false);
-  const [boxStates, setBoxStates] = useState<('empty' | 'ready' | 'recording' | 'captured')[]>(
-    ['ready', 'empty', 'empty', 'empty', 'empty']
-  );
+  const [recordingState, setRecordingState] = useState<RecordingState>('ready');
+  const [existingSnapshotCount, setExistingSnapshotCount] = useState(0);
+  const [existingSnapshots, setExistingSnapshots] = useState<any[]>([]);
 
   const audioStateRef = useRef<AudioEngineState | null>(null);
-  const capturedSnapshotsRef = useRef<number[][]>([]);
+  const audioCaptureRef = useRef<SimpleAudioCapture | null>(null);
+  const capturedPatternRef = useRef<number[] | null>(null);
+  const capturedAudioRef = useRef<Blob | null>(null);
   const isListeningRef = useRef<boolean>(false);
-  const listeningForIndexRef = useRef<number>(-1);
+  const isRecordingRef = useRef<boolean>(false);
   const animationFrameRef = useRef<number | null>(null);
-  const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastPeakTimeRef = useRef<number>(0);
+  const [volume, setVolume] = useState(0);
+  const [concentration, setConcentration] = useState(0);
 
   useEffect(() => {
     initAudio();
+    checkExistingCalibration();
 
     // Prevent body scrolling when modal is open
     document.body.style.overflow = 'hidden';
@@ -48,6 +135,30 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const checkExistingCalibration = async () => {
+    if (!currentProfileId) return;
+
+    try {
+      const { data } = await supabase
+        .from('calibrations')
+        .select('pattern_data')
+        .eq('profile_id', currentProfileId)
+        .eq('letter', letter)
+        .single();
+
+      if (data?.pattern_data?.snapshots) {
+        const snapshots = data.pattern_data.snapshots;
+        const count = snapshots.length;
+        setExistingSnapshotCount(count);
+        setExistingSnapshots(snapshots);
+        setStatusMessage(`Adding calibration #${count + 1} for "${letter}". Click microphone to record.`);
+      }
+    } catch (error) {
+      // No existing calibration, that's fine
+      console.log('No existing calibration found (will create new)');
+    }
+  };
+
   const cleanup = useCallback(() => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -61,6 +172,13 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     try {
       const audioState = await setupAudio();
       audioStateRef.current = audioState;
+
+      // Setup audio capture
+      if (audioState.stream) {
+        audioCaptureRef.current = createSimpleAudioCapture(audioState.stream);
+        console.log('🎤 Audio capture ready');
+      }
+
       startVisualization();
     } catch (err) {
       console.error('Failed to setup audio:', err);
@@ -78,60 +196,61 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
 
       getFrequencyData(audioStateRef.current.analyser, audioStateRef.current.dataArray);
 
-      // Listen for peak if actively recording
-      if (isListeningRef.current && listeningForIndexRef.current >= 0) {
-        const volume = calculateVolume(audioStateRef.current.dataArray);
-        const downsampled = downsampleTo64Bins(audioStateRef.current.dataArray);
-        const concentration = calculateEnergyConcentration(downsampled);
+      const vol = calculateVolume(audioStateRef.current.dataArray);
+      const downsampled = downsampleTo64Bins(audioStateRef.current.dataArray);
+      const conc = calculateEnergyConcentration(downsampled);
 
+      // Update volume/concentration meters
+      setVolume(vol);
+      setConcentration(conc);
+
+      // Draw live pattern continuously during recording (use REF not state!)
+      if (isRecordingRef.current) {
+        const normalized = normalizePattern(downsampled, letter);
+        drawPattern(normalized);
+      }
+
+      // Listen for peak if actively recording
+      if (isListeningRef.current && isRecordingRef.current) {
         const volumeThreshold = isNasal(letter) ? 3 : 12;
         const concentrationThreshold = isNasal(letter) ? 1.2 : 2.0;
 
         const now = Date.now();
-        if (volume > volumeThreshold &&
-            concentration > concentrationThreshold &&
+        if (vol > volumeThreshold &&
+            conc > concentrationThreshold &&
             (now - lastPeakTimeRef.current) > PEAK_COOLDOWN) {
 
           const normalized = normalizePattern(downsampled, letter);
-          capturedSnapshotsRef.current.push(normalized);
+          capturedPatternRef.current = normalized;
           lastPeakTimeRef.current = now;
 
-          const index = listeningForIndexRef.current;
-          console.log(`📸 Captured snapshot ${capturedSnapshotsRef.current.length}/5`);
+          console.log(`📸 Captured snapshot for ${letter}`);
 
-          // Draw snapshot in box
-          drawSnapshotInBox(index, normalized);
+          // Final snapshot already drawn above, just capture audio
 
-          // Update box state
-          const newBoxStates = [...boxStates];
-          newBoxStates[index] = 'captured';
-          if (index + 1 < 5) {
-            newBoxStates[index + 1] = 'ready';
+          // Capture audio (records 1 second starting NOW)
+          if (audioCaptureRef.current && !audioCaptureRef.current.isRecording) {
+            audioCaptureRef.current.captureAudio().then(blob => {
+              if (blob) {
+                capturedAudioRef.current = blob;
+                console.log('🎤 Audio captured:', blob.size, 'bytes');
+              }
+            });
           }
-          setBoxStates(newBoxStates);
 
-          // Stop listening
+          // Stop listening and recording
           isListeningRef.current = false;
-          listeningForIndexRef.current = -1;
-
-          const capturedTotal = capturedSnapshotsRef.current.length;
-
-          if (capturedTotal < 5) {
-            setStatusMessage(`✓ Captured ${capturedTotal}/5. Click box ${capturedTotal + 1}`);
-          } else {
-            setStatusMessage('✓ All 5 captured! Saving...');
-            setTimeout(() => {
-              finishCalibration();
-            }, 500);
-          }
+          isRecordingRef.current = false;
+          setRecordingState('captured');
+          setStatusMessage('✅ Captured! Play it back or try again');
         }
       }
     };
     visualize();
   };
 
-  const drawSnapshotInBox = (index: number, snapshot: number[]) => {
-    const canvas = canvasRefs.current[index];
+  const drawPattern = (pattern: number[]) => {
+    const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
@@ -139,9 +258,9 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const barWidth = canvas.width / snapshot.length;
-    for (let j = 0; j < snapshot.length; j++) {
-      const barHeight = snapshot[j] * canvas.height;
+    const barWidth = canvas.width / pattern.length;
+    for (let j = 0; j < pattern.length; j++) {
+      const barHeight = pattern[j] * canvas.height;
       const x = j * barWidth;
       const y = canvas.height - barHeight;
 
@@ -150,32 +269,98 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     }
   };
 
-  const handleBoxClick = (index: number) => {
-    // Only allow capturing the next uncaptured box
-    if (index !== capturedSnapshotsRef.current.length) {
-      return;
-    }
-
+  const handleMicClick = () => {
     // Already listening
     if (isListeningRef.current) return;
+    if (isRecordingRef.current) return;
 
     // Hide arrow once user starts
     setShowArrow(false);
 
-    listeningForIndexRef.current = index;
-
-    // Update box state to recording
-    const newBoxStates = [...boxStates];
-    newBoxStates[index] = 'recording';
-    setBoxStates(newBoxStates);
-
-    setStatusMessage(`Recording ${index + 1}/5... Get ready...`);
+    isRecordingRef.current = true;
+    setRecordingState('recording');
+    setStatusMessage(`Recording... Get ready...`);
 
     // Wait 400ms to avoid click sound, THEN start listening
     setTimeout(() => {
       isListeningRef.current = true;
-      setStatusMessage(`Recording ${index + 1}/5... Say "${letter}" NOW!`);
+      setStatusMessage(`Recording... Say "${letter}" NOW!`);
     }, 400);
+  };
+
+  const handleTryAgain = () => {
+    // Clear captured data
+    capturedPatternRef.current = null;
+    capturedAudioRef.current = null;
+    isListeningRef.current = false;
+    isRecordingRef.current = false;
+    setRecordingState('ready');
+    setStatusMessage('Click microphone to record again');
+
+    // Clear canvas
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+    }
+  };
+
+  const handlePlayback = () => {
+    if (!capturedAudioRef.current) {
+      console.error('No audio to play');
+      return;
+    }
+
+    // Create audio from blob and play
+    const audioUrl = URL.createObjectURL(capturedAudioRef.current);
+    const audio = new Audio(audioUrl);
+    audio.play().catch(err => {
+      console.error('Audio playback failed:', err);
+    });
+
+    // Clean up URL after playing
+    audio.onended = () => {
+      URL.revokeObjectURL(audioUrl);
+    };
+  };
+
+  const handleDeleteSnapshot = async (index: number) => {
+    if (!currentProfileId) return;
+
+    try {
+      // Remove snapshot from array
+      const updatedSnapshots = existingSnapshots.filter((_, i) => i !== index);
+      setExistingSnapshots(updatedSnapshots);
+      setExistingSnapshotCount(updatedSnapshots.length);
+
+      // Update in database
+      const patternData = {
+        snapshots: updatedSnapshots
+      };
+
+      const { error } = await supabase
+        .from('calibrations')
+        .update({
+          pattern_data: patternData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('profile_id', currentProfileId)
+        .eq('letter', letter);
+
+      if (error) throw error;
+
+      console.log(`✅ Deleted snapshot #${index + 1} for letter ${letter}`);
+    } catch (error) {
+      console.error('❌ Error deleting snapshot:', error);
+    }
+  };
+
+  const handlePlayExistingSnapshot = (audioUrl: string) => {
+    const audio = new Audio(audioUrl);
+    audio.play().catch(err => {
+      console.error('Audio playback failed:', err);
+    });
   };
 
   const playLetterSound = () => {
@@ -192,112 +377,88 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     });
   };
 
-  const finishCalibration = async () => {
-    cleanup();
-
-    if (capturedSnapshotsRef.current.length < 3) {
-      setStatusMessage('Not enough snapshots. Please retry.');
+  const handleOK = async () => {
+    if (!capturedPatternRef.current || !capturedAudioRef.current) {
+      setStatusMessage('❌ No recording captured');
       return;
     }
-
-    const clusterResult = findBestCluster(capturedSnapshotsRef.current);
-    const baseline = averageSnapshots(clusterResult.cluster);
 
     if (!currentProfileId) {
       setStatusMessage('❌ No profile selected');
       return;
     }
 
-    const success = await saveCalibrationToSupabase(letter, baseline, currentProfileId);
+    setStatusMessage('📤 Uploading...');
 
-    if (success) {
-      console.log(`Calibrated ${letter}: Used ${clusterResult.cluster.length}/${capturedSnapshotsRef.current.length} snapshots`);
-      setStatusMessage('✅ Calibration complete! Click Next to continue.');
-      setShowNextButton(true);
-
-      // Mark letter as calibrated (golden) immediately, but don't auto-advance yet
-      // Auto-advance only happens when Next button is clicked
-      onSuccess(letter);
-    }
-  };
-
-  const findBestCluster = (snapshots: number[][]): { cluster: number[][], indices: number[] } => {
-    if (snapshots.length <= 3) {
-      return {
-        cluster: snapshots,
-        indices: snapshots.map((_, i) => i)
-      };
-    }
-
-    const distances: { i: number, j: number, dist: number }[] = [];
-    for (let i = 0; i < snapshots.length; i++) {
-      for (let j = i + 1; j < snapshots.length; j++) {
-        const dist = calculateSnapshotDistance(snapshots[i], snapshots[j]);
-        distances.push({ i, j, dist });
-      }
-    }
-
-    distances.sort((a, b) => a.dist - b.dist);
-
-    const pair = distances[0];
-    const candidates = [pair.i, pair.j];
-
-    let bestThird: number | null = null;
-    let bestAvgDist = Infinity;
-
-    for (let k = 0; k < snapshots.length; k++) {
-      if (candidates.includes(k)) continue;
-
-      const dist1 = calculateSnapshotDistance(snapshots[k], snapshots[candidates[0]]);
-      const dist2 = calculateSnapshotDistance(snapshots[k], snapshots[candidates[1]]);
-      const avgDist = (dist1 + dist2) / 2;
-
-      if (avgDist < bestAvgDist) {
-        bestAvgDist = avgDist;
-        bestThird = k;
-      }
-    }
-
-    if (bestThird !== null) {
-      candidates.push(bestThird);
-    }
-
-    return {
-      cluster: candidates.map(i => snapshots[i]),
-      indices: candidates
-    };
-  };
-
-  const calculateSnapshotDistance = (a: number[], b: number[]): number => {
-    let sum = 0;
-    for (let i = 0; i < a.length; i++) {
-      sum += Math.abs(a[i] - b[i]);
-    }
-    return sum;
-  };
-
-  const averageSnapshots = (snapshots: number[][]): number[] => {
-    const numBins = snapshots[0].length;
-    const averaged = new Array(numBins).fill(0);
-
-    for (const snapshot of snapshots) {
-      for (let i = 0; i < numBins; i++) {
-        averaged[i] += snapshot[i];
-      }
-    }
-
-    return averaged.map(v => v / snapshots.length);
-  };
-
-  const saveCalibrationToSupabase = async (letter: string, baseline: number[], profileId: string): Promise<boolean> => {
     try {
+      // Upload audio to Supabase Storage
+      const audioUrl = await uploadSnapshotAudio(
+        capturedAudioRef.current,
+        currentProfileId,
+        letter,
+        false // positive snapshot
+      );
+
+      if (!audioUrl) {
+        throw new Error('Failed to upload audio');
+      }
+
+      // Save calibration to Supabase
+      const success = await saveCalibrationToSupabase(
+        letter,
+        capturedPatternRef.current,
+        currentProfileId,
+        audioUrl
+      );
+
+      if (success) {
+        console.log(`✅ Calibrated ${letter} with audio`);
+
+        // Mark letter as calibrated (updates the grid)
+        onSuccess(letter);
+
+        // Reload existing calibrations to show the new one
+        await checkExistingCalibration();
+
+        // Reset to ready state for another recording
+        setRecordingState('ready');
+        setStatusMessage(`✅ Saved! Add another or close to finish.`);
+      }
+    } catch (error) {
+      console.error('❌ Error saving calibration:', error);
+      setStatusMessage(`Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const saveCalibrationToSupabase = async (
+    letter: string,
+    pattern: number[],
+    profileId: string,
+    audioUrl: string
+  ): Promise<boolean> => {
+    try {
+      // Load existing calibration to append to it
+      const { data: existing } = await supabase
+        .from('calibrations')
+        .select('pattern_data')
+        .eq('profile_id', profileId)
+        .eq('letter', letter)
+        .single();
+
+      // Create new snapshot
+      const newSnapshot = {
+        data: pattern,
+        profileId: profileId,
+        isNegative: false,
+        score: 0,
+        audio_url: audioUrl,
+        createdAt: new Date().toISOString()
+      };
+
+      // Append to existing snapshots or create new array
+      const existingSnapshots = existing?.pattern_data?.snapshots || [];
       const patternData: CalibrationData = {
-        snapshots: [{
-          data: baseline,
-          profileId: profileId,
-          isNegative: false,
-          score: 0
-        }]
+        snapshots: [...existingSnapshots, newSnapshot]
       };
 
       const { error } = await supabase
@@ -313,20 +474,14 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
 
       if (error) throw error;
 
-      console.log(`✅ Saved calibration for letter ${letter}`);
+      const totalSnapshots = patternData.snapshots.length;
+      console.log(`✅ Saved calibration for letter ${letter} (now ${totalSnapshots} snapshot${totalSnapshots > 1 ? 's' : ''})`);
       return true;
     } catch (error) {
       console.error('❌ Error saving calibration:', error);
       setStatusMessage(`Failed to save: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
     }
-  };
-
-  const handleNextClick = () => {
-    // Trigger success callback (marks letter golden + auto-advances)
-    onSuccess(letter);
-    // Close modal - parent will handle opening next letter via onSuccess
-    handleClose();
   };
 
   const handleClose = () => {
@@ -385,7 +540,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
 
         {/* Instructions */}
         <div className={`text-center ${styles.text} text-base mb-5`}>
-          Click the letter to hear its sound. Click each box below to record 5 sounds.
+          Click the letter to hear its sound, then click the microphone to record.
         </div>
 
         {/* Big Letter + Listen Icon */}
@@ -407,54 +562,64 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
           </div>
         </div>
 
-        {/* 5 Capture Boxes */}
-        <div className="flex gap-2.5 justify-center mt-8 relative">
+        {/* Volume and Concentration Meters */}
+        <div className="flex gap-4 justify-center mb-6">
+          <div className="flex flex-col items-center gap-2">
+            <div className={`text-sm ${styles.text}`}>Volume</div>
+            <div className="w-24 h-3 bg-white/20 rounded-full border border-white/30 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-green-400 to-blue-400 transition-all duration-100"
+                style={{ width: `${Math.min(100, (volume / 40) * 100)}%` }}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <div className={`text-sm ${styles.text}`}>Concentration</div>
+            <div className="w-24 h-3 bg-white/20 rounded-full border border-white/30 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-yellow-400 to-orange-400 transition-all duration-100"
+                style={{ width: `${Math.min(100, (concentration / 8) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Single Capture Box */}
+        <div className="flex justify-center mt-8 relative">
           {/* Green Arrow */}
-          {showArrow && (
-            <div className="absolute bottom-[90px] left-[50px] animate-[arrowHover_2s_ease-in-out_infinite,arrowPulse_1.5s_ease-in-out_infinite]">
+          {showArrow && recordingState === 'ready' && (
+            <div className="absolute -top-[60px] animate-[arrowHover_2s_ease-in-out_infinite,arrowPulse_1.5s_ease-in-out_infinite]">
               <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-[50px] h-[50px]" style={{ filter: 'drop-shadow(0 2px 10px rgba(124, 179, 66, 0.8))' }}>
                 <path d="M12 4L12 20M12 20L5 13M12 20L19 13" stroke="#7CB342" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
               </svg>
             </div>
           )}
 
-          {Array.from({ length: SNAPSHOTS_NEEDED }).map((_, i) => {
-            let boxClass = `w-[100px] h-[80px] border-2 rounded-[10px] transition-all relative ${styles.captureBox}`;
-            if (boxStates[i] === 'ready') {
-              boxClass += ` ${styles.captureBoxReady} animate-pulse cursor-pointer`;
-            } else if (boxStates[i] === 'recording') {
-              boxClass += ` ${styles.captureBoxRecording} cursor-wait`;
-            } else if (boxStates[i] === 'captured') {
-              boxClass += ` ${styles.captureBoxCaptured} cursor-default`;
-            } else {
-              boxClass += ' opacity-50 cursor-not-allowed';
-            }
+          <div
+            onClick={recordingState === 'ready' ? handleMicClick : undefined}
+            className={`w-[300px] h-[150px] border-2 rounded-[10px] transition-all relative ${styles.captureBox}
+              ${recordingState === 'ready' ? `${styles.captureBoxReady} animate-pulse cursor-pointer` : ''}
+              ${recordingState === 'recording' ? `${styles.captureBoxRecording} cursor-wait` : ''}
+              ${recordingState === 'captured' ? `${styles.captureBoxCaptured} cursor-default` : ''}
+            `}
+          >
+            {/* Mic Icon */}
+            {recordingState === 'ready' && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 opacity-70">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-full h-full" style={{ fill: styles.iconFill }}>
+                  <path d="M12 2C10.9 2 10 2.9 10 4V12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12V4C14 2.9 13.1 2 12 2Z"/>
+                  <path d="M17 11C17 13.76 14.76 16 12 16C9.24 16 7 13.76 7 11H5C5 14.53 7.61 17.43 11 17.92V21H13V17.92C16.39 17.43 19 14.53 19 11H17Z"/>
+                </svg>
+              </div>
+            )}
 
-            return (
-            <div
-              key={i}
-              onClick={() => handleBoxClick(i)}
-              className={boxClass}
-            >
-              {/* Mic Icon */}
-              {boxStates[i] === 'ready' && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 opacity-70">
-                  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-full h-full" style={{ fill: styles.iconFill }}>
-                    <path d="M12 2C10.9 2 10 2.9 10 4V12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12V4C14 2.9 13.1 2 12 2Z"/>
-                    <path d="M17 11C17 13.76 14.76 16 12 16C9.24 16 7 13.76 7 11H5C5 14.53 7.61 17.43 11 17.92V21H13V17.92C16.39 17.43 19 14.53 19 11H17Z"/>
-                  </svg>
-                </div>
-              )}
-
-              <canvas
-                ref={el => { canvasRefs.current[i] = el; }}
-                width={100}
-                height={80}
-                className="w-full h-full"
-              />
-            </div>
-          );
-          })}
+            <canvas
+              ref={el => { canvasRef.current = el; }}
+              width={300}
+              height={150}
+              className="w-full h-full"
+            />
+          </div>
         </div>
 
         {/* Status Message */}
@@ -462,16 +627,61 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
           {statusMessage}
         </div>
 
-        {/* Next Button */}
-        {showNextButton && (
-          <div
-            onClick={handleNextClick}
-            className="w-20 h-20 bg-[#7CB342] rounded-full cursor-pointer transition-all mx-auto mt-8 flex items-center justify-center shadow-[0_4px_15px_rgba(124,179,66,0.5)] animate-[nextButtonPulse_1.5s_ease-in-out_infinite] hover:scale-110 hover:bg-[#8BC34A] hover:shadow-[0_6px_20px_rgba(124,179,66,0.7)]"
-          >
-            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 fill-white">
-              <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
-            </svg>
+        {/* Action Buttons (Playback, Try Again, OK) */}
+        {recordingState === 'captured' && (
+          <div className="flex gap-4 justify-center mt-8">
+            {/* Playback Button */}
+            <button
+              onClick={handlePlayback}
+              className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full cursor-pointer transition-all flex items-center gap-2 shadow-lg hover:scale-105"
+            >
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 fill-white">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              Play
+            </button>
+
+            {/* Try Again Button */}
+            <button
+              onClick={handleTryAgain}
+              className="px-6 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-full cursor-pointer transition-all shadow-lg hover:scale-105"
+            >
+              Try Again
+            </button>
+
+            {/* OK Button */}
+            <button
+              onClick={handleOK}
+              className="px-6 py-3 bg-[#7CB342] hover:bg-[#8BC34A] text-white rounded-full cursor-pointer transition-all shadow-lg hover:scale-105"
+            >
+              OK ✓
+            </button>
           </div>
+        )}
+
+        {/* Existing Calibrations - Below everything */}
+        {existingSnapshots.length > 0 && (
+          <>
+            {/* Horizontal Divider */}
+            <div className="my-8 border-t border-white/20" />
+
+            <div className={`text-center ${styles.text} text-sm mb-4`}>
+              Existing Calibrations ({existingSnapshots.length})
+            </div>
+
+            <div className="flex flex-wrap gap-4 justify-center max-h-[250px] overflow-y-auto px-2">
+              {existingSnapshots.map((snapshot, index) => (
+                <SnapshotCard
+                  key={index}
+                  snapshot={snapshot}
+                  index={index}
+                  onPlay={handlePlayExistingSnapshot}
+                  onDelete={handleDeleteSnapshot}
+                  styles={styles}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 

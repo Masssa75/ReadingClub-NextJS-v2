@@ -74,20 +74,8 @@ export default function CalibrationGrid({ variant = 'admin' }: CalibrationGridPr
     setCalibratedLetters(updatedCalibrated);
     console.log('🟢 Updated calibrated letters:', Array.from(updatedCalibrated));
 
-    // Auto-advance to next uncalibrated letter
-    const currentIndex = PHONEMES.findIndex(p => p.letter === letter);
-    console.log('🟢 Current letter index:', currentIndex);
-    for (let i = currentIndex + 1; i < PHONEMES.length; i++) {
-      if (!updatedCalibrated.has(PHONEMES[i].letter)) {
-        console.log('🟢 Auto-advancing to next letter:', PHONEMES[i].letter);
-        setModalLetter(PHONEMES[i].letter);
-        return;
-      }
-    }
-
-    // If no more letters after current, close modal
-    console.log('🟢 No more uncalibrated letters, closing modal');
-    setModalLetter(null);
+    // Don't auto-advance or auto-close - let user close manually
+    // Modal stays open on same letter so they can add more calibrations
   };
 
   if (profileLoading) {
