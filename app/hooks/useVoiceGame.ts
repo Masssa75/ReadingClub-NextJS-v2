@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { setupAudio, stopAudio } from '@/app/utils/audioEngine';
 import { getFrequencyData, downsampleTo64Bins, calculateVolume, calculateEnergyConcentration, isNasal } from '@/app/utils/fftAnalysis';
 import { strategy11_simpleSnapshot, getLastMatchInfo } from '@/app/utils/patternMatching';
-import { startNewScoringRound, setCalibrationDataRef, incrementSnapshotScore } from '@/app/utils/snapshotScoring';
+import { startNewScoringRound, setCalibrationDataRef, incrementSnapshotScore, flushAllPendingScores } from '@/app/utils/snapshotScoring';
 import { addPositivePattern } from '@/app/utils/positiveSnapshot';
 import { addNegativePattern } from '@/app/utils/negativeSnapshot';
 import { uploadSnapshotAudio } from '@/app/utils/snapshotAudioUpload';
@@ -227,6 +227,11 @@ export function useVoiceGame(
       audioStateRef.current = null;
     }
     patternBufferRef.current = [];
+
+    // Flush any pending score saves when stopping
+    flushAllPendingScores(calibrationDataRef.current).catch(err => {
+      console.error('Failed to flush scores on stop:', err);
+    });
   }, []);
 
   // Manual override: Mark current sound as CORRECT (IS X button)
@@ -276,13 +281,14 @@ export function useVoiceGame(
     if (result.success) {
       // addPositivePattern mutates calibrationData, so we need to update React state
       // to trigger re-render and update the useCallback dependency
-      setCalibrationData({...calibrationData});
-      setCalibrationDataRef(calibrationData);
-      console.log(`📥 Updated state, ${letter} now has ${calibrationData[letter]?.snapshots?.length || 0} snapshots`);
+      const updatedData = {...calibrationData};
+      setCalibrationData(updatedData);
+      setCalibrationDataRef(updatedData); // Use the new object, not the old one!
+      console.log(`📥 Updated state, ${letter} now has ${updatedData[letter]?.snapshots?.length || 0} snapshots`);
 
       // Restart scoring round with updated calibration data
       if (currentLetterRef.current) {
-        await startNewScoringRound(currentLetterRef.current, calibrationData);
+        await startNewScoringRound(currentLetterRef.current, updatedData);
         console.log('✅ Scoring round restarted with new snapshot');
       }
     } else {
@@ -324,13 +330,14 @@ export function useVoiceGame(
     // Update React state and restart scoring round with mutated data
     if (result.success) {
       // addNegativePattern mutates calibrationData, so we need to update React state
-      setCalibrationData({...calibrationData});
-      setCalibrationDataRef(calibrationData);
+      const updatedData = {...calibrationData};
+      setCalibrationData(updatedData);
+      setCalibrationDataRef(updatedData); // Use the new object, not the old one!
       console.log(`📥 Updated state with new negative snapshot for ${letter}`);
 
       // Restart scoring round with updated calibration data
       if (currentLetterRef.current) {
-        await startNewScoringRound(currentLetterRef.current, calibrationData);
+        await startNewScoringRound(currentLetterRef.current, updatedData);
         console.log('✅ Scoring round restarted with new negative snapshot');
       }
     }
@@ -347,6 +354,10 @@ export function useVoiceGame(
       if (audioStateRef.current) {
         stopAudio(audioStateRef.current);
       }
+      // Flush any pending score saves before unmounting
+      flushAllPendingScores(calibrationDataRef.current).catch(err => {
+        console.error('Failed to flush scores on unmount:', err);
+      });
     };
   }, []);
 

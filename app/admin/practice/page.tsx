@@ -384,13 +384,14 @@ export default function PlayPage() {
       }
 
       // Update React state with mutated data (no need to reload from DB)
-      setCalibrationData({...calibrationData});
-      setCalibrationDataRef(calibrationData);
-      console.log(`📥 Updated state, ${letter} now has ${calibrationData[letter]?.snapshots?.length || 0} snapshots`);
+      const updatedData = {...calibrationData};
+      setCalibrationData(updatedData);
+      setCalibrationDataRef(updatedData); // Use the new object, not the old one!
+      console.log(`📥 Updated state, ${letter} now has ${updatedData[letter]?.snapshots?.length || 0} snapshots`);
 
       // Restart scoring round with updated data
       if (currentLetterRef.current) {
-        await startNewScoringRound(currentLetterRef.current, calibrationData);
+        await startNewScoringRound(currentLetterRef.current, updatedData);
         console.log('✅ Scoring round restarted with new snapshot');
       }
     }
@@ -458,13 +459,14 @@ export default function PlayPage() {
 
     // Update React state with mutated data (no need to reload from DB)
     if (result.success) {
-      setCalibrationData({...calibrationData});
-      setCalibrationDataRef(calibrationData);
+      const updatedData = {...calibrationData};
+      setCalibrationData(updatedData);
+      setCalibrationDataRef(updatedData); // Use the new object, not the old one!
       console.log(`📥 Updated state with new negative snapshot`);
 
       // Restart scoring round with updated data
       if (currentLetterRef.current) {
-        await startNewScoringRound(currentLetterRef.current, calibrationData);
+        await startNewScoringRound(currentLetterRef.current, updatedData);
         console.log('✅ Scoring round restarted with new negative snapshot');
       }
     }
@@ -532,13 +534,14 @@ export default function PlayPage() {
 
     // Update React state with mutated data (no need to reload from DB)
     if (result.success) {
-      setCalibrationData({...calibrationData});
-      setCalibrationDataRef(calibrationData);
-      console.log(`📥 Updated state, ${currentLetter} now has ${calibrationData[currentLetter]?.snapshots?.length || 0} snapshots`);
+      const updatedData = {...calibrationData};
+      setCalibrationData(updatedData);
+      setCalibrationDataRef(updatedData); // Use the new object, not the old one!
+      console.log(`📥 Updated state, ${currentLetter} now has ${updatedData[currentLetter]?.snapshots?.length || 0} snapshots`);
 
       // Restart scoring round with updated data
       if (currentLetterRef.current) {
-        await startNewScoringRound(currentLetterRef.current, calibrationData);
+        await startNewScoringRound(currentLetterRef.current, updatedData);
         console.log('✅ Scoring round restarted with new snapshot');
       }
     } else {

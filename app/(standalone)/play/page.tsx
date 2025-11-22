@@ -111,8 +111,9 @@ export default function Learn1() {
   const openVideo = () => {
     // Check if video exists for this letter
     const videoMap: Record<string, string> = {
-      'A': '/Videos/a-Apple.mp4',
+      'A': '/Videos/a-Apple2.mp4',
       'B': '/Videos/Bear.mp4',
+      'E': '/Videos/e.mp4',
     };
 
     const hasVideo = currentLetter && videoMap[currentLetter.toUpperCase()];
@@ -419,8 +420,9 @@ export default function Learn1() {
             {(() => {
               // Map letters to their video files
               const videoMap: Record<string, string> = {
-                'A': '/Videos/a-Apple.mp4',
+                'A': '/Videos/a-Apple2.mp4',
                 'B': '/Videos/Bear.mp4',
+                'E': '/Videos/e.mp4',
               };
 
               const videoSrc = currentLetter ? videoMap[currentLetter.toUpperCase()] : null;
