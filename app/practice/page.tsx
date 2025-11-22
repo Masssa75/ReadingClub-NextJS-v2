@@ -79,7 +79,7 @@ export default function PlayPage() {
     };
   }, [calibrationData]);
 
-  const loadCalibrations = async () => {
+  const loadCalibrations = async (): Promise<Record<string, CalibrationData>> => {
     try {
       // Load ALL calibrations (cross-profile pooling)
       const { data, error } = await supabase
@@ -103,8 +103,10 @@ export default function PlayPage() {
       setCalibrationData(calibrations);
       setCalibrationDataRef(calibrations); // Set reference for snapshot scoring
       console.log('✅ Loaded calibrations for', Object.keys(calibrations).length, 'letters:', Object.keys(calibrations).join(', '));
+      return calibrations;
     } catch (error) {
       console.error('Error loading calibrations:', error);
+      return {};
     }
   };
 
@@ -362,6 +364,17 @@ export default function PlayPage() {
       } else {
         console.log('⚠️ Positive snapshot created without audio');
       }
+
+      // Update React state with mutated data (no need to reload from DB)
+      setCalibrationData({...calibrationData});
+      setCalibrationDataRef(calibrationData);
+      console.log(`📥 Updated state, ${letter} now has ${calibrationData[letter]?.snapshots?.length || 0} snapshots`);
+
+      // Restart scoring round with updated data
+      if (currentLetterRef.current) {
+        await startNewScoringRound(currentLetterRef.current, calibrationData);
+        console.log('✅ Scoring round restarted with new snapshot');
+      }
     }
 
     // Show "Not X" button for 5 seconds
@@ -425,6 +438,19 @@ export default function PlayPage() {
     setShowNotXButton(false);
     setNotXLetter(null);
 
+    // Update React state with mutated data (no need to reload from DB)
+    if (result.success) {
+      setCalibrationData({...calibrationData});
+      setCalibrationDataRef(calibrationData);
+      console.log(`📥 Updated state with new negative snapshot`);
+
+      // Restart scoring round with updated data
+      if (currentLetterRef.current) {
+        await startNewScoringRound(currentLetterRef.current, calibrationData);
+        console.log('✅ Scoring round restarted with new negative snapshot');
+      }
+    }
+
     if (notXButtonTimeoutRef.current) {
       clearTimeout(notXButtonTimeoutRef.current);
     }
@@ -440,32 +466,66 @@ export default function PlayPage() {
 
   // Handle "IS X" button click (manually mark current sound as correct)
   const handleIsXClick = async () => {
-    if (!currentLetter || !currentPattern || !currentProfileId || !audioCaptureRef.current) return;
+    console.log('🔘 IS X button clicked');
+
+    if (!currentLetter || !currentPattern || !currentProfileId || !audioCaptureRef.current) {
+      console.error('❌ IS X button - Missing required data:', {
+        currentLetter,
+        hasPattern: !!currentPattern,
+        currentProfileId,
+        hasAudioCapture: !!audioCaptureRef.current
+      });
+      setFeedbackMessage('❌ Missing required data');
+      setTimeout(() => setFeedbackMessage(''), 2000);
+      return;
+    }
 
     console.log(`✅ User confirmed: IS ${currentLetter} - capturing audio NOW...`);
     setFeedbackMessage('Recording...');
 
     // Capture audio RIGHT NOW (records 1 second starting from this moment)
     const audioBlob = await audioCaptureRef.current.captureAudio();
+    console.log(`🎤 Audio blob captured:`, audioBlob ? `${audioBlob.size} bytes` : 'NULL');
 
     // Upload audio if captured
     let audioUrl: string | undefined;
     if (audioBlob) {
       try {
+        console.log(`📤 Uploading audio to Supabase...`);
         audioUrl = await uploadSnapshotAudio(
           audioBlob,
           currentProfileId,
           currentLetter,
           false // positive snapshot
         ) || undefined;
+        console.log(`✅ Audio uploaded:`, audioUrl || 'NO URL RETURNED');
       } catch (error) {
         console.error('❌ Error uploading snapshot audio:', error);
       }
+    } else {
+      console.warn('⚠️ No audio blob captured - snapshot will be saved without audio');
     }
 
     // Create positive snapshot with immediate save
+    console.log(`💾 Creating positive snapshot for ${currentLetter}...`);
     const result = await addPositivePattern(currentLetter, currentPattern, currentProfileId, calibrationData, audioUrl, true);
+    console.log(`📊 addPositivePattern result:`, result);
     setFeedbackMessage(result.message + ' ✓ Saved');
+
+    // Update React state with mutated data (no need to reload from DB)
+    if (result.success) {
+      setCalibrationData({...calibrationData});
+      setCalibrationDataRef(calibrationData);
+      console.log(`📥 Updated state, ${currentLetter} now has ${calibrationData[currentLetter]?.snapshots?.length || 0} snapshots`);
+
+      // Restart scoring round with updated data
+      if (currentLetterRef.current) {
+        await startNewScoringRound(currentLetterRef.current, calibrationData);
+        console.log('✅ Scoring round restarted with new snapshot');
+      }
+    } else {
+      console.error('❌ Failed to create positive snapshot:', result.message);
+    }
 
     // Brief feedback
     setTimeout(() => setFeedbackMessage(''), 2000);
@@ -551,7 +611,7 @@ export default function PlayPage() {
         </button>
 
         {/* IS X button - manually mark current sound as correct */}
-        {currentLetter && isRunning && (
+        {currentLetter && (
           <button
             onClick={handleIsXClick}
             className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors"

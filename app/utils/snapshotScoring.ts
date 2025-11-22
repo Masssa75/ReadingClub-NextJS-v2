@@ -181,15 +181,17 @@ async function saveSnapshotScoresToSupabase(
       snapshots: profileSnapshots
     };
 
-    // Update in Supabase (use ilike for case-insensitive letter matching)
+    // Upsert in Supabase (create if doesn't exist, update if it does)
     const { error } = await supabase
       .from('calibrations')
-      .update({
+      .upsert({
+        profile_id: profileId,
+        letter: normalizedLetter,
         pattern_data: patternData,
         updated_at: new Date().toISOString()
-      })
-      .eq('profile_id', profileId)
-      .ilike('letter', normalizedLetter);
+      }, {
+        onConflict: 'profile_id,letter'
+      });
 
     if (error) {
       console.error(`❌ Error saving scores for ${normalizedLetter}:`, error);

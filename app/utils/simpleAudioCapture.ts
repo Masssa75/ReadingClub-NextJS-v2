@@ -12,14 +12,27 @@ export interface SimpleAudioCapture {
  */
 export function createSimpleAudioCapture(stream: MediaStream): SimpleAudioCapture {
   let isRecording = false;
+  let currentRecordingPromise: Promise<Blob | null> | null = null;
+  let lastRecordingEndTime = 0;
 
   const captureAudio = (): Promise<Blob | null> => {
-    if (isRecording) {
-      console.warn('⚠️ Already recording, skipping');
-      return Promise.resolve(null);
+    if (isRecording && currentRecordingPromise) {
+      console.warn('⚠️ Already recording, waiting for it to finish...');
+      return currentRecordingPromise;
     }
 
-    return new Promise((resolve) => {
+    // Prevent starting a new recording too soon after the last one ended
+    const timeSinceLastRecording = Date.now() - lastRecordingEndTime;
+    if (timeSinceLastRecording < 500) {
+      console.warn(`⚠️ Too soon after last recording (${timeSinceLastRecording}ms), waiting...`);
+      return new Promise(resolve => {
+        setTimeout(() => {
+          resolve(captureAudio());
+        }, 500 - timeSinceLastRecording);
+      });
+    }
+
+    currentRecordingPromise = new Promise((resolve) => {
       try {
         isRecording = true;
         const chunks: Blob[] = [];
@@ -39,6 +52,8 @@ export function createSimpleAudioCapture(stream: MediaStream): SimpleAudioCaptur
 
         recorder.onstop = () => {
           isRecording = false;
+          currentRecordingPromise = null;
+          lastRecordingEndTime = Date.now();
           if (chunks.length > 0) {
             const blob = new Blob(chunks, { type: mimeType });
             console.log(`🎤 Audio captured: ${blob.size} bytes (${mimeType})`);
@@ -52,6 +67,8 @@ export function createSimpleAudioCapture(stream: MediaStream): SimpleAudioCaptur
         recorder.onerror = (error) => {
           console.error('❌ MediaRecorder error:', error);
           isRecording = false;
+          currentRecordingPromise = null;
+          lastRecordingEndTime = Date.now();
           resolve(null);
         };
 
@@ -69,9 +86,12 @@ export function createSimpleAudioCapture(stream: MediaStream): SimpleAudioCaptur
       } catch (error) {
         console.error('❌ Error creating MediaRecorder:', error);
         isRecording = false;
+        currentRecordingPromise = null;
         resolve(null);
       }
     });
+
+    return currentRecordingPromise;
   };
 
   return {
