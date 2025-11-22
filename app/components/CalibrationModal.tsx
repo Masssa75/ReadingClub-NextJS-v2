@@ -662,26 +662,90 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
           </div>
         </div>
 
-        {/* Volume and Concentration Meters */}
-        <div className="flex gap-4 justify-center mb-6">
-          <div className="flex flex-col items-center gap-2">
-            <div className={`text-sm ${styles.text}`}>Volume</div>
-            <div className="w-24 h-3 bg-white/20 rounded-full border border-white/30 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-green-400 to-blue-400 transition-all duration-100"
-                style={{ width: `${Math.min(100, (volume / 40) * 100)}%` }}
-              />
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className={`text-sm ${styles.text}`}>Concentration</div>
-            <div className="w-24 h-3 bg-white/20 rounded-full border border-white/30 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-yellow-400 to-orange-400 transition-all duration-100"
-                style={{ width: `${Math.min(100, (concentration / 8) * 100)}%` }}
-              />
-            </div>
-          </div>
+        {/* Volume and Concentration Meters - Same as ThresholdMeters */}
+        <div className="flex gap-6 justify-center mb-6">
+          {(() => {
+            // Calculate thresholds based on letter (same logic as practice page)
+            const volumeThreshold = isNasal(letter) ? 3 : 12;
+            const concentrationThreshold = isNasal(letter) ? 1.2 : 2.0;
+
+            // Scale based on 2x threshold (same as ThresholdMeters)
+            const maxVolume = volumeThreshold * 2;
+            const volumePercent = Math.min(100, (volume / maxVolume) * 100);
+            const volumeThresholdPercent = (volumeThreshold / maxVolume) * 100;
+
+            const maxConcentration = concentrationThreshold * 2;
+            const concentrationPercent = Math.min(100, (concentration / maxConcentration) * 100);
+            const concentrationThresholdPercent = (concentrationThreshold / maxConcentration) * 100;
+
+            // Color coding (same as ThresholdMeters)
+            const getVolumeColor = () => {
+              if (volume >= volumeThreshold) return '#4CAF50'; // Green
+              if (volume >= volumeThreshold * 0.8) return '#FDD835'; // Yellow
+              return '#f44336'; // Red
+            };
+
+            const getConcentrationColor = () => {
+              if (concentration >= concentrationThreshold) return '#4CAF50'; // Green
+              if (concentration >= concentrationThreshold * 0.8) return '#FDD835'; // Yellow
+              return '#f44336'; // Red
+            };
+
+            return (
+              <>
+                <div className="flex flex-col items-center gap-2 min-w-[140px]">
+                  <div className="flex justify-between w-full">
+                    <div className={`text-xs ${styles.text}`}>Volume</div>
+                    <div className={`text-xs ${styles.text}`}>
+                      {Math.round(volume)} / {volumeThreshold}
+                    </div>
+                  </div>
+                  <div className="relative w-full h-5 bg-white/20 rounded-full border border-white/30 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-100"
+                      style={{
+                        width: `${volumePercent}%`,
+                        background: getVolumeColor(),
+                      }}
+                    />
+                    {/* Threshold marker */}
+                    <div
+                      className="absolute top-0 h-full w-0.5 bg-[#FDD835]"
+                      style={{
+                        left: `${volumeThresholdPercent}%`,
+                        boxShadow: '0 0 4px #FDD835',
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col items-center gap-2 min-w-[140px]">
+                  <div className="flex justify-between w-full">
+                    <div className={`text-xs ${styles.text}`}>Concentration</div>
+                    <div className={`text-xs ${styles.text}`}>
+                      {concentration.toFixed(1)} / {concentrationThreshold.toFixed(1)}
+                    </div>
+                  </div>
+                  <div className="relative w-full h-5 bg-white/20 rounded-full border border-white/30 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-100"
+                      style={{
+                        width: `${concentrationPercent}%`,
+                        background: getConcentrationColor(),
+                      }}
+                    />
+                    {/* Threshold marker */}
+                    <div
+                      className="absolute top-0 h-full w-0.5 bg-[#FDD835]"
+                      style={{
+                        left: `${concentrationThresholdPercent}%`,
+                        boxShadow: '0 0 4px #FDD835',
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </div>
 
         {/* Single Capture Box */}
