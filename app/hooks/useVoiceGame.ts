@@ -46,6 +46,12 @@ export function useVoiceGame(
   const isActiveRef = useRef(false);
   const currentLetterRef = useRef<string | null>(null);
   const patternBufferRef = useRef<number[][]>([]);
+  const calibrationDataRef = useRef<Record<string, CalibrationData>>({});
+
+  // Keep calibrationDataRef in sync with state (ensures detection loop always has fresh data)
+  useEffect(() => {
+    calibrationDataRef.current = calibrationData;
+  }, [calibrationData]);
 
   // Load calibration data
   const loadCalibrations = useCallback(async (): Promise<Record<string, CalibrationData>> => {
@@ -76,6 +82,9 @@ export function useVoiceGame(
   // Voice detection loop
   const startVoiceDetection = useCallback((targetLetter: string) => {
     let frameCount = 0;
+    let lastMatchTime = 0;
+    const MATCH_COOLDOWN = 1500; // 1.5 seconds between matches
+
     const detectVoice = () => {
       const audioState = audioStateRef.current;
       if (!isActiveRef.current || !audioState || !audioState.analyser || !audioState.dataArray) {
@@ -108,6 +117,14 @@ export function useVoiceGame(
         const volumeThreshold = isNasal(targetLetter) ? 3 : 12;
         const concentrationThreshold = isNasal(targetLetter) ? 1.2 : 2.0;
 
+        // Check cooldown to prevent rapid repeated matches of the same sustained sound
+        const timeSinceLastMatch = Date.now() - lastMatchTime;
+        if (timeSinceLastMatch < MATCH_COOLDOWN) {
+          // Too soon after last match, skip this check
+          animationFrameRef.current = requestAnimationFrame(detectVoice);
+          return;
+        }
+
         if (vol > volumeThreshold && conc > concentrationThreshold) {
           console.log(`🎯 TRIGGERING MATCH CHECK - Letter: ${targetLetter}, Vol: ${vol.toFixed(1)}, Conc: ${conc.toFixed(1)}`);
 
@@ -121,7 +138,7 @@ export function useVoiceGame(
             });
           }
 
-          const result = strategy11_simpleSnapshot(patternBufferRef.current, targetLetter, calibrationData);
+          const result = strategy11_simpleSnapshot(patternBufferRef.current, targetLetter, calibrationDataRef.current);
           const matchInfo = getLastMatchInfo();
 
           console.log(`📊 Match check - predicted: ${result.predictedLetter}, target: ${targetLetter}, score: ${result.score}, matchType: ${matchInfo?.matchType}`);
@@ -132,6 +149,8 @@ export function useVoiceGame(
 
           if (matchInfo && matchInfo.matchType === 'accepted' && predictedMatch && result.score > 60) {
             console.log(`✅ MATCH ACCEPTED!`);
+            // Update match timestamp to start cooldown
+            lastMatchTime = Date.now();
             // Stop detection before calling success
             setIsActive(false);
             isActiveRef.current = false;
@@ -140,7 +159,7 @@ export function useVoiceGame(
             }
             // Increment snapshot score
             if (matchInfo.positiveSnapshot) {
-              incrementSnapshotScore(targetLetter, matchInfo.positiveSnapshot, calibrationData);
+              incrementSnapshotScore(targetLetter, matchInfo.positiveSnapshot, calibrationDataRef.current);
             }
             // Call success callback
             onSuccess(targetLetter, matchInfo.positiveSnapshot, matchInfo.positiveScore);
