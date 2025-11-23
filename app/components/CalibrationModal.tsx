@@ -192,10 +192,10 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
       const audioState = await setupAudio();
       audioStateRef.current = audioState;
 
-      // Use light smoothing for responsive but stable readings in calibration modal
+      // Use zero smoothing for instant response in calibration modal
       if (audioState.analyser) {
-        audioState.analyser.smoothingTimeConstant = 0.2;
-        console.log('🎤 Audio smoothing set to 0.2 for calibration (responsive + stable)');
+        audioState.analyser.smoothingTimeConstant = 0;
+        console.log('🎤 Audio smoothing set to 0 for calibration (instant response)');
       }
 
       // Setup audio capture
@@ -789,7 +789,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
                       <div className={`text-[11px] ${styles.text} text-center font-medium`}>Vol</div>
                       <div className="relative w-12 h-36 bg-white/20 rounded-full border border-white/30 overflow-hidden flex flex-col-reverse">
                         <div
-                          className="w-full rounded-full transition-all duration-100"
+                          className="w-full rounded-full transition-all duration-50"
                           style={{
                             height: `${volumePercent}%`,
                             background: getVolumeColor(),
@@ -810,7 +810,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
                       <div className={`text-[11px] ${styles.text} text-center font-medium`}>Conc</div>
                       <div className="relative w-12 h-36 bg-white/20 rounded-full border border-white/30 overflow-hidden flex flex-col-reverse">
                         <div
-                          className="w-full rounded-full transition-all duration-100"
+                          className="w-full rounded-full transition-all duration-50"
                           style={{
                             height: `${concentrationPercent}%`,
                             background: getConcentrationColor(),
