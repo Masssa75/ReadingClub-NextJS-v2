@@ -604,10 +604,11 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Conditional styling based on variant
+  // Conditional styling based on variant - Option 3: Card Style
   const styles = variant === 'kid' ? {
     backdrop: 'fixed inset-0 bg-black/40 flex items-center justify-center z-[10000]',
-    modal: 'bg-white/95 backdrop-blur-xl rounded-[30px] p-6 w-[90%] max-w-[600px] max-h-[90vh] overflow-hidden border-4 border-white/50 shadow-[0_20px_60px_rgba(0,0,0,0.3)] relative flex flex-col',
+    modal: 'bg-white rounded-[30px] p-6 w-[90%] max-w-[600px] max-h-[90vh] overflow-hidden shadow-[0_30px_90px_rgba(0,0,0,0.4)] relative flex flex-col',
+    contentCard: 'bg-[#fafafa] p-5 rounded-[20px]',
     text: 'text-gray-700',
     letter: 'text-purple-500',
     letterShadow: '0 10px 30px rgba(147, 51, 234, 0.3)',
@@ -616,9 +617,11 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     captureBoxReady: 'border-green-400 shadow-[0_0_15px_rgba(74,222,128,0.4)]',
     captureBoxRecording: 'border-orange-400 shadow-[0_0_20px_rgba(251,146,60,0.6)] animate-pulse',
     captureBoxCaptured: 'border-green-500 bg-green-50',
+    metersContainer: 'bg-white border-2 border-[#e0e0e0] shadow-[0_4px_15px_rgba(0,0,0,0.1)]',
   } : {
     backdrop: 'fixed inset-0 bg-black/90 flex items-center justify-center z-[10000]',
-    modal: 'bg-[rgba(30,30,30,0.98)] rounded-[30px] p-6 w-[90%] max-w-[600px] max-h-[90vh] overflow-hidden border-3 border-[#7CB342] shadow-[0_20px_60px_rgba(0,0,0,0.8)] relative flex flex-col',
+    modal: 'bg-[rgba(30,30,30,0.98)] rounded-[30px] p-6 w-[90%] max-w-[600px] max-h-[90vh] overflow-hidden shadow-[0_30px_90px_rgba(0,0,0,0.6)] relative flex flex-col',
+    contentCard: 'bg-[rgba(40,40,40,0.5)] p-5 rounded-[20px]',
     text: 'text-[#ddd]',
     letter: 'text-[#FDD835]',
     letterShadow: '0 10px 30px rgba(253, 216, 53, 0.5)',
@@ -627,6 +630,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     captureBoxReady: 'border-[#7CB342] shadow-[0_0_15px_rgba(124,179,66,0.6)]',
     captureBoxRecording: 'border-orange-400 shadow-[0_0_20px_rgba(251,146,60,0.8)] animate-pulse',
     captureBoxCaptured: 'border-green-500 bg-[rgba(76,175,80,0.2)]',
+    metersContainer: 'bg-[rgba(60,60,60,0.8)] border-2 border-[#555] shadow-[0_4px_15px_rgba(0,0,0,0.3)]',
   };
 
   return (
@@ -649,13 +653,13 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
           ✕
         </button>
 
-        {/* MAIN CONTENT - Fixed height, no scroll */}
-        <div className="flex-shrink-0 relative">
-          {/* Instructions - Smaller */}
-          <div className={`text-center ${styles.text} text-sm mb-3`}>
-            Click letter to hear sound, then click microphone to record
-          </div>
+        {/* Title - Outside content card */}
+        <div className={`text-center ${styles.text} text-sm mb-4`}>
+          Click letter to hear sound, then click microphone to record
+        </div>
 
+        {/* MAIN CONTENT CARD - Card-within-card design */}
+        <div className={`flex-shrink-0 relative ${styles.contentCard}`}>
           {/* Main content with meters on the right */}
           <div className="flex gap-4">
             {/* Left side - Letter and capture */}
@@ -753,8 +757,8 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
               )}
             </div>
 
-          {/* Vertical Volume and Concentration Meters on RIGHT */}
-          <div className="flex flex-col gap-6 justify-center items-center min-w-[70px]">
+          {/* Vertical Volume and Concentration Meters on RIGHT - Card style */}
+          <div className={`flex flex-col gap-6 justify-center items-center min-w-[70px] p-4 rounded-2xl ${styles.metersContainer}`}>
               {(() => {
                 // Calculate thresholds based on letter (same logic as practice page)
                 const volumeThreshold = isNasal(letter) ? 3 : (isLiquid(letter) ? 6 : 12);
