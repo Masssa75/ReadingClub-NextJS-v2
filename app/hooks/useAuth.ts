@@ -37,10 +37,15 @@ export function useAuth() {
     }
 
     try {
+      // Use production URL or current origin for redirect
+      const redirectUrl = process.env.NODE_ENV === 'production'
+        ? 'https://wunderkind.world'
+        : window.location.origin;
+
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: redirectUrl,
         },
       });
 
