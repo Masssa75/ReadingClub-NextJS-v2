@@ -96,7 +96,7 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
 
       {/* Dropdown Menu - Bubble Fun Style */}
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-80 bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-3xl rounded-[40px] shadow-2xl overflow-hidden border-4 border-white/80 z-50">
+        <div className="absolute top-full right-0 mt-2 w-80 max-h-[80vh] bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-3xl rounded-[40px] shadow-2xl overflow-y-auto border-4 border-white/80 z-50">
           {/* Top Section with Bouncing Emoji */}
           <div className="text-center pt-8 pb-6 px-8">
             <div className="text-6xl mb-3 animate-[bounce_2s_ease-in-out_infinite]">🌈</div>
