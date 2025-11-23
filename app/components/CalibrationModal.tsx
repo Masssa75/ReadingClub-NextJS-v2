@@ -662,7 +662,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
         {/* Close Button - Light red background */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 bg-red-400/30 border-none text-white text-xl w-9 h-9 rounded-full cursor-pointer transition-all hover:bg-red-500/50 hover:rotate-90"
+          className="absolute top-4 right-4 z-50 bg-red-400/30 border-none text-white text-xl w-10 h-10 rounded-full cursor-pointer transition-all hover:bg-red-500/50 hover:rotate-90 flex items-center justify-center"
         >
           ✕
         </button>
