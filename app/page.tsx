@@ -355,19 +355,19 @@ function Learn1() {
         </div>
       )}
 
-      {/* Manual Override Buttons - Option 5 (Compact Corner, 50% bigger) */}
+      {/* Manual Override Buttons - Left of Parents menu, 30% smaller */}
       {advancedMode && state.currentLetter && (
-        <div className="absolute top-24 right-6 z-20 flex flex-col gap-3">
+        <div className="absolute top-6 right-32 z-20 flex flex-col gap-2">
           <button
             onClick={handleManualCorrect}
-            className="px-7 py-5 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-[18px] font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            className="px-5 py-3.5 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-[12px] font-bold text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
             title="Mark current sound as correct (creates positive snapshot)"
           >
             ✓ IS {state.currentLetter.toUpperCase()}
           </button>
           <button
             onClick={handleManualIncorrect}
-            className="px-7 py-5 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-[18px] font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            className="px-5 py-3.5 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-[12px] font-bold text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
             title="Mark current sound as incorrect (creates negative snapshot)"
           >
             ✗ NOT {state.currentLetter.toUpperCase()}
