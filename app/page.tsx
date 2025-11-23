@@ -122,6 +122,7 @@ function Learn1() {
       'A': '/Videos/a-Apple2.mp4',
       'B': '/Videos/Bear.mp4',
       'E': '/Videos/e.mp4',
+      'F': '/Videos/Funny_F_Sound_Video_Generation.mp4',
     };
 
     const hasVideo = currentLetter && videoMap[currentLetter.toUpperCase()];
@@ -457,6 +458,7 @@ function Learn1() {
                 'A': '/Videos/a-Apple2.mp4',
                 'B': '/Videos/Bear.mp4',
                 'E': '/Videos/e.mp4',
+                'F': '/Videos/Funny_F_Sound_Video_Generation.mp4',
               };
 
               const videoSrc = currentLetter ? videoMap[currentLetter.toUpperCase()] : null;
