@@ -233,7 +233,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
       // Debug logging (every 30 frames = ~0.5 seconds at 60fps)
       frameCount++;
       if (frameCount % 30 === 0) {
-        // Letter O is a soft vowel - use half thresholds
+        // Letter O is a soft vowel - use half volume threshold only
         const volumeThreshold = letter === 'o' ? 6 : (isNasal(letter) ? 3 : (isLiquid(letter) ? 6 : 12));
         const maxVolume = volumeThreshold * 2;
         const volumePercent = Math.min(100, (vol / maxVolume) * 100);
@@ -254,9 +254,9 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
 
       // Listen for peak if actively recording
       if (isListeningRef.current && isRecordingRef.current) {
-        // Letter O is a soft vowel - use half thresholds
+        // Letter O is a soft vowel - use half volume threshold only
         const volumeThreshold = letter === 'o' ? 6 : (isNasal(letter) ? 3 : (isLiquid(letter) ? 6 : 12));
-        const concentrationThreshold = letter === 'o' ? 1.0 : (isNasal(letter) ? 1.2 : (isLiquid(letter) ? 1.0 : 2.0));
+        const concentrationThreshold = isNasal(letter) ? 1.2 : (isLiquid(letter) ? 1.0 : 2.0);
 
         const now = Date.now();
         if (vol > volumeThreshold &&
@@ -775,9 +775,9 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
           <div className="flex flex-col gap-6 justify-center items-center min-w-[70px]">
               {(() => {
                 // Calculate thresholds based on letter (same logic as peak detection)
-                // Letter O is a soft vowel - use half thresholds
+                // Letter O is a soft vowel - use half volume threshold only
                 const volumeThreshold = letter === 'o' ? 6 : (isNasal(letter) ? 3 : (isLiquid(letter) ? 6 : 12));
-                const concentrationThreshold = letter === 'o' ? 1.0 : (isNasal(letter) ? 1.2 : (isLiquid(letter) ? 1.0 : 2.0));
+                const concentrationThreshold = isNasal(letter) ? 1.2 : (isLiquid(letter) ? 1.0 : 2.0);
 
                 // Scale based on 2x threshold (same as ThresholdMeters)
                 const maxVolume = volumeThreshold * 2;
