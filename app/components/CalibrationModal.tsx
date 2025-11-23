@@ -640,6 +640,11 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
           ✕
         </button>
 
+        {/* Title */}
+        <div className={`text-center ${styles.text} text-base mb-5`}>
+          Click the letter to hear its sound, then click the microphone to record.
+        </div>
+
         {/* Layout: Letter/Capture on left, Meters on right */}
         <div className="flex gap-6">
           {/* Left side: Letter and Capture */}
@@ -739,8 +744,8 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
         )}
           </div>
 
-          {/* Right side: Vertical Meters */}
-          <div className="flex flex-col gap-6 justify-center items-center min-w-[70px]">
+          {/* Right side: Vertical Meters with border */}
+          <div className="flex flex-col gap-6 justify-center items-center min-w-[70px] p-4 rounded-2xl bg-white/5 border border-white/20">
             {(() => {
               const volumeThreshold = isNasal(letter) ? 3 : (isLiquid(letter) ? 6 : 12);
               const concentrationThreshold = isNasal(letter) ? 1.2 : (isLiquid(letter) ? 1.0 : 2.0);
