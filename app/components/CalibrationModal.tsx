@@ -805,7 +805,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
                       <div className={`text-[11px] ${styles.text} text-center font-medium`}>Vol</div>
                       <div className="relative w-12 h-36 bg-white/20 rounded-full border border-white/30 overflow-hidden flex flex-col-reverse">
                         <div
-                          className="w-full rounded-full transition-all duration-50"
+                          className="w-full rounded-full"
                           style={{
                             height: `${volumePercent}%`,
                             background: getVolumeColor(),
@@ -826,7 +826,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
                       <div className={`text-[11px] ${styles.text} text-center font-medium`}>Conc</div>
                       <div className="relative w-12 h-36 bg-white/20 rounded-full border border-white/30 overflow-hidden flex flex-col-reverse">
                         <div
-                          className="w-full rounded-full transition-all duration-50"
+                          className="w-full rounded-full"
                           style={{
                             height: `${concentrationPercent}%`,
                             background: getConcentrationColor(),
