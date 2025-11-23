@@ -632,21 +632,20 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     <div className={styles.backdrop}>
       <div className={styles.modal}>
 
-        {/* Close Button */}
+        {/* Close Button - Light red background */}
         <button
           onClick={handleClose}
-          className="absolute top-5 right-5 bg-white/10 border-none text-white text-2xl w-10 h-10 rounded-full cursor-pointer transition-all hover:bg-[rgba(255,67,54,0.3)] hover:rotate-90"
+          className="absolute top-5 right-5 bg-red-400/30 border-none text-white text-2xl w-10 h-10 rounded-full cursor-pointer transition-all hover:bg-red-500/50 hover:rotate-90"
         >
           ✕
         </button>
 
-        {/* Instructions */}
-        <div className={`text-center ${styles.text} text-base mb-5`}>
-          Click the letter to hear its sound, then click the microphone to record.
-        </div>
-
-        {/* Big Letter + Listen Icon */}
-        <div className="flex items-center justify-center gap-5 my-5">
+        {/* Layout: Letter/Capture on left, Meters on right */}
+        <div className="flex gap-6">
+          {/* Left side: Letter and Capture */}
+          <div className="flex-1">
+            {/* Big Letter + Listen Icon */}
+            <div className="flex items-center justify-center gap-5 my-5">
           <div
             onClick={playLetterSound}
             className={`text-[180px] font-bold ${styles.letter} cursor-pointer inline-block transition-all hover:scale-110`}
@@ -662,99 +661,13 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
               <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
             </svg>
           </div>
-        </div>
+            </div>
 
-        {/* Volume and Concentration Meters - Same as ThresholdMeters */}
-        <div className="flex gap-6 justify-center mb-6">
-          {(() => {
-            // Calculate thresholds based on letter (same logic as practice page)
-            const volumeThreshold = isNasal(letter) ? 3 : (isLiquid(letter) ? 6 : 12);
-            const concentrationThreshold = isNasal(letter) ? 1.2 : (isLiquid(letter) ? 1.0 : 2.0);
-
-            // Scale based on 2x threshold (same as ThresholdMeters)
-            const maxVolume = volumeThreshold * 2;
-            const volumePercent = Math.min(100, (volume / maxVolume) * 100);
-            const volumeThresholdPercent = (volumeThreshold / maxVolume) * 100;
-
-            const maxConcentration = concentrationThreshold * 2;
-            const concentrationPercent = Math.min(100, (concentration / maxConcentration) * 100);
-            const concentrationThresholdPercent = (concentrationThreshold / maxConcentration) * 100;
-
-            // Color coding (same as ThresholdMeters)
-            const getVolumeColor = () => {
-              if (volume >= volumeThreshold) return '#4CAF50'; // Green
-              if (volume >= volumeThreshold * 0.8) return '#FDD835'; // Yellow
-              return '#f44336'; // Red
-            };
-
-            const getConcentrationColor = () => {
-              if (concentration >= concentrationThreshold) return '#4CAF50'; // Green
-              if (concentration >= concentrationThreshold * 0.8) return '#FDD835'; // Yellow
-              return '#f44336'; // Red
-            };
-
-            return (
-              <>
-                <div className="flex flex-col items-center gap-2 min-w-[140px]">
-                  <div className="flex justify-between w-full">
-                    <div className={`text-xs ${styles.text}`}>Volume</div>
-                    <div className={`text-xs ${styles.text}`}>
-                      {Math.round(volume)} / {volumeThreshold}
-                    </div>
-                  </div>
-                  <div className="relative w-full h-5 bg-white/20 rounded-full border border-white/30 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-100"
-                      style={{
-                        width: `${volumePercent}%`,
-                        background: getVolumeColor(),
-                      }}
-                    />
-                    {/* Threshold marker */}
-                    <div
-                      className="absolute top-0 h-full w-0.5 bg-[#FDD835]"
-                      style={{
-                        left: `${volumeThresholdPercent}%`,
-                        boxShadow: '0 0 4px #FDD835',
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col items-center gap-2 min-w-[140px]">
-                  <div className="flex justify-between w-full">
-                    <div className={`text-xs ${styles.text}`}>Concentration</div>
-                    <div className={`text-xs ${styles.text}`}>
-                      {concentration.toFixed(1)} / {concentrationThreshold.toFixed(1)}
-                    </div>
-                  </div>
-                  <div className="relative w-full h-5 bg-white/20 rounded-full border border-white/30 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-100"
-                      style={{
-                        width: `${concentrationPercent}%`,
-                        background: getConcentrationColor(),
-                      }}
-                    />
-                    {/* Threshold marker */}
-                    <div
-                      className="absolute top-0 h-full w-0.5 bg-[#FDD835]"
-                      style={{
-                        left: `${concentrationThresholdPercent}%`,
-                        boxShadow: '0 0 4px #FDD835',
-                      }}
-                    />
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-        </div>
-
-        {/* Single Capture Box */}
-        <div className="flex justify-center mt-8 relative">
+            {/* Single Capture Box */}
+            <div className="flex justify-center mt-8 relative">
           {/* Green Arrow */}
           {showArrow && recordingState === 'ready' && (
-            <div className="absolute -top-[60px] animate-[arrowHover_2s_ease-in-out_infinite,arrowPulse_1.5s_ease-in-out_infinite]">
+            <div className="absolute -top-[60px] animate-bounce">
               <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="w-[50px] h-[50px]" style={{ filter: 'drop-shadow(0 2px 10px rgba(124, 179, 66, 0.8))' }}>
                 <path d="M12 4L12 20M12 20L5 13M12 20L19 13" stroke="#7CB342" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
               </svg>
@@ -824,6 +737,81 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
             </button>
           </div>
         )}
+          </div>
+
+          {/* Right side: Vertical Meters */}
+          <div className="flex flex-col gap-6 justify-center items-center min-w-[70px]">
+            {(() => {
+              const volumeThreshold = isNasal(letter) ? 3 : (isLiquid(letter) ? 6 : 12);
+              const concentrationThreshold = isNasal(letter) ? 1.2 : (isLiquid(letter) ? 1.0 : 2.0);
+
+              const maxVolume = volumeThreshold * 2;
+              const volumePercent = Math.min(100, (volume / maxVolume) * 100);
+              const volumeThresholdPercent = (volumeThreshold / maxVolume) * 100;
+
+              const maxConcentration = concentrationThreshold * 2;
+              const concentrationPercent = Math.min(100, (concentration / maxConcentration) * 100);
+              const concentrationThresholdPercent = (concentrationThreshold / maxConcentration) * 100;
+
+              const getVolumeColor = () => {
+                if (volume >= volumeThreshold) return '#4CAF50';
+                if (volume >= volumeThreshold * 0.8) return '#FDD835';
+                return '#f44336';
+              };
+
+              const getConcentrationColor = () => {
+                if (concentration >= concentrationThreshold) return '#4CAF50';
+                if (concentration >= concentrationThreshold * 0.8) return '#FDD835';
+                return '#f44336';
+              };
+
+              return (
+                <>
+                  {/* Volume Meter - Vertical */}
+                  <div className="flex flex-col items-center gap-1">
+                    <div className={`text-[11px] ${styles.text} text-center font-medium`}>Vol</div>
+                    <div className="relative w-12 h-48 bg-white/20 rounded-full border border-white/30 overflow-hidden flex flex-col-reverse">
+                      <div
+                        className="w-full rounded-full transition-all duration-100"
+                        style={{
+                          height: `${volumePercent}%`,
+                          background: getVolumeColor(),
+                        }}
+                      />
+                      <div
+                        className="absolute left-0 w-full h-0.5 bg-[#FDD835]"
+                        style={{
+                          bottom: `${volumeThresholdPercent}%`,
+                          boxShadow: '0 0 4px #FDD835',
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {/* Concentration Meter - Vertical */}
+                  <div className="flex flex-col items-center gap-1">
+                    <div className={`text-[11px] ${styles.text} text-center font-medium`}>Conc</div>
+                    <div className="relative w-12 h-48 bg-white/20 rounded-full border border-white/30 overflow-hidden flex flex-col-reverse">
+                      <div
+                        className="w-full rounded-full transition-all duration-100"
+                        style={{
+                          height: `${concentrationPercent}%`,
+                          background: getConcentrationColor(),
+                        }}
+                      />
+                      <div
+                        className="absolute left-0 w-full h-0.5 bg-[#FDD835]"
+                        style={{
+                          bottom: `${concentrationThresholdPercent}%`,
+                          boxShadow: '0 0 4px #FDD835',
+                        }}
+                      />
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
 
         {/* Existing Calibrations - Below everything */}
         {existingSnapshots.length > 0 && (
@@ -850,21 +838,6 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
           </>
         )}
       </div>
-
-      <style jsx>{`
-        @keyframes arrowHover {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        @keyframes arrowPulse {
-          0%, 100% { opacity: 0.8; }
-          50% { opacity: 1; }
-        }
-        @keyframes nextButtonPulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-      `}</style>
     </div>
   );
 }
