@@ -467,10 +467,7 @@ function Learn1() {
                     <video
                       ref={videoRef}
                       className="w-full"
-                      onEnded={() => {
-                        setIsPlaying(false);
-                        actions.setMuted(false); // Unmute when video finishes
-                      }}
+                      onEnded={closeVideo} // Auto-close modal when video finishes
                     >
                       <source src={videoSrc} type="video/mp4" />
                     </video>
