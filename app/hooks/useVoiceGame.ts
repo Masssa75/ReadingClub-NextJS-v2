@@ -14,6 +14,7 @@ import type { AudioEngineState, CalibrationData } from '@/app/lib/types';
 
 export interface VoiceGameState {
   isActive: boolean;
+  isMuted: boolean;
   volume: number;
   concentration: number;
   calibrationData: Record<string, CalibrationData>;
@@ -24,6 +25,7 @@ export interface VoiceGameState {
 export interface VoiceGameActions {
   startGame: (letter: string) => Promise<void>;
   stopGame: () => void;
+  setMuted: (muted: boolean) => void;
   loadCalibrations: () => Promise<Record<string, CalibrationData>>;
   handleManualCorrect: (profileId: string) => Promise<{ success: boolean; message: string }>;
   handleManualIncorrect: (profileId: string) => Promise<{ success: boolean; message: string }>;
@@ -34,6 +36,7 @@ export function useVoiceGame(
   onNegativeRejection?: (negativeScore: number, positiveScore: number) => void
 ) {
   const [isActive, setIsActive] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0);
   const [concentration, setConcentration] = useState(0);
   const [calibrationData, setCalibrationData] = useState<Record<string, CalibrationData>>({});
@@ -45,14 +48,19 @@ export function useVoiceGame(
   const lastCapturedAudioRef = useRef<Blob | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const isActiveRef = useRef(false);
+  const isMutedRef = useRef(false);
   const currentLetterRef = useRef<string | null>(null);
   const patternBufferRef = useRef<number[][]>([]);
   const calibrationDataRef = useRef<Record<string, CalibrationData>>({});
 
-  // Keep calibrationDataRef in sync with state (ensures detection loop always has fresh data)
+  // Keep refs in sync with state (ensures detection loop always has fresh data)
   useEffect(() => {
     calibrationDataRef.current = calibrationData;
   }, [calibrationData]);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   // Load calibration data
   const loadCalibrations = useCallback(async (): Promise<Record<string, CalibrationData>> => {
@@ -111,6 +119,12 @@ export function useVoiceGame(
       patternBufferRef.current.push(downsampled);
       if (patternBufferRef.current.length > 30) {
         patternBufferRef.current.shift();
+      }
+
+      // Skip pattern matching if muted (e.g., during video playback)
+      if (isMutedRef.current) {
+        animationFrameRef.current = requestAnimationFrame(detectVoice);
+        return;
       }
 
       // Check for match - EXACT SAME LOGIC AS PLAY PAGE
@@ -370,9 +384,16 @@ export function useVoiceGame(
     };
   }, []);
 
+  // Mute/unmute voice detection (e.g., during video playback)
+  const setMuted = useCallback((muted: boolean) => {
+    console.log(`🔇 Voice detection ${muted ? 'MUTED' : 'UNMUTED'}`);
+    setIsMuted(muted);
+  }, []);
+
   return {
     state: {
       isActive,
+      isMuted,
       volume,
       concentration,
       calibrationData,
@@ -382,6 +403,7 @@ export function useVoiceGame(
     actions: {
       startGame,
       stopGame,
+      setMuted,
       loadCalibrations,
       handleManualCorrect,
       handleManualIncorrect,
