@@ -5,9 +5,9 @@ import { PEAK_COOLDOWN, NASALS, FRICATIVES, LIQUIDS } from '@/app/lib/constants'
 export { PEAK_COOLDOWN };
 
 export function getVolumeThreshold(letter: string): number {
-  if (isNasal(letter)) return 2;
-  if (LIQUIDS.includes(letter)) return 6;
-  return 15;
+  if (isNasal(letter)) return 1.5;
+  if (LIQUIDS.includes(letter)) return 4.5;
+  return 11;
 }
 
 export function getConcentrationThreshold(letter: string): number {
