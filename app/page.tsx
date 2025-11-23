@@ -355,9 +355,9 @@ function Learn1() {
         </div>
       )}
 
-      {/* Manual Override Buttons - Left of Parents menu, 30% smaller */}
+      {/* Manual Override Buttons - Left of Parents menu, 30% smaller, horizontal */}
       {advancedMode && state.currentLetter && (
-        <div className="absolute top-6 right-32 z-20 flex flex-col gap-2">
+        <div className="absolute top-6 right-32 z-20 flex flex-row gap-2">
           <button
             onClick={handleManualCorrect}
             className="px-5 py-3.5 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-[12px] font-bold text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
