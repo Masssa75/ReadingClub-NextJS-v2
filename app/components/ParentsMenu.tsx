@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useProfileContext } from '@/app/contexts/ProfileContext';
+import { useAuth } from '@/app/hooks/useAuth';
 import Link from 'next/link';
 import { User } from 'lucide-react';
 
@@ -12,8 +13,12 @@ interface ParentsMenuProps {
 
 export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange }: ParentsMenuProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [email, setEmail] = useState('');
+  const [emailStatus, setEmailStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const { currentProfile, profileNames, switchProfile, createNewProfile, loadProfileNames } = useProfileContext();
+  const { user, loading, sendMagicLink, signOut } = useAuth();
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -49,6 +54,33 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
       // Reload the page to use new profile
       window.location.reload();
     }
+  };
+
+  const handleSendMagicLink = async () => {
+    setEmailStatus(null);
+    const result = await sendMagicLink(email);
+
+    if (result.success) {
+      setEmailStatus({
+        type: 'success',
+        message: `✅ Magic link sent to ${email}! Check your inbox.`
+      });
+      setEmail('');
+      setTimeout(() => {
+        setShowEmailInput(false);
+        setEmailStatus(null);
+      }, 3000);
+    } else {
+      setEmailStatus({
+        type: 'error',
+        message: result.error || 'Failed to send magic link'
+      });
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    setIsOpen(false);
   };
 
   return (
@@ -141,6 +173,98 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
                 </button>
               )}
             </div>
+
+            {/* Auth Section - Divider */}
+            <div className="my-5 border-t-4 border-white/30"></div>
+
+            {/* Auth Section */}
+            {!loading && (
+              <div className="space-y-3">
+                {user ? (
+                  // Logged In State
+                  <div className="space-y-3">
+                    <div className="text-center py-3 px-4 rounded-[20px] bg-gradient-to-r from-green-100 to-green-200">
+                      <div className="text-sm font-bold text-green-800 mb-1">💾 Synced</div>
+                      <div className="text-xs font-medium text-green-700">{user.email}</div>
+                    </div>
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full py-3 px-6 rounded-[20px] font-bold text-sm text-gray-700
+                        bg-gradient-to-r from-gray-200 to-gray-300
+                        shadow-md hover:shadow-lg transition-all duration-300
+                        hover:scale-105"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  // Not Logged In State
+                  <>
+                    {!showEmailInput ? (
+                      <button
+                        onClick={() => setShowEmailInput(true)}
+                        className="w-full py-[18px] px-6 rounded-[22px] font-black text-[17px] text-white
+                          bg-gradient-to-r from-green-400 to-teal-400
+                          shadow-lg hover:shadow-xl transition-all duration-300
+                          hover:scale-105 flex items-center justify-center gap-3"
+                        style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' }}
+                      >
+                        <span>💾</span>
+                        <span>Save Progress</span>
+                      </button>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="text-center text-sm font-bold text-purple-600 mb-2">
+                          Get a magic link to sync across devices
+                        </div>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleSendMagicLink()}
+                          placeholder="your@email.com"
+                          className="w-full px-4 py-3 rounded-[18px] border-3 border-purple-300
+                            text-gray-800 font-medium text-center
+                            focus:outline-none focus:border-purple-500 transition-all"
+                        />
+                        {emailStatus && (
+                          <div className={`text-xs font-medium text-center p-2 rounded-[12px] ${
+                            emailStatus.type === 'success'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {emailStatus.message}
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleSendMagicLink}
+                            disabled={!email}
+                            className="flex-1 py-3 px-4 rounded-[18px] font-bold text-sm text-white
+                              bg-gradient-to-r from-green-400 to-teal-400
+                              shadow-md hover:shadow-lg transition-all duration-300
+                              hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Send Link
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowEmailInput(false);
+                              setEmail('');
+                              setEmailStatus(null);
+                            }}
+                            className="px-4 py-3 rounded-[18px] font-bold text-sm text-gray-600
+                              bg-gray-200 hover:bg-gray-300 transition-all"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
