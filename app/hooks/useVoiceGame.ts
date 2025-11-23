@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { setupAudio, stopAudio } from '@/app/utils/audioEngine';
-import { getFrequencyData, downsampleTo64Bins, calculateVolume, calculateEnergyConcentration, isNasal } from '@/app/utils/fftAnalysis';
+import { getFrequencyData, downsampleTo64Bins, calculateVolume, calculateEnergyConcentration, isNasal, isLiquid } from '@/app/utils/fftAnalysis';
 import { strategy11_simpleSnapshot, getLastMatchInfo } from '@/app/utils/patternMatching';
 import { startNewScoringRound, setCalibrationDataRef, incrementSnapshotScore, flushAllPendingScores } from '@/app/utils/snapshotScoring';
 import { addPositivePattern } from '@/app/utils/positiveSnapshot';
@@ -129,8 +129,8 @@ export function useVoiceGame(
 
       // Check for match - EXACT SAME LOGIC AS PLAY PAGE
       if (patternBufferRef.current.length >= 10) {
-        const volumeThreshold = isNasal(targetLetter) ? 3 : 12;
-        const concentrationThreshold = isNasal(targetLetter) ? 1.2 : 2.0;
+        const volumeThreshold = isNasal(targetLetter) ? 3 : (isLiquid(targetLetter) ? 6 : 12);
+        const concentrationThreshold = isNasal(targetLetter) ? 1.2 : (isLiquid(targetLetter) ? 1.0 : 2.0);
 
         // Check cooldown to prevent rapid repeated matches of the same sustained sound
         const timeSinceLastMatch = Date.now() - lastMatchTime;

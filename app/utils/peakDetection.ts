@@ -5,7 +5,9 @@ import { PEAK_COOLDOWN, NASALS, FRICATIVES, LIQUIDS } from '@/app/lib/constants'
 export { PEAK_COOLDOWN };
 
 export function getVolumeThreshold(letter: string): number {
-  return isNasal(letter) ? 2 : 15;
+  if (isNasal(letter)) return 2;
+  if (LIQUIDS.includes(letter)) return 6;
+  return 15;
 }
 
 export function getConcentrationThreshold(letter: string): number {
@@ -13,8 +15,10 @@ export function getConcentrationThreshold(letter: string): number {
   const isFricative = FRICATIVES.includes(letter);
   const isLiquid = LIQUIDS.includes(letter);
 
-  if (isCurrentNasal || isLiquid) {
-    return 1.5; // Lower concentration for nasals/liquids (m, n, l, r)
+  if (isCurrentNasal) {
+    return 1.2; // Lowest for nasals (m, n)
+  } else if (isLiquid) {
+    return 1.0; // Lower for liquids (l, r, w, y)
   } else if (isFricative) {
     return 1.8; // Lower concentration for fricatives (f, s, v, z, h)
   } else {

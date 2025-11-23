@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { setupAudio, stopAudio } from '@/app/utils/audioEngine';
-import { getFrequencyData, downsampleTo64Bins, normalizePattern, calculateVolume, calculateEnergyConcentration, isNasal } from '@/app/utils/fftAnalysis';
+import { getFrequencyData, downsampleTo64Bins, normalizePattern, calculateVolume, calculateEnergyConcentration, isNasal, isLiquid } from '@/app/utils/fftAnalysis';
 import { supabase } from '@/app/lib/supabase';
 import { PHONEMES } from '@/app/lib/constants';
 import type { AudioEngineState, CalibrationData } from '@/app/lib/types';
@@ -236,8 +236,8 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
 
       // Listen for peak if actively recording
       if (isListeningRef.current && isRecordingRef.current) {
-        const volumeThreshold = isNasal(letter) ? 3 : 12;
-        const concentrationThreshold = isNasal(letter) ? 1.2 : 2.0;
+        const volumeThreshold = isNasal(letter) ? 3 : (isLiquid(letter) ? 6 : 12);
+        const concentrationThreshold = isNasal(letter) ? 1.2 : (isLiquid(letter) ? 1.0 : 2.0);
 
         const now = Date.now();
         if (vol > volumeThreshold &&
@@ -668,8 +668,8 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
         <div className="flex gap-6 justify-center mb-6">
           {(() => {
             // Calculate thresholds based on letter (same logic as practice page)
-            const volumeThreshold = isNasal(letter) ? 3 : 12;
-            const concentrationThreshold = isNasal(letter) ? 1.2 : 2.0;
+            const volumeThreshold = isNasal(letter) ? 3 : (isLiquid(letter) ? 6 : 12);
+            const concentrationThreshold = isNasal(letter) ? 1.2 : (isLiquid(letter) ? 1.0 : 2.0);
 
             // Scale based on 2x threshold (same as ThresholdMeters)
             const maxVolume = volumeThreshold * 2;

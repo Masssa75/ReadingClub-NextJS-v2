@@ -7,7 +7,7 @@ import { useProfileContext } from '@/app/contexts/ProfileContext';
 import { useSession } from '@/app/hooks/useSession';
 import { useProficiency } from '@/app/hooks/useProficiency';
 import { setupAudio, stopAudio } from '@/app/utils/audioEngine';
-import { getFrequencyData, downsampleTo64Bins, calculateVolume, calculateEnergyConcentration, isNasal } from '@/app/utils/fftAnalysis';
+import { getFrequencyData, downsampleTo64Bins, calculateVolume, calculateEnergyConcentration, isNasal, isLiquid } from '@/app/utils/fftAnalysis';
 import { selectNextLetter } from '@/app/utils/adaptiveSelection';
 import { strategy11_simpleSnapshot, getLastMatchInfo } from '@/app/utils/patternMatching';
 import { incrementSnapshotScore, startNewScoringRound, setCalibrationDataRef, flushAllPendingScores } from '@/app/utils/snapshotScoring';
@@ -263,8 +263,8 @@ export default function PlayPage() {
       // Check for match (use ref instead of state to avoid timing issues)
       const letter = currentLetterRef.current;
       if (letter && patternBufferRef.current.length >= 10) {
-        const volumeThreshold = isNasal(letter) ? 3 : 12;
-        const concentrationThreshold = isNasal(letter) ? 1.2 : 2.0;
+        const volumeThreshold = isNasal(letter) ? 3 : (isLiquid(letter) ? 6 : 12);
+        const concentrationThreshold = isNasal(letter) ? 1.2 : (isLiquid(letter) ? 1.0 : 2.0);
 
         if (vol > volumeThreshold && conc > concentrationThreshold) {
           console.log(`🎯 TRIGGERING MATCH CHECK - Letter: ${letter}, Vol: ${vol.toFixed(1)}, Conc: ${conc.toFixed(1)}, Buffer: ${patternBufferRef.current.length}`);
@@ -590,8 +590,8 @@ export default function PlayPage() {
     return <div className="text-center text-gray-400 mt-6">No profile selected</div>;
   }
 
-  const volumeThreshold = currentLetter && isNasal(currentLetter) ? 3 : 12;
-  const concentrationThreshold = currentLetter && isNasal(currentLetter) ? 1.2 : 2.0;
+  const volumeThreshold = currentLetter && isNasal(currentLetter) ? 3 : (currentLetter && isLiquid(currentLetter) ? 6 : 12);
+  const concentrationThreshold = currentLetter && isNasal(currentLetter) ? 1.2 : (currentLetter && isLiquid(currentLetter) ? 1.0 : 2.0);
 
   return (
     <div className="mt-6 max-w-4xl mx-auto">

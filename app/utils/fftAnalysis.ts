@@ -61,6 +61,11 @@ export function isNasal(letter: string): boolean {
   return NASALS.includes(letter);
 }
 
+export function isLiquid(letter: string): boolean {
+  const LIQUIDS = ['l', 'r', 'w', 'y'];
+  return LIQUIDS.includes(letter);
+}
+
 export function isPlosive(letter: string): boolean {
   const PLOSIVES = ['b', 'c', 'd', 'g', 'k', 'p', 't'];
   return PLOSIVES.includes(letter);
