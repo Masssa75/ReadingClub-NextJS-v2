@@ -262,8 +262,8 @@ function Learn1() {
   // Handle manual override: IS X (correct) - Opens calibration modal
   const handleManualCorrect = () => {
     if (!currentProfileId || !currentLetter) return;
-    // Stop the game before opening modal
-    stopGame();
+    // Mute the game while modal is open (don't stop - keeps same letter)
+    actions.setMuted(true);
     setShowCalibrationModal(true);
   };
 
@@ -538,8 +538,8 @@ function Learn1() {
             console.log('✅ Calibrations reloaded');
             setShowCalibrationModal(false);
 
-            // Don't auto-restart - let user click "Learn" when ready to test
-            // The letter stays on screen, game is stopped, user controls when to try
+            // Unmute game - it will continue on the same letter
+            actions.setMuted(false);
           }}
           onSuccess={(letter) => {
             console.log(`✅ Added calibration for ${letter}`);
