@@ -127,6 +127,8 @@ function Learn1() {
     const hasVideo = currentLetter && videoMap[currentLetter.toUpperCase()];
 
     if (hasVideo) {
+      // Mute voice detection during video playback
+      actions.setMuted(true);
       // Open video modal if video exists
       setShowVideo(true);
       setIsPlaying(true);
@@ -137,6 +139,8 @@ function Learn1() {
   };
 
   const closeVideo = () => {
+    // Unmute voice detection when video closes
+    actions.setMuted(false);
     setShowVideo(false);
     setIsPlaying(false);
     if (videoRef.current) {
@@ -193,8 +197,13 @@ function Learn1() {
       listenClickedThisRound.current = false;
       return nextLetter;
     } else {
-      setGameMessage('All letters mastered!');
-      return null;
+      // All letters mastered! Continue with random practice
+      console.log('✅ All letters mastered! Continuing with random practice...');
+      const randomLetter = calibratedLetters[Math.floor(Math.random() * calibratedLetters.length)];
+      setCurrentLetter(randomLetter);
+      currentLetterRef.current = randomLetter;
+      listenClickedThisRound.current = false;
+      return randomLetter;
     }
   };
 
@@ -292,11 +301,19 @@ function Learn1() {
       audioRef.current.currentTime = 0;
     }
 
+    // Mute voice detection during audio playback
+    actions.setMuted(true);
+
     // Play new audio
     audioRef.current = new Audio(audioUrl);
     audioRef.current.play().catch(err => {
       console.error('Audio playback failed:', err);
     });
+
+    // Unmute when audio ends
+    audioRef.current.onended = () => {
+      actions.setMuted(false);
+    };
   };
 
   // Loading state
@@ -450,7 +467,10 @@ function Learn1() {
                     <video
                       ref={videoRef}
                       className="w-full"
-                      onEnded={() => setIsPlaying(false)}
+                      onEnded={() => {
+                        setIsPlaying(false);
+                        actions.setMuted(false); // Unmute when video finishes
+                      }}
                     >
                       <source src={videoSrc} type="video/mp4" />
                     </video>
