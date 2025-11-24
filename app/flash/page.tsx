@@ -43,6 +43,7 @@ function FlashcardPage() {
   const [isButtonPressed, setIsButtonPressed] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [gameMessage, setGameMessage] = useState('');
+  const [isLetterAnimating, setIsLetterAnimating] = useState(false);
   const [negativeRejections, setNegativeRejections] = useState<Array<{
     id: number;
     negativeScore: number;
@@ -144,6 +145,10 @@ function FlashcardPage() {
     audioRef.current.play().catch(err => {
       console.error('Audio playback failed:', err);
     });
+
+    // Trigger letter outline animation (double bounce - 2 seconds total)
+    setIsLetterAnimating(true);
+    setTimeout(() => setIsLetterAnimating(false), 2000);
   };
 
   // Handle button press - activate microphone
@@ -275,7 +280,7 @@ function FlashcardPage() {
 
             {/* Letter Overlay */}
             <div
-              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-black pointer-events-none ${isButtonPressed ? 'letter-pop' : ''}`}
+              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-black pointer-events-none ${isButtonPressed ? 'letter-pop' : ''} ${isLetterAnimating ? 'letter-outline-animate' : ''}`}
               style={{
                 fontSize: '288px',
                 textShadow: '0 6px 12px rgba(0,0,0,0.3)',
@@ -523,6 +528,34 @@ function FlashcardPage() {
             0 0 50px rgba(0,0,0,0.7),
             0 10px 20px rgba(0,0,0,0.6);
           transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        /* Double-bounce outline stroke animation */
+        @keyframes outline-stroke-double {
+          0%, 100% {
+            -webkit-text-stroke-width: 0px;
+            -webkit-text-stroke-color: transparent;
+          }
+          15% {
+            -webkit-text-stroke-width: 12px;
+            -webkit-text-stroke-color: #FF5722;
+          }
+          30% {
+            -webkit-text-stroke-width: 0px;
+            -webkit-text-stroke-color: transparent;
+          }
+          50% {
+            -webkit-text-stroke-width: 12px;
+            -webkit-text-stroke-color: #FF5722;
+          }
+          70% {
+            -webkit-text-stroke-width: 0px;
+            -webkit-text-stroke-color: transparent;
+          }
+        }
+
+        .letter-outline-animate {
+          animation: outline-stroke-double 2s ease-in-out;
         }
       `}</style>
     </div>
