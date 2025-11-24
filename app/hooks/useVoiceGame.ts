@@ -10,6 +10,7 @@ import { addNegativePattern } from '@/app/utils/negativeSnapshot';
 import { uploadSnapshotAudio } from '@/app/utils/snapshotAudioUpload';
 import { createSimpleAudioCapture, type SimpleAudioCapture } from '@/app/utils/simpleAudioCapture';
 import { supabase } from '@/app/lib/supabase';
+import { MATCH_THRESHOLD } from '@/app/lib/constants';
 import type { AudioEngineState, CalibrationData } from '@/app/lib/types';
 
 export interface VoiceGameState {
@@ -62,9 +63,11 @@ export function useVoiceGame(
     isMutedRef.current = isMuted;
   }, [isMuted]);
 
-  // Load calibration data
+  // Load calibration data (cross-profile pooling for better accuracy)
   const loadCalibrations = useCallback(async (): Promise<Record<string, CalibrationData>> => {
     try {
+      // Load ALL calibrations (cross-profile pooling) - same as admin/practice page
+      console.log('🔍 Loading ALL calibrations (cross-profile pooling)');
       const { data, error } = await supabase.from('calibrations').select('*');
       if (error) throw error;
 
@@ -168,9 +171,9 @@ export function useVoiceGame(
 
           // Check if predicted letter matches target and score is above threshold (case-insensitive)
           const predictedMatch = result.predictedLetter.toLowerCase() === targetLetter.toLowerCase();
-          console.log(`🔍 Match conditions - matchType: ${matchInfo?.matchType}, predictedMatch: ${predictedMatch} (${result.predictedLetter} vs ${targetLetter}), score: ${result.score} > 60`);
+          console.log(`🔍 Match conditions - matchType: ${matchInfo?.matchType}, predictedMatch: ${predictedMatch} (${result.predictedLetter} vs ${targetLetter}), score: ${result.score} > ${MATCH_THRESHOLD}`);
 
-          if (matchInfo && matchInfo.matchType === 'accepted' && predictedMatch && result.score > 60) {
+          if (matchInfo && matchInfo.matchType === 'accepted' && predictedMatch && result.score > MATCH_THRESHOLD) {
             console.log(`✅ MATCH ACCEPTED!`);
             // Update match timestamp to start cooldown
             lastMatchTime = Date.now();
