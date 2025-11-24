@@ -98,14 +98,6 @@ function FlashcardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-play letter sound when letter changes
-  useEffect(() => {
-    if (currentLetter && !state.isActive) {
-      playLetterSound();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentLetter]);
-
   // Pick a random calibrated letter
   const pickNextLetter = () => {
     const calibratedLetters = Object.keys(state.calibrationData);
