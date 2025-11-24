@@ -132,7 +132,7 @@ export function useVoiceGame(
 
       // Check for match - EXACT SAME LOGIC AS PLAY PAGE
       if (patternBufferRef.current.length >= 10) {
-        const volumeThreshold = isNasal(targetLetter) ? 3 : (isLiquid(targetLetter) ? 6 : 12);
+        const volumeThreshold = isNasal(targetLetter) ? 2 : (isLiquid(targetLetter) ? 6 : 15);
         const concentrationThreshold = isNasal(targetLetter) ? 1.2 : (isLiquid(targetLetter) ? 1.0 : 2.0);
 
         // Check cooldown to prevent rapid repeated matches of the same sustained sound

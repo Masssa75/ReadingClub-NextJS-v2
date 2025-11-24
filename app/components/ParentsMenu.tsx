@@ -9,9 +9,11 @@ import { User } from 'lucide-react';
 interface ParentsMenuProps {
   advancedMode?: boolean;
   onAdvancedModeChange?: (enabled: boolean) => void;
+  vowelsOnly?: boolean;
+  onVowelsOnlyChange?: (enabled: boolean) => void;
 }
 
-export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange }: ParentsMenuProps = {}) {
+export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange, vowelsOnly = false, onVowelsOnlyChange }: ParentsMenuProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [email, setEmail] = useState('');
@@ -170,6 +172,24 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
                 >
                   <span>{advancedMode ? '🔧' : '⚙️'}</span>
                   <span>Advanced Mode: {advancedMode ? 'ON' : 'OFF'}</span>
+                </button>
+              )}
+
+              {/* Vowels Only Toggle (only show if callback provided) */}
+              {onVowelsOnlyChange && (
+                <button
+                  onClick={() => onVowelsOnlyChange(!vowelsOnly)}
+                  className={`w-full py-[18px] px-6 rounded-[22px] font-black text-[17px] text-white
+                    shadow-lg hover:shadow-xl transition-all duration-300
+                    hover:scale-105 flex items-center justify-center gap-3
+                    ${vowelsOnly
+                      ? 'bg-gradient-to-r from-pink-400 to-purple-400'
+                      : 'bg-gradient-to-r from-gray-400 to-gray-500'
+                    }`}
+                  style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' }}
+                >
+                  <span>{vowelsOnly ? '📖' : '📚'}</span>
+                  <span>Vowels Only: {vowelsOnly ? 'ON' : 'OFF'}</span>
                 </button>
               )}
             </div>

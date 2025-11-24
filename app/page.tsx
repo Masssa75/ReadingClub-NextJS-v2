@@ -48,6 +48,7 @@ function Learn1() {
   const [gameMessage, setGameMessage] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
+  const [vowelsOnly, setVowelsOnly] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [showCalibrationModal, setShowCalibrationModal] = useState(false);
   const [showNegativeRejection, setShowNegativeRejection] = useState(false);
@@ -78,11 +79,15 @@ function Learn1() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load advanced mode from localStorage
+  // Load advanced mode and vowels only from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem('advancedMode');
-    if (saved === 'true') {
+    const savedAdvanced = localStorage.getItem('advancedMode');
+    if (savedAdvanced === 'true') {
       setAdvancedMode(true);
+    }
+    const savedVowels = localStorage.getItem('vowelsOnly');
+    if (savedVowels === 'true') {
+      setVowelsOnly(true);
     }
   }, []);
 
@@ -90,6 +95,11 @@ function Learn1() {
   useEffect(() => {
     localStorage.setItem('advancedMode', advancedMode.toString());
   }, [advancedMode]);
+
+  // Save vowels only to localStorage
+  useEffect(() => {
+    localStorage.setItem('vowelsOnly', vowelsOnly.toString());
+  }, [vowelsOnly]);
 
   // Cleanup feedback timeout on unmount
   useEffect(() => {
@@ -175,7 +185,18 @@ function Learn1() {
 
   // Pick next letter using adaptive selection (same as /play)
   const pickNextLetter = async () => {
-    const calibratedLetters = Object.keys(state.calibrationData);
+    let calibratedLetters = Object.keys(state.calibrationData);
+
+    // Filter to vowels only if enabled
+    if (vowelsOnly) {
+      const vowels = ['a', 'e', 'i', 'o', 'u'];
+      calibratedLetters = calibratedLetters.filter(letter => vowels.includes(letter.toLowerCase()));
+      if (calibratedLetters.length === 0) {
+        setGameMessage('No calibrated vowels. Please calibrate A, E, I, O, or U first.');
+        return null;
+      }
+    }
+
     if (calibratedLetters.length === 0) {
       setGameMessage('No calibrated letters');
       return null;
@@ -349,6 +370,8 @@ function Learn1() {
         <ParentsMenu
           advancedMode={advancedMode}
           onAdvancedModeChange={setAdvancedMode}
+          vowelsOnly={vowelsOnly}
+          onVowelsOnlyChange={setVowelsOnly}
         />
       </div>
 
@@ -377,6 +400,13 @@ function Learn1() {
             title="Mark current sound as incorrect (creates negative snapshot)"
           >
             ✗ NOT {state.currentLetter.toUpperCase()}
+          </button>
+          <button
+            onClick={() => actions.setMuted(!state.isMuted)}
+            className={`px-5 py-3.5 ${state.isMuted ? 'bg-gradient-to-br from-gray-500 to-gray-600' : 'bg-gradient-to-br from-blue-500 to-blue-600'} text-white rounded-[12px] font-bold text-base shadow-lg hover:shadow-xl transition-all hover:scale-105`}
+            title={state.isMuted ? "Unmute microphone" : "Mute microphone"}
+          >
+            {state.isMuted ? '🔇 Muted' : '🎤 Mic On'}
           </button>
         </div>
       )}
