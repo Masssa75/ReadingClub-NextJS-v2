@@ -72,7 +72,7 @@ function Learn1() {
   // Use the shared voice game hook
   const { state, actions } = useVoiceGame(handleSuccess, handleNegativeRejection);
 
-  // Load calibrations on mount (empty array to prevent infinite loop)
+  // Load calibrations on mount
   useEffect(() => {
     actions.loadCalibrations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,13 +128,15 @@ function Learn1() {
     const hasVideo = currentLetter && videoMap[currentLetter.toUpperCase()];
 
     if (hasVideo) {
+      // Mark that user clicked Listen (triggers rapid rep requirement)
+      listenClickedThisRound.current = true;
       // Mute voice detection during video playback
       actions.setMuted(true);
       // Open video modal if video exists
       setShowVideo(true);
       setIsPlaying(true);
     } else {
-      // Just play audio if no video
+      // Just play audio if no video (playLetterSound sets the flag)
       playLetterSound();
     }
   };
@@ -295,6 +297,9 @@ function Learn1() {
 
     const audioUrl = LETTER_AUDIO_URLS[currentLetter.toLowerCase()];
     if (!audioUrl) return;
+
+    // Mark that user clicked Listen (triggers rapid rep requirement)
+    listenClickedThisRound.current = true;
 
     // Stop current audio if playing
     if (audioRef.current) {
