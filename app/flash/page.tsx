@@ -98,6 +98,14 @@ function FlashcardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-play letter sound when letter changes
+  useEffect(() => {
+    if (currentLetter && !state.isActive) {
+      playLetterSound();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLetter]);
+
   // Pick a random calibrated letter
   const pickNextLetter = () => {
     const calibratedLetters = Object.keys(state.calibrationData);
@@ -111,6 +119,12 @@ function FlashcardPage() {
 
   // Start with first letter
   const startGame = () => {
+    // Initialize audio context for iOS (enables auto-play after first user interaction)
+    const initAudio = new Audio();
+    initAudio.play().catch(() => {
+      // Ignore error - just trying to unlock audio
+    });
+
     const firstLetter = pickNextLetter();
     if (firstLetter) {
       setCurrentLetter(firstLetter);
@@ -145,9 +159,6 @@ function FlashcardPage() {
     // Visual feedback
     setIsButtonPressed(true);
     setTimeout(() => setIsButtonPressed(false), 600);
-
-    // Play audio immediately as part of user interaction (fixes iOS)
-    playLetterSound();
 
     // Start voice detection
     try {
