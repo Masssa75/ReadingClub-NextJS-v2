@@ -159,12 +159,33 @@ function FlashcardPage() {
     setIsButtonPressed(true);
     setTimeout(() => setIsButtonPressed(false), 600);
 
+    // Play audio immediately as part of user interaction (fixes iOS)
+    playLetterSound();
+
     // Start voice detection
     try {
       await actions.startGame(currentLetter);
       setGameMessage('Listening...');
     } catch (err: any) {
       setGameMessage(err.message || 'Microphone access denied');
+    }
+  };
+
+  // Skip to next letter
+  const handleSkip = () => {
+    if (!currentLetter) return;
+
+    // Stop current game if active
+    if (state.isActive) {
+      actions.stopGame();
+    }
+
+    // Pick next letter
+    const nextLetter = pickNextLetter();
+    if (nextLetter) {
+      setCurrentLetter(nextLetter);
+      setGameMessage('Tap the button and say the letter!');
+      setNegativeRejections([]); // Clear rejection indicators
     }
   };
 
@@ -229,7 +250,7 @@ function FlashcardPage() {
 
       {/* Manual "IS X" Button - Top Right (below red flags) */}
       {currentLetter && state.isActive && (
-        <div className={`absolute top-6 right-6 z-20 transition-all`} style={{ marginTop: `${negativeRejections.length * 80}px` }}>
+        <div className={`absolute top-6 right-6 z-20 transition-all flex flex-col gap-3`} style={{ marginTop: `${negativeRejections.length * 80}px` }}>
           <button
             onClick={() => {
               if (!currentProfileId || !currentLetter) return;
@@ -241,6 +262,26 @@ function FlashcardPage() {
             title="Mark current sound as correct (creates calibration snapshot)"
           >
             ✓ IS {currentLetter.toUpperCase()}
+          </button>
+          <button
+            onClick={handleSkip}
+            className="px-6 py-4 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            title="Skip to next letter"
+          >
+            ⏭️ SKIP
+          </button>
+        </div>
+      )}
+
+      {/* Skip Button (when not active) - Top Right */}
+      {currentLetter && !state.isActive && (
+        <div className={`absolute top-6 right-6 z-20 transition-all`} style={{ marginTop: `${negativeRejections.length * 80}px` }}>
+          <button
+            onClick={handleSkip}
+            className="px-6 py-4 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            title="Skip to next letter"
+          >
+            ⏭️ SKIP
           </button>
         </div>
       )}
