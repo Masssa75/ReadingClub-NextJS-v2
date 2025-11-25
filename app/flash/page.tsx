@@ -6,11 +6,16 @@ import { useProfileContext } from '@/app/contexts/ProfileContext';
 import { ProfileProvider } from '@/app/contexts/ProfileContext';
 import SuccessCelebration from '@/app/components/SuccessCelebration';
 import CalibrationModal from '@/app/components/CalibrationModal';
+import ParentsMenu from '@/app/components/ParentsMenu';
 import { supabase } from '@/app/lib/supabase';
 
+// Letter sequences
+const ALPHABET = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+const VOWELS = ['a', 'e', 'i', 'o', 'u'];
 
 function FlashcardPage() {
   const [currentLetter, setCurrentLetter] = useState<string | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isButtonPressed, setIsButtonPressed] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [gameMessage, setGameMessage] = useState('');
@@ -23,6 +28,8 @@ function FlashcardPage() {
   }>>([]);
   const [selectedSnapshot, setSelectedSnapshot] = useState<any>(null);
   const [showCalibrationModal, setShowCalibrationModal] = useState(false);
+  const [vowelsOnly, setVowelsOnly] = useState(false);
+  const [advancedMode, setAdvancedMode] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const rejectionIdRef = useRef(0);
@@ -70,6 +77,28 @@ function FlashcardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Load settings from localStorage
+  useEffect(() => {
+    const savedVowels = localStorage.getItem('flashcard_vowelsOnly');
+    if (savedVowels === 'true') setVowelsOnly(true);
+    const savedAdvanced = localStorage.getItem('flashcard_advancedMode');
+    if (savedAdvanced === 'true') setAdvancedMode(true);
+  }, []);
+
+  // Save settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('flashcard_vowelsOnly', vowelsOnly.toString());
+  }, [vowelsOnly]);
+
+  useEffect(() => {
+    localStorage.setItem('flashcard_advancedMode', advancedMode.toString());
+  }, [advancedMode]);
+
+  // Reset index when mode changes
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [vowelsOnly]);
+
   // Auto-play letter sound when letter changes
   useEffect(() => {
     if (currentLetter && !state.isActive) {
@@ -78,15 +107,27 @@ function FlashcardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLetter]);
 
-  // Pick a random calibrated letter
-  const pickNextLetter = () => {
+  // Get the current letter sequence based on mode
+  const getLetterSequence = () => {
+    const sequence = vowelsOnly ? VOWELS : ALPHABET;
     const calibratedLetters = Object.keys(state.calibrationData);
-    if (calibratedLetters.length === 0) {
-      setGameMessage('No calibrated letters. Please calibrate at least one letter first.');
+    // Filter to only calibrated letters
+    return sequence.filter(letter => calibratedLetters.includes(letter));
+  };
+
+  // Pick next letter in sequence (A-Z loop or vowels loop)
+  const pickNextLetter = () => {
+    const sequence = getLetterSequence();
+    if (sequence.length === 0) {
+      const modeText = vowelsOnly ? 'vowels (A, E, I, O, U)' : 'letters';
+      setGameMessage(`No calibrated ${modeText}. Please calibrate first.`);
       return null;
     }
-    const randomLetter = calibratedLetters[Math.floor(Math.random() * calibratedLetters.length)];
-    return randomLetter;
+    // Get next letter in sequence (loop back to start)
+    const nextIndex = currentIndex % sequence.length;
+    const nextLetter = sequence[nextIndex];
+    setCurrentIndex(nextIndex + 1);
+    return nextLetter;
   };
 
   // Start with first letter
@@ -144,6 +185,12 @@ function FlashcardPage() {
     }
   };
 
+  // Stop listening
+  const handleStop = () => {
+    actions.stopGame();
+    setGameMessage('Tap the button and say the letter!');
+  };
+
   // Skip to next letter
   const handleSkip = () => {
     if (!currentLetter) return;
@@ -160,6 +207,11 @@ function FlashcardPage() {
       setGameMessage('Tap the button and say the letter!');
       setNegativeRejections([]); // Clear rejection indicators
     }
+  };
+
+  // Replay current letter sound
+  const handleReplay = () => {
+    playLetterSound();
   };
 
   // Handle successful match
@@ -202,56 +254,51 @@ function FlashcardPage() {
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(/images/background.jpg)` }} />
       <div className="absolute inset-0 bg-cover bg-center hidden md:block" style={{ backgroundImage: `url(/images/background-wide.jpg)` }} />
 
-      {/* Negative Rejection Indicators - Top Right (Stacked) */}
-      {negativeRejections.map((rejection, index) => (
+      {/* Parents Menu - Top Right */}
+      <div className="absolute top-4 right-4 md:top-6 md:right-6 z-30">
+        <ParentsMenu
+          advancedMode={advancedMode}
+          onAdvancedModeChange={setAdvancedMode}
+          vowelsOnly={vowelsOnly}
+          onVowelsOnlyChange={setVowelsOnly}
+        />
+      </div>
+
+      {/* Negative Rejection Indicators - Top Left (Stacked) - only in advanced mode */}
+      {advancedMode && negativeRejections.map((rejection, index) => (
         <div
           key={rejection.id}
-          className="absolute right-6 z-20 animate-pulse cursor-pointer hover:scale-110 transition-all"
+          className="absolute left-4 md:left-6 z-20 animate-pulse cursor-pointer hover:scale-110 transition-all"
           style={{ top: `${24 + index * 80}px` }}
           onClick={() => setSelectedSnapshot(rejection)}
           title="Click to view/delete this negative snapshot"
         >
-          <div className="w-16 h-16 rounded-full bg-red-500/60 backdrop-blur-md border-4 border-red-400/80 shadow-lg shadow-red-500/50 flex items-center justify-center">
-            <span className="text-3xl">🚫</span>
+          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-red-500/60 backdrop-blur-md border-4 border-red-400/80 shadow-lg shadow-red-500/50 flex items-center justify-center">
+            <span className="text-2xl md:text-3xl">🚫</span>
           </div>
-          {/* Score badge */}
           <div className="absolute -bottom-2 -right-2 px-2 py-0.5 bg-black/80 text-white text-xs rounded-full font-bold">
             {rejection.negativeScore.toFixed(0)}
           </div>
         </div>
       ))}
 
-      {/* Manual "IS X" Button - Top Right (below red flags) */}
-      {currentLetter && state.isActive && (
-        <div className={`absolute top-6 right-6 z-20 transition-all flex flex-col gap-3`} style={{ marginTop: `${negativeRejections.length * 80}px` }}>
+      {/* Advanced Mode Controls - Bottom Right */}
+      {advancedMode && currentLetter && (
+        <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 flex flex-col gap-2">
           <button
             onClick={() => {
               if (!currentProfileId || !currentLetter) return;
-              // Mute the game while modal is open (don't stop - keeps same letter)
               actions.setMuted(true);
               setShowCalibrationModal(true);
             }}
-            className="px-6 py-4 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
-            title="Mark current sound as correct (creates calibration snapshot)"
+            className="px-4 py-3 md:px-6 md:py-4 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl font-bold text-base md:text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            title="Mark current sound as correct"
           >
             ✓ IS {currentLetter.toUpperCase()}
           </button>
           <button
             onClick={handleSkip}
-            className="px-6 py-4 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
-            title="Skip to next letter"
-          >
-            ⏭️ SKIP
-          </button>
-        </div>
-      )}
-
-      {/* Skip Button (when not active) - Top Right */}
-      {currentLetter && !state.isActive && (
-        <div className={`absolute top-6 right-6 z-20 transition-all`} style={{ marginTop: `${negativeRejections.length * 80}px` }}>
-          <button
-            onClick={handleSkip}
-            className="px-6 py-4 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            className="px-4 py-3 md:px-6 md:py-4 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-xl font-bold text-base md:text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
             title="Skip to next letter"
           >
             ⏭️ SKIP
@@ -313,7 +360,7 @@ function FlashcardPage() {
           </button>
         )}
 
-        {/* Volume indicator (when listening) */}
+        {/* Volume indicator + Stop button (when listening) */}
         {state.isActive && (
           <div className="flex flex-col items-center gap-2 w-64 md:w-80">
             <div className="w-full">
@@ -325,7 +372,25 @@ function FlashcardPage() {
                 />
               </div>
             </div>
+            {/* Stop Button */}
+            <button
+              onClick={handleStop}
+              className="px-8 py-2 md:px-12 md:py-3 text-base md:text-lg font-medium text-white/90 rounded-full border-2 border-red-400/50 backdrop-blur-sm bg-red-400/40 hover:bg-red-500/50 transition-all"
+            >
+              Stop
+            </button>
           </div>
+        )}
+
+        {/* Replay Sound Button (when not listening and letter is shown) */}
+        {currentLetter && !state.isActive && !showSuccess && (
+          <button
+            onClick={handleReplay}
+            className="px-6 py-2 md:px-8 md:py-3 text-base md:text-lg font-medium text-white/90 rounded-full border-2 border-white/40 backdrop-blur-sm bg-white/10 hover:bg-white/20 transition-all flex items-center gap-2"
+          >
+            <span>🔊</span>
+            <span>Listen Again</span>
+          </button>
         )}
       </div>
 
