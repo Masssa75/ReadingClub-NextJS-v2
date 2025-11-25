@@ -282,8 +282,8 @@ function FlashcardPage() {
         </div>
       ))}
 
-      {/* Advanced Mode Controls - Bottom Right */}
-      {advancedMode && currentLetter && (
+      {/* IS X Button - Shows when listening (for when letter doesn't get recognized) */}
+      {currentLetter && state.isActive && (
         <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 flex flex-col gap-2">
           <button
             onClick={() => {
@@ -296,13 +296,16 @@ function FlashcardPage() {
           >
             ✓ IS {currentLetter.toUpperCase()}
           </button>
-          <button
-            onClick={handleSkip}
-            className="px-4 py-3 md:px-6 md:py-4 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-xl font-bold text-base md:text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
-            title="Skip to next letter"
-          >
-            ⏭️ SKIP
-          </button>
+          {/* Skip button only in advanced mode */}
+          {advancedMode && (
+            <button
+              onClick={handleSkip}
+              className="px-4 py-3 md:px-6 md:py-4 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-xl font-bold text-base md:text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+              title="Skip to next letter"
+            >
+              ⏭️ SKIP
+            </button>
+          )}
         </div>
       )}
 
@@ -382,16 +385,6 @@ function FlashcardPage() {
           </div>
         )}
 
-        {/* Replay Sound Button (when not listening and letter is shown) */}
-        {currentLetter && !state.isActive && !showSuccess && (
-          <button
-            onClick={handleReplay}
-            className="px-6 py-2 md:px-8 md:py-3 text-base md:text-lg font-medium text-white/90 rounded-full border-2 border-white/40 backdrop-blur-sm bg-white/10 hover:bg-white/20 transition-all flex items-center gap-2"
-          >
-            <span>🔊</span>
-            <span>Listen Again</span>
-          </button>
-        )}
       </div>
 
       {/* Success Celebration - Confetti */}
