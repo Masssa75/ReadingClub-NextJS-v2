@@ -282,16 +282,16 @@ function FlashcardPage() {
         </div>
       ))}
 
-      {/* IS X Button - Shows when listening (for when letter doesn't get recognized) */}
+      {/* IS X and Skip Buttons - Top right, left of Parents menu */}
       {currentLetter && state.isActive && (
-        <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-20 flex flex-col gap-2">
+        <div className="absolute top-4 right-32 md:top-6 md:right-40 z-20 flex flex-row gap-2">
           <button
             onClick={() => {
               if (!currentProfileId || !currentLetter) return;
               actions.setMuted(true);
               setShowCalibrationModal(true);
             }}
-            className="px-4 py-3 md:px-6 md:py-4 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-xl font-bold text-base md:text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            className="px-3 py-2 md:px-5 md:py-3 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-full font-bold text-sm md:text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
             title="Mark current sound as correct"
           >
             ✓ IS {currentLetter.toUpperCase()}
@@ -300,10 +300,10 @@ function FlashcardPage() {
           {advancedMode && (
             <button
               onClick={handleSkip}
-              className="px-4 py-3 md:px-6 md:py-4 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-xl font-bold text-base md:text-lg shadow-lg hover:shadow-xl transition-all hover:scale-105"
+              className="px-3 py-2 md:px-5 md:py-3 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-full font-bold text-sm md:text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
               title="Skip to next letter"
             >
-              ⏭️ SKIP
+              ⏭️
             </button>
           )}
         </div>
