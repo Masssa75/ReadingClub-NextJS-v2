@@ -7,6 +7,7 @@ import { ProfileProvider } from '@/app/contexts/ProfileContext';
 import SuccessCelebration from '@/app/components/SuccessCelebration';
 import CalibrationModal from '@/app/components/CalibrationModal';
 import ParentsMenu from '@/app/components/ParentsMenu';
+import MicrophonePermission from '@/app/components/MicrophonePermission';
 import { supabase } from '@/app/lib/supabase';
 
 // Letter sequences
@@ -28,6 +29,8 @@ function FlashcardPage() {
   }>>([]);
   const [selectedSnapshot, setSelectedSnapshot] = useState<any>(null);
   const [showCalibrationModal, setShowCalibrationModal] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [micPermissionGranted, setMicPermissionGranted] = useState(false);
   const [vowelsOnly, setVowelsOnly] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
 
@@ -75,6 +78,28 @@ function FlashcardPage() {
   useEffect(() => {
     actions.loadCalibrations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Check microphone permission on mount
+  useEffect(() => {
+    const checkMicPermission = async () => {
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          if (result.state === 'granted') {
+            setMicPermissionGranted(true);
+          }
+          // Listen for permission changes
+          result.addEventListener('change', () => {
+            setMicPermissionGranted(result.state === 'granted');
+          });
+        }
+      } catch (err) {
+        // Permission query not supported, will check when user tries to use mic
+        console.log('Permission query not supported');
+      }
+    };
+    checkMicPermission();
   }, []);
 
   // Load settings from localStorage
@@ -172,6 +197,13 @@ function FlashcardPage() {
   const handleButtonPress = async () => {
     if (!currentLetter || state.isActive) return;
 
+    // Check if we have microphone permission
+    if (!micPermissionGranted) {
+      // Show permission modal first
+      setShowPermissionModal(true);
+      return;
+    }
+
     // Visual feedback
     setIsButtonPressed(true);
     setTimeout(() => setIsButtonPressed(false), 600);
@@ -181,8 +213,21 @@ function FlashcardPage() {
       await actions.startGame(currentLetter);
       setGameMessage('Listening...');
     } catch (err: any) {
-      setGameMessage(err.message || 'Microphone access denied');
+      // If permission was revoked, show the modal again
+      if (err.message?.includes('denied') || err.message?.includes('Settings')) {
+        setMicPermissionGranted(false);
+        setShowPermissionModal(true);
+      } else {
+        setGameMessage(err.message || 'Microphone access denied');
+      }
     }
+  };
+
+  // Called when permission is successfully granted
+  const handlePermissionGranted = () => {
+    setMicPermissionGranted(true);
+    setShowPermissionModal(false);
+    setGameMessage('Tap the button and say the letter!');
   };
 
   // Stop listening
@@ -390,6 +435,14 @@ function FlashcardPage() {
       {/* Success Celebration - Confetti */}
       {showSuccess && currentLetter && (
         <SuccessCelebration letter={currentLetter} />
+      )}
+
+      {/* Microphone Permission Modal */}
+      {showPermissionModal && (
+        <MicrophonePermission
+          onPermissionGranted={handlePermissionGranted}
+          onClose={() => setShowPermissionModal(false)}
+        />
       )}
 
       {/* Calibration Modal - for "IS X" manual override */}
