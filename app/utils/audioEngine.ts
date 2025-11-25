@@ -3,17 +3,46 @@
 import type { AudioEngineState } from '@/app/lib/types';
 import { FFT_SIZE, SMOOTHING } from '@/app/lib/constants';
 
+// Detect iOS Chrome (uses WebKit but has microphone permission issues)
+function isIOSChrome(): boolean {
+  const ua = navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(ua) && /CriOS/.test(ua);
+}
+
+// Detect iOS Safari
+function isIOSSafari(): boolean {
+  const ua = navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(ua) && /Safari/.test(ua) && !/CriOS/.test(ua) && !/FxiOS/.test(ua);
+}
+
 export async function setupAudio(): Promise<AudioEngineState> {
   const setupStart = Date.now();
   console.log('🎤 Setting up audio...');
+  console.log('📱 User Agent:', navigator.userAgent);
+  console.log('📱 iOS Chrome:', isIOSChrome());
+  console.log('📱 iOS Safari:', isIOSSafari());
 
   try {
+    // Check if getUserMedia is supported
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Microphone not supported on this browser. Please use Safari on iOS.');
+    }
+
     // Create audio context
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const audioContext = new AudioContextClass();
 
-    // Request microphone access
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Request microphone access with explicit constraints for iOS
+    const constraints: MediaStreamConstraints = {
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      }
+    };
+
+    console.log('🎤 Requesting microphone with constraints:', constraints);
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
     // Create analyser node
     const analyser = audioContext.createAnalyser();
@@ -40,9 +69,25 @@ export async function setupAudio(): Promise<AudioEngineState> {
       dataArray,
       stream
     };
-  } catch (err) {
+  } catch (err: any) {
     console.error('❌ Audio setup error:', err);
-    throw new Error('Microphone access denied');
+    console.error('❌ Error name:', err?.name);
+    console.error('❌ Error message:', err?.message);
+
+    // Provide helpful error messages based on the error type and browser
+    if (isIOSChrome()) {
+      // Chrome on iOS has known microphone permission issues
+      throw new Error('Chrome on iPhone doesn\'t support microphone well. Please open this page in Safari instead.');
+    } else if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+      // User denied permission or it was previously denied
+      throw new Error('Microphone access denied. Check your browser settings to allow microphone for this site.');
+    } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
+      throw new Error('No microphone found. Please connect a microphone and try again.');
+    } else if (err?.name === 'NotReadableError' || err?.name === 'TrackStartError') {
+      throw new Error('Microphone is in use by another app. Please close other apps using the microphone.');
+    } else {
+      throw new Error('Microphone access denied');
+    }
   }
 }
 
