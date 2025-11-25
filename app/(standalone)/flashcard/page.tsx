@@ -260,28 +260,28 @@ function FlashcardPage() {
       )}
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center justify-center h-full gap-8">
-        {/* Title */}
-        <div className="text-white text-2xl font-light tracking-[0.3em] uppercase opacity-70">
+      <div className="relative z-10 flex flex-col items-center justify-center h-full gap-2 md:gap-4 py-4">
+        {/* Title - hidden on small screens in landscape */}
+        <div className="text-white text-xl md:text-2xl font-light tracking-[0.3em] uppercase opacity-70 hidden portrait:block md:block">
           Flashcard Mode
         </div>
 
         {/* Message */}
         {gameMessage && (
-          <div className="text-white text-xl font-medium text-center px-8 py-4 bg-white/20 backdrop-blur-md rounded-full">
+          <div className="text-white text-base md:text-xl font-medium text-center px-6 py-2 md:px-8 md:py-4 bg-white/20 backdrop-blur-md rounded-full">
             {gameMessage}
           </div>
         )}
 
-        {/* Big Smash Button with Letter */}
+        {/* Big Smash Button with Letter - responsive sizing */}
         {currentLetter ? (
           <button
             onClick={handleButtonPress}
             disabled={state.isActive}
             className={`relative cursor-pointer select-none ${isButtonPressed ? 'animate-saturation-burst' : ''}`}
             style={{
-              width: '504px',
-              height: '504px',
+              width: 'min(504px, 80vw, 50vh)',
+              height: 'min(504px, 80vw, 50vh)',
               transition: 'all 0.2s ease',
             }}
           >
@@ -292,11 +292,11 @@ function FlashcardPage() {
               className="w-full h-full object-contain pointer-events-none"
             />
 
-            {/* Letter Overlay */}
+            {/* Letter Overlay - responsive font size */}
             <div
               className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-black pointer-events-none ${isButtonPressed ? 'letter-pop' : ''}`}
               style={{
-                fontSize: '288px',
+                fontSize: 'min(288px, 45vw, 28vh)',
                 textShadow: '0 6px 12px rgba(0,0,0,0.3)',
                 transition: 'all 0.2s ease',
               }}
@@ -307,7 +307,7 @@ function FlashcardPage() {
         ) : (
           <button
             onClick={startGame}
-            className="px-24 py-6 text-2xl font-medium text-white/90 rounded-full border-2 border-white/40 backdrop-blur-sm bg-white/10 hover:bg-white/20 transition-all"
+            className="px-16 py-4 md:px-24 md:py-6 text-xl md:text-2xl font-medium text-white/90 rounded-full border-2 border-white/40 backdrop-blur-sm bg-white/10 hover:bg-white/20 transition-all"
           >
             Start
           </button>
@@ -315,10 +315,10 @@ function FlashcardPage() {
 
         {/* Volume indicator (when listening) */}
         {state.isActive && (
-          <div className="flex flex-col items-center gap-4 w-80">
+          <div className="flex flex-col items-center gap-2 w-64 md:w-80">
             <div className="w-full">
-              <div className="text-white/70 text-sm mb-2 text-center">Listening...</div>
-              <div className="h-6 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden border border-white/30">
+              <div className="text-white/70 text-xs md:text-sm mb-1 md:mb-2 text-center">Listening...</div>
+              <div className="h-4 md:h-6 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden border border-white/30">
                 <div
                   className="h-full bg-gradient-to-r from-green-400 to-blue-400"
                   style={{ width: `${Math.min(100, (state.volume / 30) * 100)}%` }}
