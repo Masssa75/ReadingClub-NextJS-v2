@@ -76,8 +76,8 @@ export async function setupAudio(): Promise<AudioEngineState> {
 
     // Provide helpful error messages based on the error type and browser
     if (isIOSChrome()) {
-      // Chrome on iOS has known microphone permission issues
-      throw new Error('Chrome on iPhone doesn\'t support microphone well. Please open this page in Safari instead.');
+      // Chrome on iOS requires system-level permission first
+      throw new Error('Enable microphone in iPhone Settings → Chrome → Microphone. Then reload this page.');
     } else if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
       // User denied permission or it was previously denied
       throw new Error('Microphone access denied. Check your browser settings to allow microphone for this site.');
