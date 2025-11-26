@@ -14,6 +14,70 @@ import { supabase } from '@/app/lib/supabase';
 const ALPHABET = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
 const VOWELS = ['a', 'e', 'i', 'o', 'u'];
 
+// Record cycle completion to Supabase
+async function recordCycleCompletion(
+  profileId: string,
+  level: number,
+  durationSeconds: number,
+  lettersSkipped: number
+) {
+  try {
+    // First, try to get existing progress for this profile/level
+    const { data: existing, error: fetchError } = await supabase
+      .from('level_progress')
+      .select('*')
+      .eq('profile_id', profileId)
+      .eq('level', level)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      // PGRST116 = no rows found, which is fine for first cycle
+      console.error('Error fetching level progress:', fetchError);
+      return;
+    }
+
+    if (existing) {
+      // Update existing record
+      const { error: updateError } = await supabase
+        .from('level_progress')
+        .update({
+          cycles_completed: existing.cycles_completed + 1,
+          last_cycle_at: new Date().toISOString(),
+          total_time_seconds: existing.total_time_seconds + durationSeconds,
+          letters_skipped: existing.letters_skipped + lettersSkipped,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+
+      if (updateError) {
+        console.error('Error updating level progress:', updateError);
+      } else {
+        console.log(`📊 Cycle ${existing.cycles_completed + 1} recorded for level ${level}`);
+      }
+    } else {
+      // Insert new record
+      const { error: insertError } = await supabase
+        .from('level_progress')
+        .insert({
+          profile_id: profileId,
+          level,
+          cycles_completed: 1,
+          last_cycle_at: new Date().toISOString(),
+          total_time_seconds: durationSeconds,
+          letters_skipped: lettersSkipped,
+        });
+
+      if (insertError) {
+        console.error('Error inserting level progress:', insertError);
+      } else {
+        console.log(`📊 First cycle recorded for level ${level}`);
+      }
+    }
+  } catch (err) {
+    console.error('Error recording cycle:', err);
+  }
+}
+
 function FlashcardPage() {
   const [currentLetter, setCurrentLetter] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -37,6 +101,10 @@ function FlashcardPage() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const rejectionIdRef = useRef(0);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+
+  // Cycle tracking refs
+  const cycleStartTimeRef = useRef<number | null>(null);
+  const skipsInCycleRef = useRef(0);
 
   const { currentProfileId, isLoading: profileLoading } = useProfileContext();
 
@@ -119,9 +187,11 @@ function FlashcardPage() {
     localStorage.setItem('flashcard_advancedMode', advancedMode.toString());
   }, [advancedMode]);
 
-  // Reset index when mode changes
+  // Reset index and cycle tracking when mode changes
   useEffect(() => {
     setCurrentIndex(0);
+    cycleStartTimeRef.current = null;
+    skipsInCycleRef.current = 0;
   }, [vowelsOnly]);
 
   // Auto-play letter sound when letter changes
@@ -148,8 +218,29 @@ function FlashcardPage() {
       setGameMessage(`No calibrated ${modeText}. Please calibrate first.`);
       return null;
     }
-    // Get next letter in sequence (loop back to start)
+
+    // Check if we're completing a cycle (wrapping around)
     const nextIndex = currentIndex % sequence.length;
+
+    // If nextIndex is 0 and we've gone through letters (currentIndex > 0), cycle completed
+    if (nextIndex === 0 && currentIndex > 0 && cycleStartTimeRef.current && currentProfileId) {
+      const durationSeconds = Math.round((Date.now() - cycleStartTimeRef.current) / 1000);
+      const skips = skipsInCycleRef.current;
+
+      // Record the completed cycle (level 1 = flashcard mode)
+      recordCycleCompletion(currentProfileId, 1, durationSeconds, skips);
+
+      // Reset for next cycle
+      cycleStartTimeRef.current = Date.now();
+      skipsInCycleRef.current = 0;
+    }
+
+    // Start tracking if this is the first letter
+    if (cycleStartTimeRef.current === null) {
+      cycleStartTimeRef.current = Date.now();
+      skipsInCycleRef.current = 0;
+    }
+
     const nextLetter = sequence[nextIndex];
     setCurrentIndex(nextIndex + 1);
     return nextLetter;
@@ -239,6 +330,9 @@ function FlashcardPage() {
   // Skip to next letter
   const handleSkip = () => {
     if (!currentLetter) return;
+
+    // Track skip for analytics
+    skipsInCycleRef.current++;
 
     // Stop current game if active
     if (state.isActive) {
