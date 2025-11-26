@@ -11,3 +11,21 @@
 body {
   color: white;
 }
+
+/* Fix iOS Safari/Chrome rendering bug with backdrop-filter
+   Elements with backdrop-blur sometimes don't render until scroll/touch.
+   This forces GPU compositing on initial render. */
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-3xl,
+  [class*="backdrop-blur"] {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+  }
+}

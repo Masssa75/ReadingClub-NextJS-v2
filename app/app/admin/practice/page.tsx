@@ -193,6 +193,12 @@ export default function PlayPage() {
 
   // Pick next letter using adaptive selection
   const pickNextLetter = async () => {
+    // Clear any leftover audio from previous letter
+    if (lastCapturedAudioRef.current) {
+      console.log('🔄 New letter, clearing previous audio');
+      lastCapturedAudioRef.current = null;
+    }
+
     const calibratedLetters = Object.keys(calibrationData);
     if (calibratedLetters.length === 0) {
       setStatusMessage('No calibrated letters');
@@ -366,8 +372,7 @@ export default function PlayPage() {
             letter,
             false // positive snapshot
           ) || undefined;
-
-          lastCapturedAudioRef.current = null;
+          // Note: Don't clear audio here - keep it available for "Not X" button
         } catch (error) {
           console.error('❌ Error uploading snapshot audio:', error);
         }
@@ -402,6 +407,17 @@ export default function PlayPage() {
     // Auto-next or wait
     if (autoNext) {
       setTimeout(() => {
+        // Clear "Not X" button and audio before moving to next letter
+        setShowNotXButton(false);
+        setNotXLetter(null);
+        if (notXButtonTimeoutRef.current) {
+          clearTimeout(notXButtonTimeoutRef.current);
+        }
+        if (lastCapturedAudioRef.current) {
+          console.log('⏱️ Auto-next, clearing unused audio');
+          lastCapturedAudioRef.current = null;
+        }
+
         setShowCelebration(false);
         setIsRunning(true);
         isRunningRef.current = true;
@@ -427,6 +443,11 @@ export default function PlayPage() {
     notXButtonTimeoutRef.current = setTimeout(() => {
       setShowNotXButton(false);
       setNotXLetter(null);
+      // Clear audio since user didn't click "Not X"
+      if (lastCapturedAudioRef.current) {
+        console.log('⏱️ Timeout expired, clearing unused audio');
+        lastCapturedAudioRef.current = null;
+      }
     }, 5000);
   };
 
