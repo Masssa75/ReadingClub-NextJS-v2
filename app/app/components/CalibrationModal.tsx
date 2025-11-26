@@ -16,6 +16,7 @@ interface CalibrationModalProps {
   letter: string;
   onClose: () => void;
   onSuccess: (letter: string) => void;
+  onNext?: () => void;
   variant?: 'admin' | 'kid';
 }
 
@@ -116,7 +117,7 @@ function SnapshotCard({
   );
 }
 
-export default function CalibrationModal({ letter, onClose, onSuccess, variant = 'admin' }: CalibrationModalProps) {
+export default function CalibrationModal({ letter, onClose, onSuccess, onNext, variant = 'admin' }: CalibrationModalProps) {
   const { currentProfileId } = useProfileContext();
   const [statusMessage, setStatusMessage] = useState('Click letter to hear sound, then click microphone');
   const [showArrow, setShowArrow] = useState(true);
@@ -124,6 +125,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
   const [existingSnapshotCount, setExistingSnapshotCount] = useState(0);
   const [existingSnapshots, setExistingSnapshots] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
 
   const audioStateRef = useRef<AudioEngineState | null>(null);
   const audioCaptureRef = useRef<SimpleAudioCapture | null>(null);
@@ -552,7 +554,8 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
 
         // Reset to ready state for another recording
         setRecordingState('ready');
-        setStatusMessage(`✅ Saved! Add another or close to finish.`);
+        setHasSaved(true);
+        setStatusMessage(`✅ Saved! Add another or click Next →`);
       }
     } catch (error) {
       console.error('❌ Error saving calibration:', error);
@@ -672,13 +675,28 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     >
       <div className={styles.modal}>
 
-        {/* Close Button - Light red background */}
-        <button
-          onClick={handleClose}
-          className="absolute top-4 right-4 z-50 bg-red-400/30 border-none text-white text-xl w-10 h-10 rounded-full cursor-pointer transition-all hover:bg-red-500/50 hover:rotate-90 flex items-center justify-center"
-        >
-          ✕
-        </button>
+        {/* Top Right Buttons - Close and Next */}
+        <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+          {/* Next Button - Shows after saving (green, prominent) */}
+          {hasSaved && onNext && (
+            <button
+              onClick={() => {
+                cleanup();
+                onNext();
+              }}
+              className="px-4 py-2 bg-[#7CB342] hover:bg-[#8BC34A] text-white font-bold rounded-full cursor-pointer transition-all hover:scale-105 flex items-center gap-1 shadow-lg"
+            >
+              Next →
+            </button>
+          )}
+          {/* Close Button - Light red background */}
+          <button
+            onClick={handleClose}
+            className="bg-red-400/30 border-none text-white text-xl w-10 h-10 rounded-full cursor-pointer transition-all hover:bg-red-500/50 hover:rotate-90 flex items-center justify-center"
+          >
+            ✕
+          </button>
+        </div>
 
         {/* MAIN CONTENT - Fixed height, no scroll */}
         <div className="flex-shrink-0 relative">

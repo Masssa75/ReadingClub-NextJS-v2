@@ -88,6 +88,21 @@ export default function CalibrationGrid({ variant = 'admin' }: CalibrationGridPr
     // Modal stays open on same letter so they can add more calibrations
   };
 
+  const handleNextLetter = () => {
+    if (!modalLetter) return;
+
+    // Find current letter index in PHONEMES array
+    const currentIndex = PHONEMES.findIndex(p => p.letter === modalLetter);
+    if (currentIndex === -1) return;
+
+    // Get next letter (wrap around to first if at end)
+    const nextIndex = (currentIndex + 1) % PHONEMES.length;
+    const nextLetter = PHONEMES[nextIndex].letter;
+
+    console.log(`➡️ Advancing from ${modalLetter} to ${nextLetter}`);
+    setModalLetter(nextLetter);
+  };
+
   if (profileLoading) {
     return <div className="text-center text-gray-400">Loading profile...</div>;
   }
@@ -141,6 +156,7 @@ export default function CalibrationGrid({ variant = 'admin' }: CalibrationGridPr
           letter={modalLetter}
           onClose={handleModalClose}
           onSuccess={handleCalibrationSuccess}
+          onNext={handleNextLetter}
           variant={variant}
         />
       )}
