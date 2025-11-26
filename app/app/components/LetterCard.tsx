@@ -44,7 +44,8 @@ export default function LetterCard({ phoneme, isCalibrated, proficiency, isRecor
     : '';
 
   return (
-    <div
+    <button
+      type="button"
       className={cardClass}
       onClick={onClick}
       style={proficiencyColor ? {
@@ -74,6 +75,6 @@ export default function LetterCard({ phoneme, isCalibrated, proficiency, isRecor
       >
         {isCalibrated ? '✓ Calibrated' : 'Click to record'}
       </div>
-    </div>
+    </button>
   );
 }
