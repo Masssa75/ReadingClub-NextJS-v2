@@ -10,6 +10,7 @@ export default function Tabs() {
     { path: '/admin/calibrate', label: '📊 Calibrate' },
     { path: '/admin/practice', label: '▶ Practice' },
     { path: '/admin/snapshots', label: '🗂️ Snapshots' },
+    { path: '/admin/progress', label: '📈 Progress' },
   ];
 
   return (
