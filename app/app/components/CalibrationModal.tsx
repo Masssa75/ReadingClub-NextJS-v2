@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Volume2 } from 'lucide-react';
 import { setupAudio, stopAudio } from '@/app/utils/audioEngine';
 import { getFrequencyData, downsampleTo64Bins, normalizePattern, calculateVolume, calculateEnergyConcentration, isNasal, isLiquid } from '@/app/utils/fftAnalysis';
@@ -122,6 +123,7 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
   const [recordingState, setRecordingState] = useState<RecordingState>('ready');
   const [existingSnapshotCount, setExistingSnapshotCount] = useState(0);
   const [existingSnapshots, setExistingSnapshots] = useState<any[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
 
   const audioStateRef = useRef<AudioEngineState | null>(null);
   const audioCaptureRef = useRef<SimpleAudioCapture | null>(null);
@@ -134,6 +136,11 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
   const lastPeakTimeRef = useRef<number>(0);
   const [volume, setVolume] = useState(0);
   const [concentration, setConcentration] = useState(0);
+
+  // Set mounted state for portal (needed for SSR safety in Next.js)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     initAudio();
@@ -650,7 +657,10 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
     captureBoxCaptured: 'border-green-500 bg-[rgba(76,175,80,0.2)]',
   };
 
-  return (
+  // Don't render until mounted (SSR safety for portal)
+  if (!isMounted) return null;
+
+  const modalContent = (
     <div
       className={styles.backdrop}
       onClick={(e) => {
@@ -880,4 +890,8 @@ export default function CalibrationModal({ letter, onClose, onSuccess, variant =
       </div>
     </div>
   );
+
+  // Use portal to render modal at document.body level
+  // This fixes the positioning issue when parent has backdrop-filter
+  return createPortal(modalContent, document.body);
 }
