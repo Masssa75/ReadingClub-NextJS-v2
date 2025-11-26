@@ -457,7 +457,7 @@ function FlashcardPage() {
 
         {/* Message */}
         {gameMessage && (
-          <div className="text-white text-base md:text-xl font-medium text-center px-6 py-2 md:px-8 md:py-4 bg-white/20 backdrop-blur-md rounded-full">
+          <div className="text-white text-base md:text-xl font-medium text-center px-6 py-2 md:px-8 md:py-4 bg-white/30 rounded-full">
             {gameMessage}
           </div>
         )}
@@ -496,7 +496,7 @@ function FlashcardPage() {
         ) : (
           <button
             onClick={startGame}
-            className="px-16 py-4 md:px-24 md:py-6 text-xl md:text-2xl font-medium text-white/90 rounded-full border-2 border-white/40 backdrop-blur-sm bg-white/10 hover:bg-white/20 transition-all"
+            className="px-16 py-4 md:px-24 md:py-6 text-xl md:text-2xl font-medium text-white/90 rounded-full border-2 border-white/40 bg-white/25 hover:bg-white/35 transition-all"
           >
             Start
           </button>
@@ -507,7 +507,7 @@ function FlashcardPage() {
           <div className="flex flex-col items-center gap-2 w-64 md:w-80">
             <div className="w-full">
               <div className="text-white/70 text-xs md:text-sm mb-1 md:mb-2 text-center">Listening...</div>
-              <div className="h-4 md:h-6 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden border border-white/30">
+              <div className="h-4 md:h-6 bg-white/30 rounded-full overflow-hidden border border-white/30">
                 <div
                   className="h-full bg-gradient-to-r from-green-400 to-blue-400"
                   style={{ width: `${Math.min(100, (state.volume / 30) * 100)}%` }}
@@ -517,7 +517,7 @@ function FlashcardPage() {
             {/* Stop Button */}
             <button
               onClick={handleStop}
-              className="px-8 py-2 md:px-12 md:py-3 text-base md:text-lg font-medium text-white/90 rounded-full border-2 border-red-400/50 backdrop-blur-sm bg-red-400/40 hover:bg-red-500/50 transition-all"
+              className="px-8 py-2 md:px-12 md:py-3 text-base md:text-lg font-medium text-white/90 rounded-full border-2 border-red-400/50 bg-red-500/50 hover:bg-red-500/60 transition-all"
             >
               Stop
             </button>

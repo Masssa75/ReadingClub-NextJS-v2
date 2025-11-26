@@ -431,7 +431,7 @@ function Learn1() {
 
         {/* Game message */}
         {gameMessage && (
-          <div className="text-white text-xl font-medium text-center px-8 py-4 bg-white/20 backdrop-blur-md rounded-full">
+          <div className="text-white text-xl font-medium text-center px-8 py-4 bg-white/30 rounded-full">
             {gameMessage}
           </div>
         )}
@@ -442,7 +442,7 @@ function Learn1() {
             {/* Volume Bar */}
             <div className="w-full">
               <div className="text-white/70 text-sm mb-2 text-center">Microphone Volume</div>
-              <div className="h-6 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden border border-white/30">
+              <div className="h-6 bg-white/30 rounded-full overflow-hidden border border-white/30">
                 <div
                   className="h-full bg-gradient-to-r from-green-400 to-blue-400"
                   style={{ width: `${Math.min(100, (state.volume / 30) * 100)}%` }}
@@ -454,7 +454,7 @@ function Learn1() {
             {/* Concentration Bar */}
             <div className="w-full">
               <div className="text-white/70 text-sm mb-2 text-center">Sound Focus</div>
-              <div className="h-6 bg-white/20 backdrop-blur-sm rounded-full overflow-hidden border border-white/30">
+              <div className="h-6 bg-white/30 rounded-full overflow-hidden border border-white/30">
                 <div
                   className="h-full bg-gradient-to-r from-yellow-400 to-orange-400"
                   style={{ width: `${Math.min(100, (state.concentration / 5) * 100)}%` }}
@@ -469,14 +469,14 @@ function Learn1() {
         {!state.isActive && !showSuccess ? (
           <button
             onClick={() => startGame()}
-            className="px-24 py-6 text-2xl font-medium text-white/90 rounded-full border-2 border-white/40 backdrop-blur-sm bg-white/10 hover:bg-white/20 transition-all"
+            className="px-24 py-6 text-2xl font-medium text-white/90 rounded-full border-2 border-white/40 bg-white/25 hover:bg-white/35 transition-all"
           >
             Learn
           </button>
         ) : (
           <button
             onClick={stopGame}
-            className="px-16 py-4 text-lg font-medium text-white/90 rounded-full border-2 border-red-400/50 backdrop-blur-sm bg-red-400/40 hover:bg-red-500/50 transition-all"
+            className="px-16 py-4 text-lg font-medium text-white/90 rounded-full border-2 border-red-400/50 bg-red-500/50 hover:bg-red-500/60 transition-all"
           >
             Stop
           </button>

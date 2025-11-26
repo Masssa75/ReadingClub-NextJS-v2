@@ -89,7 +89,7 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
       {/* Parents Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="px-6 py-3 text-lg font-medium text-white/90 rounded-full border-2 border-white/40 backdrop-blur-sm bg-white/10 hover:bg-white/20 transition-all flex items-center gap-2"
+        className="px-6 py-3 text-lg font-medium text-white/90 rounded-full border-2 border-white/40 bg-white/25 hover:bg-white/35 transition-all flex items-center gap-2"
       >
         <User className="w-5 h-5 text-white" strokeWidth={2} />
         <span>Parents</span>
