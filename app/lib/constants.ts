@@ -10,38 +10,38 @@ export interface Phoneme {
 
 export const PHONEMES: Phoneme[] = [
   // Vowels
-  { letter: 'a', hint: 'Say: aaa (like "apple")', type: 'vowel', group: 'vowels', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-a.mp3' },
-  { letter: 'e', hint: 'Say: eee (like "egg")', type: 'vowel', group: 'vowels', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-e.mp3' },
-  { letter: 'i', hint: 'Say: iii (like "igloo")', type: 'vowel', group: 'vowels', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-i.mp3' },
-  { letter: 'o', hint: 'Say: ooo (like "octopus")', type: 'vowel', group: 'vowels', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-o-sh.mp3' },
-  { letter: 'u', hint: 'Say: uuu (like "umbrella")', type: 'vowel', group: 'vowels', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-u-sh.mp3' },
+  { letter: 'a', hint: 'Say: aaa (like "apple")', type: 'vowel', group: 'vowels', audioUrl: '/audio/letters/a.mp3' },
+  { letter: 'e', hint: 'Say: eee (like "egg")', type: 'vowel', group: 'vowels', audioUrl: '/audio/letters/e.mp3' },
+  { letter: 'i', hint: 'Say: iii (like "igloo")', type: 'vowel', group: 'vowels', audioUrl: '/audio/letters/i.mp3' },
+  { letter: 'o', hint: 'Say: ooo (like "octopus")', type: 'vowel', group: 'vowels', audioUrl: '/audio/letters/o.mp3' },
+  { letter: 'u', hint: 'Say: uuu (like "umbrella")', type: 'vowel', group: 'vowels', audioUrl: '/audio/letters/u.mp3' },
 
   // Easy Consonants
-  { letter: 'm', hint: 'Say: mmm (hum)', type: 'nasal', group: 'easy', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-m.mp3' },
-  { letter: 's', hint: 'Say: sss (like "snake")', type: 'fricative', group: 'easy', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-z.mp3' },
-  { letter: 't', hint: 'Repeat: tuh, tuh', type: 'plosive', group: 'easy', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-t.mp3' },
-  { letter: 'b', hint: 'Repeat: buh, buh', type: 'plosive', group: 'easy', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-b.mp3' },
-  { letter: 'f', hint: 'Say: fff (like "fan")', type: 'fricative', group: 'easy', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-f.mp3' },
-  { letter: 'n', hint: 'Say: nnn (like "no")', type: 'nasal', group: 'easy', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-n.mp3' },
+  { letter: 'm', hint: 'Say: mmm (hum)', type: 'nasal', group: 'easy', audioUrl: '/audio/letters/m.mp3' },
+  { letter: 's', hint: 'Say: sss (like "snake")', type: 'fricative', group: 'easy', audioUrl: '/audio/letters/s.mp3' },
+  { letter: 't', hint: 'Repeat: tuh, tuh', type: 'plosive', group: 'easy', audioUrl: '/audio/letters/t.mp3' },
+  { letter: 'b', hint: 'Repeat: buh, buh', type: 'plosive', group: 'easy', audioUrl: '/audio/letters/b.mp3' },
+  { letter: 'f', hint: 'Say: fff (like "fan")', type: 'fricative', group: 'easy', audioUrl: '/audio/letters/f.mp3' },
+  { letter: 'n', hint: 'Say: nnn (like "no")', type: 'nasal', group: 'easy', audioUrl: '/audio/letters/n.mp3' },
 
   // Common Consonants
-  { letter: 'p', hint: 'Repeat: puh, puh', type: 'plosive', group: 'common', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-p-2.mp3' },
-  { letter: 'd', hint: 'Repeat: duh, duh (like "dog")', type: 'plosive', group: 'common', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-d.mp3' },
-  { letter: 'l', hint: 'Say: lll (like "lion")', type: 'liquid', group: 'common', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-l.mp3' },
-  { letter: 'r', hint: 'Say: rrr (like "run")', type: 'liquid', group: 'common', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-r.mp3' },
-  { letter: 'c', hint: 'Repeat: cuh, cuh (like "cat")', type: 'plosive', group: 'common', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-c.mp3' },
-  { letter: 'g', hint: 'Repeat: guh, guh (like "go")', type: 'plosive', group: 'common', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-g.mp3' },
-  { letter: 'h', hint: 'Say: hhh (like "hat")', type: 'fricative', group: 'common', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-h.mp3' },
-  { letter: 'k', hint: 'Repeat: kuh, kuh (like "kite")', type: 'plosive', group: 'common', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-k.mp3' },
-  { letter: 'w', hint: 'Say: www (like "water")', type: 'liquid', group: 'common', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-w.mp3' },
+  { letter: 'p', hint: 'Repeat: puh, puh', type: 'plosive', group: 'common', audioUrl: '/audio/letters/p.mp3' },
+  { letter: 'd', hint: 'Repeat: duh, duh (like "dog")', type: 'plosive', group: 'common', audioUrl: '/audio/letters/d.mp3' },
+  { letter: 'l', hint: 'Say: lll (like "lion")', type: 'liquid', group: 'common', audioUrl: '/audio/letters/l.mp3' },
+  { letter: 'r', hint: 'Say: rrr (like "run")', type: 'liquid', group: 'common', audioUrl: '/audio/letters/r.mp3' },
+  { letter: 'c', hint: 'Repeat: cuh, cuh (like "cat")', type: 'plosive', group: 'common', audioUrl: '/audio/letters/c.mp3' },
+  { letter: 'g', hint: 'Repeat: guh, guh (like "go")', type: 'plosive', group: 'common', audioUrl: '/audio/letters/g.mp3' },
+  { letter: 'h', hint: 'Say: hhh (like "hat")', type: 'fricative', group: 'common', audioUrl: '/audio/letters/h.mp3' },
+  { letter: 'k', hint: 'Repeat: kuh, kuh (like "kite")', type: 'plosive', group: 'common', audioUrl: '/audio/letters/k.mp3' },
+  { letter: 'w', hint: 'Say: www (like "water")', type: 'liquid', group: 'common', audioUrl: '/audio/letters/w.mp3' },
 
   // Advanced
-  { letter: 'j', hint: 'Say: jjj (like "jump")', type: 'plosive', group: 'advanced', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-j.mp3' },
-  { letter: 'v', hint: 'Say: vvv (like "van")', type: 'fricative', group: 'advanced', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-v.mp3' },
-  { letter: 'y', hint: 'Say: yyy (like "yes")', type: 'liquid', group: 'advanced', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/btalpha-i-long.mp3' },
-  { letter: 'z', hint: 'Say: zzz (like "zebra")', type: 'fricative', group: 'advanced', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-z.mp3' },
-  { letter: 'q', hint: 'Say: kww (like "queen")', type: 'plosive', group: 'advanced', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-q.mp3' },
-  { letter: 'x', hint: 'Say: ksss (like "fox")', type: 'fricative', group: 'advanced', audioUrl: 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-x.mp3' },
+  { letter: 'j', hint: 'Say: jjj (like "jump")', type: 'plosive', group: 'advanced', audioUrl: '/audio/letters/j.mp3' },
+  { letter: 'v', hint: 'Say: vvv (like "van")', type: 'fricative', group: 'advanced', audioUrl: '/audio/letters/v.mp3' },
+  { letter: 'y', hint: 'Say: yyy (like "yes")', type: 'liquid', group: 'advanced', audioUrl: '/audio/letters/y.mp3' },
+  { letter: 'z', hint: 'Say: zzz (like "zebra")', type: 'fricative', group: 'advanced', audioUrl: '/audio/letters/z.mp3' },
+  { letter: 'q', hint: 'Say: kww (like "queen")', type: 'plosive', group: 'advanced', audioUrl: '/audio/letters/q.mp3' },
+  { letter: 'x', hint: 'Say: ksss (like "fox")', type: 'fricative', group: 'advanced', audioUrl: '/audio/letters/x.mp3' },
 ];
 
 export const PLOSIVES = ['b', 'c', 'd', 'g', 'k', 'p', 't', 'j', 'q'];
