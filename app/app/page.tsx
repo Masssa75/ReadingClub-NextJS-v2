@@ -3,75 +3,145 @@
 import { useState, useRef, useEffect } from 'react';
 import { useVoiceGame } from '@/app/hooks/useVoiceGame';
 import { useProfileContext } from '@/app/contexts/ProfileContext';
-import { useSession } from '@/app/hooks/useSession';
-import { useProficiency } from '@/app/hooks/useProficiency';
-import { selectNextLetter } from '@/app/utils/adaptiveSelection';
-import ParentsMenu from '@/app/components/ParentsMenu';
+import { ProfileProvider } from '@/app/contexts/ProfileContext';
 import SuccessCelebration from '@/app/components/SuccessCelebration';
 import CalibrationModal from '@/app/components/CalibrationModal';
-import { ProfileProvider } from '@/app/contexts/ProfileContext';
+import ParentsMenu from '@/app/components/ParentsMenu';
+import MicrophonePermission from '@/app/components/MicrophonePermission';
+import { supabase } from '@/app/lib/supabase';
 
-// Audio URLs for letter sounds (from SoundCity Reading)
-const LETTER_AUDIO_URLS: Record<string, string> = {
-  'a': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-a.mp3',
-  'b': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-b.mp3',
-  'c': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-c.mp3',
-  'd': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-d.mp3',
-  'e': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-e.mp3',
-  'f': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-f.mp3',
-  'g': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-g.mp3',
-  'h': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-h.mp3',
-  'i': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-i.mp3',
-  'j': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-j.mp3',
-  'k': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-k.mp3',
-  'l': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-l.mp3',
-  'm': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-m.mp3',
-  'n': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-n.mp3',
-  'o': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-o-sh.mp3',
-  'p': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-p-2.mp3',
-  'q': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-q.mp3',
-  'r': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-r.mp3',
-  's': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-z.mp3',
-  't': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-t.mp3',
-  'u': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-u-sh.mp3',
-  'v': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-v.mp3',
-  'w': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-w.mp3',
-  'x': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-x.mp3',
-  'y': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/btalpha-i-long.mp3',
-  'z': 'https://www.soundcityreading.net/uploads/3/7/6/1/37611941/alphasounds-z.mp3',
-};
+// Letter sequences
+const ALPHABET = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
+const VOWELS = ['a', 'e', 'i', 'o', 'u'];
 
-function Learn1() {
+// Record cycle completion to Supabase
+async function recordCycleCompletion(
+  profileId: string,
+  level: number,
+  durationSeconds: number,
+  lettersSkipped: number
+) {
+  try {
+    // First, try to get existing progress for this profile/level
+    const { data: existing, error: fetchError } = await supabase
+      .from('level_progress')
+      .select('*')
+      .eq('profile_id', profileId)
+      .eq('level', level)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      // PGRST116 = no rows found, which is fine for first cycle
+      console.error('Error fetching level progress:', fetchError);
+      return;
+    }
+
+    if (existing) {
+      // Update existing record
+      const { error: updateError } = await supabase
+        .from('level_progress')
+        .update({
+          cycles_completed: existing.cycles_completed + 1,
+          last_cycle_at: new Date().toISOString(),
+          total_time_seconds: existing.total_time_seconds + durationSeconds,
+          letters_skipped: existing.letters_skipped + lettersSkipped,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+
+      if (updateError) {
+        console.error('Error updating level progress:', updateError);
+      } else {
+        console.log(`📊 Cycle ${existing.cycles_completed + 1} recorded for level ${level}`);
+      }
+    } else {
+      // Insert new record
+      const { error: insertError } = await supabase
+        .from('level_progress')
+        .insert({
+          profile_id: profileId,
+          level,
+          cycles_completed: 1,
+          last_cycle_at: new Date().toISOString(),
+          total_time_seconds: durationSeconds,
+          letters_skipped: lettersSkipped,
+        });
+
+      if (insertError) {
+        console.error('Error inserting level progress:', insertError);
+      } else {
+        console.log(`📊 First cycle recorded for level ${level}`);
+      }
+    }
+  } catch (err) {
+    console.error('Error recording cycle:', err);
+  }
+}
+
+function FlashcardPage() {
   const [currentLetter, setCurrentLetter] = useState<string | null>(null);
-  const [showVideo, setShowVideo] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [gameMessage, setGameMessage] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isButtonPressed, setIsButtonPressed] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [advancedMode, setAdvancedMode] = useState(false);
-  const [vowelsOnly, setVowelsOnly] = useState(false);
-  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [gameMessage, setGameMessage] = useState('');
+  const [negativeRejections, setNegativeRejections] = useState<Array<{
+    id: number;
+    negativeScore: number;
+    positiveScore: number;
+    snapshot: any;
+    timestamp: number;
+  }>>([]);
+  const [selectedSnapshot, setSelectedSnapshot] = useState<any>(null);
   const [showCalibrationModal, setShowCalibrationModal] = useState(false);
-  const [showNegativeRejection, setShowNegativeRejection] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [micPermissionGranted, setMicPermissionGranted] = useState(false);
+  const [vowelsOnly, setVowelsOnly] = useState(false);
+  const [advancedMode, setAdvancedMode] = useState(false);
+  const [marginOfVictory, setMarginOfVictory] = useState(3);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const currentLetterRef = useRef<string | null>(null);
-  const listenClickedThisRound = useRef(false);
-  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const rejectionIdRef = useRef(0);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
 
-  // Profile, session, and proficiency tracking (same as /play)
+  // Cycle tracking refs
+  const cycleStartTimeRef = useRef<number | null>(null);
+  const skipsInCycleRef = useRef(0);
+
   const { currentProfileId, isLoading: profileLoading } = useProfileContext();
-  const { currentSession, recordAttempt, getSession, endSession } = useSession(currentProfileId);
-  const { proficiencies, updateProficienciesFromSession } = useProficiency(currentProfileId);
 
-  // Handle negative rejection (show visual feedback)
-  const handleNegativeRejection = (negativeScore: number, positiveScore: number) => {
-    setShowNegativeRejection(true);
-    setTimeout(() => setShowNegativeRejection(false), 800); // Flash for 800ms
+  // Handle negative rejection (show visual feedback with snapshot details)
+  const handleNegativeRejection = (negativeScore: number, positiveScore: number, negativeSnapshot?: any) => {
+    console.log(`🚫 Negative rejection: negative=${negativeScore}, positive=${positiveScore}`, negativeSnapshot);
+
+    if (negativeSnapshot) {
+      // Deduplicate: check if this snapshot is already showing
+      setNegativeRejections(prev => {
+        const alreadyExists = prev.some(r => r.snapshot.id === negativeSnapshot.id);
+        if (alreadyExists) {
+          console.log('⏭️ Skipping duplicate rejection for snapshot:', negativeSnapshot.id);
+          return prev; // Don't add duplicate
+        }
+
+        const rejectionId = rejectionIdRef.current++;
+        const newRejection = {
+          id: rejectionId,
+          negativeScore,
+          positiveScore,
+          snapshot: negativeSnapshot,
+          timestamp: Date.now(),
+        };
+
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+          setNegativeRejections(current => current.filter(r => r.id !== rejectionId));
+        }, 3000);
+
+        return [...prev, newRejection];
+      });
+    }
   };
 
-  // Use the shared voice game hook
-  const { state, actions } = useVoiceGame(handleSuccess, handleNegativeRejection);
+  const { state, actions } = useVoiceGame(handleSuccess, handleNegativeRejection, marginOfVictory);
 
   // Load calibrations on mount
   useEffect(() => {
@@ -79,275 +149,259 @@ function Learn1() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load advanced mode and vowels only from localStorage
+  // Check microphone permission on mount
   useEffect(() => {
-    const savedAdvanced = localStorage.getItem('advancedMode');
-    if (savedAdvanced === 'true') {
-      setAdvancedMode(true);
-    }
-    const savedVowels = localStorage.getItem('vowelsOnly');
-    if (savedVowels === 'true') {
-      setVowelsOnly(true);
-    }
+    const checkMicPermission = async () => {
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          if (result.state === 'granted') {
+            setMicPermissionGranted(true);
+          }
+          // Listen for permission changes
+          result.addEventListener('change', () => {
+            setMicPermissionGranted(result.state === 'granted');
+          });
+        }
+      } catch (err) {
+        // Permission query not supported, will check when user tries to use mic
+        console.log('Permission query not supported');
+      }
+    };
+    checkMicPermission();
   }, []);
 
-  // Save advanced mode to localStorage
+  // Load settings from localStorage
   useEffect(() => {
-    localStorage.setItem('advancedMode', advancedMode.toString());
-  }, [advancedMode]);
+    const savedVowels = localStorage.getItem('flashcard_vowelsOnly');
+    if (savedVowels === 'true') setVowelsOnly(true);
+    const savedAdvanced = localStorage.getItem('flashcard_advancedMode');
+    if (savedAdvanced === 'true') setAdvancedMode(true);
+  }, []);
 
-  // Save vowels only to localStorage
+  // Load margin of victory per-profile from localStorage
   useEffect(() => {
-    localStorage.setItem('vowelsOnly', vowelsOnly.toString());
+    if (currentProfileId) {
+      const savedMargin = localStorage.getItem(`marginOfVictory_${currentProfileId}`);
+      if (savedMargin) {
+        const parsed = parseInt(savedMargin, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 10) {
+          setMarginOfVictory(parsed);
+          console.log(`🎚️ Loaded margin of victory for profile ${currentProfileId.substring(0, 8)}...: ${parsed}%`);
+        }
+      }
+    }
+  }, [currentProfileId]);
+
+  // Save settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('flashcard_vowelsOnly', vowelsOnly.toString());
   }, [vowelsOnly]);
 
-  // Cleanup feedback timeout on unmount
   useEffect(() => {
-    return () => {
-      if (feedbackTimeoutRef.current) {
-        clearTimeout(feedbackTimeoutRef.current);
-      }
-    };
-  }, []);
+    localStorage.setItem('flashcard_advancedMode', advancedMode.toString());
+  }, [advancedMode]);
 
-  // Save proficiency updates when leaving page or switching profiles
+  // Save margin of victory per-profile to localStorage
   useEffect(() => {
-    return () => {
-      // On unmount, save proficiency updates
-      const sessionData = endSession();
-      if (sessionData) {
-        updateProficienciesFromSession(
-          sessionData.letterStats,
-          sessionData.lettersGraduated
-        );
-        console.log('💾 Saved proficiency updates on unmount');
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProfileId]); // Re-run when profile changes
+    if (currentProfileId) {
+      localStorage.setItem(`marginOfVictory_${currentProfileId}`, marginOfVictory.toString());
+      console.log(`🎚️ Saved margin of victory for profile ${currentProfileId.substring(0, 8)}...: ${marginOfVictory}%`);
+    }
+  }, [marginOfVictory, currentProfileId]);
 
-  const openVideo = () => {
-    // Check if video exists for this letter
-    const videoMap: Record<string, string> = {
-      'A': '/Videos/a-Apple2.mp4',
-      'B': '/Videos/Bear.mp4',
-      'E': '/Videos/e.mp4',
-      'F': '/Videos/Funny_F_Sound_Video_Generation.mp4',
-    };
+  // Reset index and cycle tracking when mode changes
+  useEffect(() => {
+    setCurrentIndex(0);
+    cycleStartTimeRef.current = null;
+    skipsInCycleRef.current = 0;
+  }, [vowelsOnly]);
 
-    const hasVideo = currentLetter && videoMap[currentLetter.toUpperCase()];
-
-    if (hasVideo) {
-      // Mark that user clicked Listen (triggers rapid rep requirement)
-      listenClickedThisRound.current = true;
-      // Mute voice detection during video playback
-      actions.setMuted(true);
-      // Open video modal if video exists
-      setShowVideo(true);
-      setIsPlaying(true);
-    } else {
-      // Just play audio if no video (playLetterSound sets the flag)
+  // Auto-play letter sound when letter changes
+  useEffect(() => {
+    if (currentLetter && !state.isActive) {
       playLetterSound();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLetter]);
+
+  // Get the current letter sequence based on mode
+  const getLetterSequence = () => {
+    const sequence = vowelsOnly ? VOWELS : ALPHABET;
+    const calibratedLetters = Object.keys(state.calibrationData);
+    // Filter to only calibrated letters
+    return sequence.filter(letter => calibratedLetters.includes(letter));
   };
 
-  const closeVideo = () => {
-    // Unmute voice detection when video closes
-    actions.setMuted(false);
-    setShowVideo(false);
-    setIsPlaying(false);
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-    }
-  };
-
-  const togglePlayPause = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  // Auto-play video when modal opens
-  useEffect(() => {
-    if (showVideo && videoRef.current) {
-      videoRef.current.play().catch(err => {
-        console.log('Auto-play failed:', err);
-        setIsPlaying(false);
-      });
-    }
-  }, [showVideo]);
-
-  // Pick next letter using adaptive selection (same as /play)
-  const pickNextLetter = async () => {
-    let calibratedLetters = Object.keys(state.calibrationData);
-
-    // Filter to vowels only if enabled
-    if (vowelsOnly) {
-      const vowels = ['a', 'e', 'i', 'o', 'u'];
-      calibratedLetters = calibratedLetters.filter(letter => vowels.includes(letter.toLowerCase()));
-      if (calibratedLetters.length === 0) {
-        setGameMessage('No calibrated vowels. Please calibrate A, E, I, O, or U first.');
-        return null;
-      }
-    }
-
-    if (calibratedLetters.length === 0) {
-      setGameMessage('No calibrated letters');
+  // Pick next letter in sequence (A-Z loop or vowels loop)
+  const pickNextLetter = () => {
+    const sequence = getLetterSequence();
+    if (sequence.length === 0) {
+      const modeText = vowelsOnly ? 'vowels (A, E, I, O, U)' : 'letters';
+      setGameMessage(`No calibrated ${modeText}. Please calibrate first.`);
       return null;
     }
 
-    const session = getSession();
-    if (!session) {
-      // Fallback: random letter
-      const randomLetter = calibratedLetters[Math.floor(Math.random() * calibratedLetters.length)];
-      setCurrentLetter(randomLetter);
-      currentLetterRef.current = randomLetter;
-      listenClickedThisRound.current = false;
-      return randomLetter;
+    // Check if we're completing a cycle (wrapping around)
+    const nextIndex = currentIndex % sequence.length;
+
+    // If nextIndex is 0 and we've gone through letters (currentIndex > 0), cycle completed
+    if (nextIndex === 0 && currentIndex > 0 && cycleStartTimeRef.current && currentProfileId) {
+      const durationSeconds = Math.round((Date.now() - cycleStartTimeRef.current) / 1000);
+      const skips = skipsInCycleRef.current;
+
+      // Record the completed cycle (level 1 = flashcard mode)
+      recordCycleCompletion(currentProfileId, 1, durationSeconds, skips);
+
+      // Reset for next cycle
+      cycleStartTimeRef.current = Date.now();
+      skipsInCycleRef.current = 0;
     }
 
-    // Use adaptive selection (same as /play)
-    const nextLetter = selectNextLetter(session, proficiencies, calibratedLetters);
-
-    if (nextLetter) {
-      setCurrentLetter(nextLetter);
-      currentLetterRef.current = nextLetter;
-      listenClickedThisRound.current = false;
-      return nextLetter;
-    } else {
-      // All letters mastered! Continue with random practice
-      console.log('✅ All letters mastered! Continuing with random practice...');
-      const randomLetter = calibratedLetters[Math.floor(Math.random() * calibratedLetters.length)];
-      setCurrentLetter(randomLetter);
-      currentLetterRef.current = randomLetter;
-      listenClickedThisRound.current = false;
-      return randomLetter;
+    // Start tracking if this is the first letter
+    if (cycleStartTimeRef.current === null) {
+      cycleStartTimeRef.current = Date.now();
+      skipsInCycleRef.current = 0;
     }
+
+    const nextLetter = sequence[nextIndex];
+    setCurrentIndex(nextIndex + 1);
+    return nextLetter;
   };
 
-  // Start game
+  // Start with first letter
   const startGame = async () => {
-    if (Object.keys(state.calibrationData).length === 0) {
-      setGameMessage('Please calibrate at least one letter first!');
-      return;
-    }
-
-    const nextLetter = await pickNextLetter();
-    if (!nextLetter) return;
-
-    try {
-      await actions.startGame(nextLetter);
-      setGameMessage(`Say the letter sound: "${nextLetter}"`);
-    } catch (err: any) {
-      setGameMessage(err.message || 'Microphone access denied');
-    }
-  };
-
-  // Stop game
-  const stopGame = () => {
-    actions.stopGame();
-    setGameMessage('');
-  };
-
-  // Handle successful match (same as /play with auto-advance)
-  function handleSuccess(letter: string, matchedSnapshot: any, similarity: number) {
-    console.log('🎉 handleSuccess ENTERED for letter:', letter);
-    setShowSuccess(true);
-    setGameMessage('🎉 Correct! Great job!');
-
-    // Record attempt (same as /play)
-    if (currentSession) {
-      recordAttempt(letter, true, listenClickedThisRound.current);
-    }
-
-    // Auto-advance to next letter (same as /play with autoNext enabled)
-    setTimeout(async () => {
-      setShowSuccess(false);
-
-      // Pick next letter using adaptive selection
-      const nextLetter = await pickNextLetter();
-      if (!nextLetter) return;
-
+    // Unlock iOS audio by playing silent file on the SAME audio element we'll reuse
+    // This is critical - iOS requires the first play() to be from a user gesture
+    if (audioRef.current && !audioUnlocked) {
+      audioRef.current.src = '/audio/silent.mp3';
       try {
-        await actions.startGame(nextLetter);
-        setGameMessage(`Say the letter sound: "${nextLetter}"`);
-      } catch (err: any) {
-        setGameMessage(err.message || 'Microphone access denied');
+        await audioRef.current.play();
+        setAudioUnlocked(true);
+        console.log('🔊 iOS audio unlocked');
+      } catch (err) {
+        console.log('Audio unlock failed (may already be unlocked):', err);
       }
-    }, 3000);
-  }
-
-  // Handle manual override: IS X (correct) - Opens calibration modal
-  const handleManualCorrect = () => {
-    if (!currentProfileId || !currentLetter) return;
-    // Mute the game while modal is open (don't stop - keeps same letter)
-    actions.setMuted(true);
-    setShowCalibrationModal(true);
-  };
-
-  // Handle manual override: NOT X (incorrect)
-  const handleManualIncorrect = async () => {
-    if (!currentProfileId) return;
-
-    const result = await actions.handleManualIncorrect(currentProfileId);
-
-    if (result.success) {
-      setFeedbackMessage(result.message + ' ✓ Saved');
-    } else {
-      setFeedbackMessage('❌ ' + result.message);
     }
 
-    // Clear feedback after 2 seconds
-    if (feedbackTimeoutRef.current) {
-      clearTimeout(feedbackTimeoutRef.current);
+    const firstLetter = pickNextLetter();
+    if (firstLetter) {
+      setCurrentLetter(firstLetter);
+      setGameMessage('Tap the button and say the letter!');
     }
-    feedbackTimeoutRef.current = setTimeout(() => {
-      setFeedbackMessage('');
-    }, 2000);
   };
 
-  // Play letter sound audio
+  // Play letter sound using single audio element (iOS-friendly)
   const playLetterSound = () => {
-    if (!currentLetter) return;
+    if (!currentLetter || !audioRef.current) return;
 
-    const audioUrl = LETTER_AUDIO_URLS[currentLetter.toLowerCase()];
-    if (!audioUrl) return;
+    // Use local audio file
+    const audioUrl = `/audio/letters/${currentLetter.toLowerCase()}.mp3`;
 
-    // Mark that user clicked Listen (triggers rapid rep requirement)
-    listenClickedThisRound.current = true;
-
-    // Stop current audio if playing
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-
-    // Mute voice detection during audio playback
-    actions.setMuted(true);
-
-    // Play new audio
-    audioRef.current = new Audio(audioUrl);
+    // Stop current audio if playing, then play new letter
+    audioRef.current.pause();
+    audioRef.current.currentTime = 0;
+    audioRef.current.src = audioUrl;
     audioRef.current.play().catch(err => {
       console.error('Audio playback failed:', err);
     });
-
-    // Unmute when audio ends
-    audioRef.current.onended = () => {
-      actions.setMuted(false);
-    };
   };
+
+  // Handle button press - activate microphone
+  const handleButtonPress = async () => {
+    if (!currentLetter || state.isActive) return;
+
+    // Check if we have microphone permission
+    if (!micPermissionGranted) {
+      // Show permission modal first
+      setShowPermissionModal(true);
+      return;
+    }
+
+    // Visual feedback
+    setIsButtonPressed(true);
+    setTimeout(() => setIsButtonPressed(false), 600);
+
+    // Brief delay to let click sound dissipate before listening
+    setGameMessage('Get ready...');
+    await new Promise(resolve => setTimeout(resolve, 250));
+
+    // Start voice detection
+    try {
+      await actions.startGame(currentLetter);
+      setGameMessage('Listening...');
+    } catch (err: any) {
+      // If permission was revoked, show the modal again
+      if (err.message?.includes('denied') || err.message?.includes('Settings')) {
+        setMicPermissionGranted(false);
+        setShowPermissionModal(true);
+      } else {
+        setGameMessage(err.message || 'Microphone access denied');
+      }
+    }
+  };
+
+  // Called when permission is successfully granted
+  const handlePermissionGranted = () => {
+    setMicPermissionGranted(true);
+    setShowPermissionModal(false);
+    setGameMessage('Tap the button and say the letter!');
+  };
+
+  // Stop listening
+  const handleStop = () => {
+    actions.stopGame();
+    setGameMessage('Tap the button and say the letter!');
+  };
+
+  // Skip to next letter
+  const handleSkip = () => {
+    if (!currentLetter) return;
+
+    // Track skip for analytics
+    skipsInCycleRef.current++;
+
+    // Stop current game if active
+    if (state.isActive) {
+      actions.stopGame();
+    }
+
+    // Pick next letter
+    const nextLetter = pickNextLetter();
+    if (nextLetter) {
+      setCurrentLetter(nextLetter);
+      setGameMessage('Tap the button and say the letter!');
+      setNegativeRejections([]); // Clear rejection indicators
+    }
+  };
+
+  // Replay current letter sound
+  const handleReplay = () => {
+    playLetterSound();
+  };
+
+  // Handle successful match
+  function handleSuccess(letter: string) {
+    console.log('🎉 Success! Matched letter:', letter);
+    setShowSuccess(true);
+    setGameMessage('');
+
+    // Quick succession for rapid learning - advance to next letter fast
+    setTimeout(() => {
+      setShowSuccess(false);
+      const nextLetter = pickNextLetter();
+      if (nextLetter) {
+        setCurrentLetter(nextLetter);
+        setGameMessage('Tap the button and say the letter!');
+      }
+    }, 800); // Fast transition for rapid repetition
+  }
 
   // Loading state
   if (profileLoading) {
     return (
       <div className="fixed inset-0 w-screen h-screen overflow-hidden flex items-center justify-center">
-        <div className="text-white text-xl">Loading profile...</div>
+        <div className="text-white text-xl">Loading...</div>
       </div>
     );
   }
@@ -362,202 +416,156 @@ function Learn1() {
 
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden flex flex-col">
+      {/* Background */}
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(/images/background.jpg)` }} />
       <div className="absolute inset-0 bg-cover bg-center hidden md:block" style={{ backgroundImage: `url(/images/background-wide.jpg)` }} />
 
       {/* Parents Menu - Top Right */}
-      <div className="absolute top-6 right-6 z-20">
+      <div className="absolute top-4 right-4 md:top-6 md:right-6 z-30">
         <ParentsMenu
           advancedMode={advancedMode}
           onAdvancedModeChange={setAdvancedMode}
           vowelsOnly={vowelsOnly}
           onVowelsOnlyChange={setVowelsOnly}
+          marginOfVictory={marginOfVictory}
+          onMarginOfVictoryChange={setMarginOfVictory}
         />
       </div>
 
-      {/* Negative Rejection Indicator - Top Left */}
-      {showNegativeRejection && (
-        <div className="absolute top-6 left-6 z-20 animate-pulse">
-          <div className="w-16 h-16 rounded-full bg-red-500/60 backdrop-blur-md border-4 border-red-400/80 shadow-lg shadow-red-500/50 flex items-center justify-center">
-            <span className="text-3xl">🚫</span>
+      {/* Negative Rejection Indicators - Top Left (Stacked) - only in advanced mode */}
+      {advancedMode && negativeRejections.map((rejection, index) => (
+        <div
+          key={rejection.id}
+          className="absolute left-4 md:left-6 z-20 animate-pulse cursor-pointer hover:scale-110 transition-all"
+          style={{ top: `${24 + index * 80}px` }}
+          onClick={() => setSelectedSnapshot(rejection)}
+          title="Click to view/delete this negative snapshot"
+        >
+          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-red-500/60 backdrop-blur-md border-4 border-red-400/80 shadow-lg shadow-red-500/50 flex items-center justify-center">
+            <span className="text-2xl md:text-3xl">🚫</span>
+          </div>
+          <div className="absolute -bottom-2 -right-2 px-2 py-0.5 bg-black/80 text-white text-xs rounded-full font-bold">
+            {rejection.negativeScore.toFixed(0)}
           </div>
         </div>
-      )}
+      ))}
 
-      {/* Manual Override Buttons - Left of Parents menu, 30% smaller, horizontal */}
-      {advancedMode && state.currentLetter && (
-        <div className="absolute top-6 right-44 z-20 flex flex-row gap-2">
+      {/* IS X and Skip Buttons - Top right, left of Parents menu */}
+      {currentLetter && state.isActive && (
+        <div className="absolute top-4 right-32 md:top-6 md:right-40 z-20 flex flex-row gap-2">
           <button
-            onClick={handleManualCorrect}
-            className="px-5 py-3.5 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-[12px] font-bold text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
-            title="Mark current sound as correct (creates positive snapshot)"
+            onClick={() => {
+              if (!currentProfileId || !currentLetter) return;
+              actions.setMuted(true);
+              setShowCalibrationModal(true);
+            }}
+            className="px-3 py-2 md:px-5 md:py-3 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-full font-bold text-sm md:text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
+            title="Mark current sound as correct"
           >
-            ✓ IS {state.currentLetter.toUpperCase()}
+            ✓ IS {currentLetter.toUpperCase()}
           </button>
-          <button
-            onClick={handleManualIncorrect}
-            className="px-5 py-3.5 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-[12px] font-bold text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
-            title="Mark current sound as incorrect (creates negative snapshot)"
-          >
-            ✗ NOT {state.currentLetter.toUpperCase()}
-          </button>
-          <button
-            onClick={() => actions.setMuted(!state.isMuted)}
-            className={`px-5 py-3.5 ${state.isMuted ? 'bg-gradient-to-br from-gray-500 to-gray-600' : 'bg-gradient-to-br from-blue-500 to-blue-600'} text-white rounded-[12px] font-bold text-base shadow-lg hover:shadow-xl transition-all hover:scale-105`}
-            title={state.isMuted ? "Unmute microphone" : "Mute microphone"}
-          >
-            {state.isMuted ? '🔇 Muted' : '🎤 Mic On'}
-          </button>
+          {/* Skip button only in advanced mode */}
+          {advancedMode && (
+            <button
+              onClick={handleSkip}
+              className="px-3 py-2 md:px-5 md:py-3 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-full font-bold text-sm md:text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
+              title="Skip to next letter"
+            >
+              ⏭️
+            </button>
+          )}
         </div>
       )}
 
-      {/* Feedback Message */}
-      {feedbackMessage && (
-        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-20 px-8 py-4 bg-black/80 backdrop-blur-md text-white rounded-full text-lg font-medium shadow-xl">
-          {feedbackMessage}
-        </div>
-      )}
-
-      <div className="relative z-10 flex flex-col items-center justify-center h-full gap-8">
-        <div className="text-white text-2xl font-light tracking-[0.3em] uppercase opacity-70">Wunderkind</div>
-
-        {/* Letter - click to watch video */}
-        <div
-          className={`text-[240px] md:text-[280px] leading-none font-black text-white drop-shadow-2xl cursor-pointer hover:scale-110 transition-transform ${showSuccess ? 'animate-bounce' : ''}`}
-          onClick={openVideo}
-        >
-          {currentLetter || '?'}
+      {/* Main content */}
+      <div className="relative z-10 flex flex-col items-center justify-center h-full gap-2 md:gap-4 py-4">
+        {/* Title - hidden on small screens in landscape */}
+        <div className="text-white text-xl md:text-2xl font-light tracking-[0.3em] uppercase opacity-70 hidden portrait:block md:block">
+          Wunderkind
         </div>
 
-        {/* Game message */}
+        {/* Message */}
         {gameMessage && (
-          <div className="text-white text-xl font-medium text-center px-8 py-4 bg-white/30 rounded-full">
+          <div className="text-white text-base md:text-xl font-medium text-center px-6 py-2 md:px-8 md:py-4 bg-white/30 rounded-full">
             {gameMessage}
           </div>
         )}
 
-        {/* Volume Meter - shows when game is active */}
+        {/* Big Smash Button with Letter - responsive sizing */}
+        {currentLetter ? (
+          <button
+            onClick={handleButtonPress}
+            disabled={state.isActive}
+            className={`relative cursor-pointer select-none ${isButtonPressed ? 'animate-saturation-burst' : ''}`}
+            style={{
+              width: 'min(504px, 80vw, 50vh)',
+              height: 'min(504px, 80vw, 50vh)',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {/* Button Image */}
+            <img
+              src="/images/Smash button.png"
+              alt="Smash Button"
+              className="w-full h-full object-contain pointer-events-none"
+            />
+
+            {/* Letter Overlay - responsive font size */}
+            <div
+              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-black pointer-events-none ${isButtonPressed ? 'letter-pop' : ''}`}
+              style={{
+                fontSize: 'min(288px, 45vw, 28vh)',
+                textShadow: '0 6px 12px rgba(0,0,0,0.3)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {currentLetter}
+            </div>
+          </button>
+        ) : (
+          <button
+            onClick={startGame}
+            className="px-16 py-4 md:px-24 md:py-6 text-xl md:text-2xl font-medium text-white/90 rounded-full border-2 border-white/40 bg-white/25 hover:bg-white/35 transition-all"
+          >
+            Start
+          </button>
+        )}
+
+        {/* Volume indicator + Stop button (when listening) */}
         {state.isActive && (
-          <div className="flex flex-col items-center gap-4 w-80">
-            {/* Volume Bar */}
+          <div className="flex flex-col items-center gap-2 w-64 md:w-80">
             <div className="w-full">
-              <div className="text-white/70 text-sm mb-2 text-center">Microphone Volume</div>
-              <div className="h-6 bg-white/30 rounded-full overflow-hidden border border-white/30">
+              <div className="text-white/70 text-xs md:text-sm mb-1 md:mb-2 text-center">Listening...</div>
+              <div className="h-4 md:h-6 bg-white/30 rounded-full overflow-hidden border border-white/30">
                 <div
                   className="h-full bg-gradient-to-r from-green-400 to-blue-400"
                   style={{ width: `${Math.min(100, (state.volume / 30) * 100)}%` }}
                 />
               </div>
-              <div className="text-white/60 text-xs text-center mt-1">{state.volume.toFixed(1)}</div>
             </div>
-
-            {/* Concentration Bar */}
-            <div className="w-full">
-              <div className="text-white/70 text-sm mb-2 text-center">Sound Focus</div>
-              <div className="h-6 bg-white/30 rounded-full overflow-hidden border border-white/30">
-                <div
-                  className="h-full bg-gradient-to-r from-yellow-400 to-orange-400"
-                  style={{ width: `${Math.min(100, (state.concentration / 5) * 100)}%` }}
-                />
-              </div>
-              <div className="text-white/60 text-xs text-center mt-1">{state.concentration.toFixed(2)}</div>
-            </div>
+            {/* Stop Button */}
+            <button
+              onClick={handleStop}
+              className="px-8 py-2 md:px-12 md:py-3 text-base md:text-lg font-medium text-white/90 rounded-full border-2 border-red-400/50 bg-red-500/50 hover:bg-red-500/60 transition-all"
+            >
+              Stop
+            </button>
           </div>
         )}
 
-        {/* Learn button - starts voice recognition game */}
-        {!state.isActive && !showSuccess ? (
-          <button
-            onClick={() => startGame()}
-            className="px-24 py-6 text-2xl font-medium text-white/90 rounded-full border-2 border-white/40 bg-white/25 hover:bg-white/35 transition-all"
-          >
-            Learn
-          </button>
-        ) : (
-          <button
-            onClick={stopGame}
-            className="px-16 py-4 text-lg font-medium text-white/90 rounded-full border-2 border-red-400/50 bg-red-500/50 hover:bg-red-500/60 transition-all"
-          >
-            Stop
-          </button>
-        )}
       </div>
 
-      {/* Video Modal */}
-      {showVideo && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="relative bg-black rounded-3xl overflow-hidden shadow-2xl max-w-4xl w-full mx-4">
-            {(() => {
-              // Map letters to their video files
-              const videoMap: Record<string, string> = {
-                'A': '/Videos/a-Apple2.mp4',
-                'B': '/Videos/Bear.mp4',
-                'E': '/Videos/e.mp4',
-                'F': '/Videos/Funny_F_Sound_Video_Generation.mp4',
-              };
-
-              const videoSrc = currentLetter ? videoMap[currentLetter.toUpperCase()] : null;
-
-              if (videoSrc) {
-                return (
-                  <>
-                    <video
-                      ref={videoRef}
-                      className="w-full"
-                      onEnded={closeVideo} // Auto-close modal when video finishes
-                    >
-                      <source src={videoSrc} type="video/mp4" />
-                    </video>
-
-                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
-                      <button
-                        onClick={togglePlayPause}
-                        className="px-8 py-3 text-xl font-bold text-white rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all"
-                      >
-                        {isPlaying ? '⏸ Pause' : '▶ Play'}
-                      </button>
-                      <button
-                        onClick={closeVideo}
-                        className="px-8 py-3 text-xl font-bold text-white rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all"
-                      >
-                        ✕ Close
-                      </button>
-                    </div>
-                  </>
-                );
-              } else {
-                return (
-                  <div className="flex flex-col items-center justify-center p-16 min-h-[400px]">
-                    <div className="text-white text-6xl mb-8">{currentLetter}</div>
-                    <div className="text-white/90 text-3xl font-bold mb-4">Coming Soon!</div>
-                    <div className="text-white/70 text-xl mb-8">
-                      Video for letter {currentLetter} is being created
-                    </div>
-                    <div className="flex gap-4">
-                      <button
-                        onClick={playLetterSound}
-                        className="px-8 py-3 text-xl font-bold text-white rounded-full bg-blue-500/80 backdrop-blur-md hover:bg-blue-600/80 transition-all"
-                      >
-                        🔊 Listen
-                      </button>
-                      <button
-                        onClick={closeVideo}
-                        className="px-8 py-3 text-xl font-bold text-white rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all"
-                      >
-                        ✕ Close
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-            })()}
-          </div>
-        </div>
-      )}
-
-      {/* Success Celebration - Sound + Confetti */}
+      {/* Success Celebration - Confetti */}
       {showSuccess && currentLetter && (
         <SuccessCelebration letter={currentLetter} />
+      )}
+
+      {/* Microphone Permission Modal */}
+      {showPermissionModal && (
+        <MicrophonePermission
+          onPermissionGranted={handlePermissionGranted}
+          onClose={() => setShowPermissionModal(false)}
+        />
       )}
 
       {/* Calibration Modal - for "IS X" manual override */}
@@ -580,14 +588,207 @@ function Learn1() {
           }}
         />
       )}
+
+      {/* Negative Snapshot Detail Modal */}
+      {selectedSnapshot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <h2 className="text-2xl font-bold mb-4 text-gray-900">Negative Snapshot Details</h2>
+
+            <div className="space-y-4 mb-6">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">Negative Score:</span>
+                <span className="text-red-600 font-bold text-xl">{selectedSnapshot.negativeScore.toFixed(2)}</span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">Positive Score:</span>
+                <span className="text-green-600 font-bold text-xl">{selectedSnapshot.positiveScore.toFixed(2)}</span>
+              </div>
+
+              <div className="border-t pt-4">
+                <span className="text-gray-700 font-medium">Snapshot ID:</span>
+                <p className="text-gray-600 text-sm mt-1 font-mono">{selectedSnapshot.snapshot.id}</p>
+              </div>
+
+              {selectedSnapshot.snapshot.audio_url && (
+                <div>
+                  <span className="text-gray-700 font-medium block mb-2">Audio Recording:</span>
+                  <audio controls className="w-full" src={selectedSnapshot.snapshot.audio_url} />
+                </div>
+              )}
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                <strong>Why this blocked:</strong> This negative snapshot matched your voice better than any positive snapshots, indicating this sound should NOT be recognized as the target letter.
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  // Delete the negative snapshot from Supabase
+                  try {
+                    const snapshotId = selectedSnapshot.snapshot.id;
+                    console.log('🗑️ Starting snapshot deletion...');
+                    console.log('   Snapshot ID:', snapshotId);
+                    console.log('   Full snapshot object:', selectedSnapshot.snapshot);
+
+                    // Get all calibrations
+                    console.log('📥 Fetching all calibrations from database...');
+                    const { data: calibrations, error: fetchError } = await supabase
+                      .from('calibrations')
+                      .select('*');
+
+                    if (fetchError) {
+                      console.error('❌ Error fetching calibrations:', fetchError);
+                      throw fetchError;
+                    }
+
+                    console.log(`✅ Fetched ${calibrations?.length || 0} calibrations`);
+
+                    // Find and update the calibration that contains this snapshot
+                    let found = false;
+                    for (const cal of calibrations || []) {
+                      console.log(`🔍 Checking calibration ID: ${cal.id}, Letter: ${cal.letter}, Profile: ${cal.profile_id}`);
+
+                      if (cal.pattern_data?.snapshots) {
+                        const snapshots = cal.pattern_data.snapshots;
+                        console.log(`   Has ${snapshots.length} snapshots`);
+
+                        // Log first few snapshot IDs for comparison
+                        if (snapshots.length > 0) {
+                          console.log('   First 3 snapshot IDs:', snapshots.slice(0, 3).map((s: any) => s.id));
+                        }
+
+                        const snapshotIndex = snapshots.findIndex((s: any) => s.id === snapshotId);
+                        console.log(`   findIndex result: ${snapshotIndex}`);
+
+                        if (snapshotIndex !== -1) {
+                          found = true;
+                          console.log(`🎯 FOUND! Snapshot at index ${snapshotIndex}`);
+                          console.log('   Before deletion:', snapshots.length, 'snapshots');
+
+                          // Found the snapshot - remove it
+                          const updatedSnapshots = snapshots.filter((s: any) => s.id !== snapshotId);
+                          console.log('   After filtering:', updatedSnapshots.length, 'snapshots');
+
+                          // Update the calibration
+                          console.log('💾 Updating calibration in database...');
+                          const { error: updateError } = await supabase
+                            .from('calibrations')
+                            .update({
+                              pattern_data: {
+                                ...cal.pattern_data,
+                                snapshots: updatedSnapshots,
+                              },
+                            })
+                            .eq('id', cal.id);
+
+                          if (updateError) {
+                            console.error('❌ Error updating calibration:', updateError);
+                            throw updateError;
+                          }
+
+                          console.log('✅ Database updated successfully');
+
+                          // Reload calibrations
+                          console.log('🔄 Reloading calibrations...');
+                          await actions.loadCalibrations();
+                          console.log('✅ Calibrations reloaded');
+
+                          // Restart the game with fresh calibrations if currently playing
+                          if (state.isActive && currentLetter) {
+                            console.log('🔄 Restarting game with fresh calibrations...');
+                            actions.stopGame();
+                            await new Promise(resolve => setTimeout(resolve, 100)); // Brief pause
+                            await actions.startGame(currentLetter);
+                            console.log('✅ Game restarted with updated data');
+                          }
+
+                          // Close modal
+                          setSelectedSnapshot(null);
+
+                          // Remove from rejections list
+                          setNegativeRejections(prev => prev.filter(r => r.id !== selectedSnapshot.id));
+
+                          console.log('✅ SNAPSHOT DELETION COMPLETE');
+
+                          // Show success message
+                          alert('✅ Snapshot deleted successfully!\n\nThe negative pattern has been removed from the database and the game has been restarted with fresh data.');
+
+                          return; // Exit once we've found and deleted it
+                        }
+                      } else {
+                        console.log('   No pattern_data or snapshots found');
+                      }
+                    }
+
+                    if (!found) {
+                      console.error('❌ Snapshot not found in any calibration');
+                      console.error('   Searched', calibrations?.length, 'calibrations');
+                      console.error('   Looking for snapshot ID:', snapshotId);
+                      alert(`Snapshot not found in database. ID: ${snapshotId}`);
+                    }
+                  } catch (error) {
+                    console.error('❌ Error deleting snapshot:', error);
+                    alert('Failed to delete snapshot. Check console for details.');
+                  }
+                }}
+                className="flex-1 px-6 py-3 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl font-bold hover:shadow-xl transition-all hover:scale-105"
+              >
+                🗑️ Delete Snapshot
+              </button>
+
+              <button
+                onClick={() => setSelectedSnapshot(null)}
+                className="flex-1 px-6 py-3 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-xl font-bold hover:shadow-xl transition-all hover:scale-105"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden audio element - iOS requires a single element to be unlocked once */}
+      <audio ref={audioRef} preload="auto" className="hidden" />
+
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes saturation-burst {
+          0% { filter: saturate(1) brightness(1); transform: scale(1); }
+          40% { filter: saturate(5) brightness(2); transform: scale(0.65); }
+          100% { filter: saturate(1) brightness(1); transform: scale(1); }
+        }
+
+        .animate-saturation-burst {
+          animation: saturation-burst 0.6s ease-out;
+        }
+
+        .letter-pop {
+          text-shadow:
+            -4px -4px 0 rgba(0,0,0,0.8),
+            4px -4px 0 rgba(0,0,0,0.8),
+            -4px 4px 0 rgba(0,0,0,0.8),
+            4px 4px 0 rgba(0,0,0,0.8),
+            -6px 0 0 rgba(0,0,0,0.8),
+            6px 0 0 rgba(0,0,0,0.8),
+            0 -6px 0 rgba(0,0,0,0.8),
+            0 6px 0 rgba(0,0,0,0.8),
+            0 0 30px rgba(0,0,0,0.9),
+            0 0 50px rgba(0,0,0,0.7),
+            0 10px 20px rgba(0,0,0,0.6);
+          transform: translate(-50%, -50%) scale(1.1);
+        }
+      `}</style>
     </div>
   );
 }
 
-export default function Learn1WithProvider() {
+export default function FlashcardWithProvider() {
   return (
     <ProfileProvider>
-      <Learn1 />
+      <FlashcardPage />
     </ProfileProvider>
   );
 }
