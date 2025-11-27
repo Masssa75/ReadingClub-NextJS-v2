@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  color: white;
+}
+
+/* Fix iOS Safari/Chrome rendering bug with backdrop-filter
+   Elements with backdrop-blur sometimes don't render until scroll/touch.
+   This forces GPU compositing on initial render. */
+.ios-blur-fix {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* Fallback solid backgrounds for iOS when backdrop-blur fails */
+.ios-solid-btn {
+  background: rgba(255, 255, 255, 0.25) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
