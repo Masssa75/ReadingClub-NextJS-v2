@@ -97,6 +97,7 @@ function FlashcardPage() {
   const [micPermissionGranted, setMicPermissionGranted] = useState(false);
   const [vowelsOnly, setVowelsOnly] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
+  const [marginOfVictory, setMarginOfVictory] = useState(3);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const rejectionIdRef = useRef(0);
@@ -140,7 +141,7 @@ function FlashcardPage() {
     }
   };
 
-  const { state, actions } = useVoiceGame(handleSuccess, handleNegativeRejection);
+  const { state, actions } = useVoiceGame(handleSuccess, handleNegativeRejection, marginOfVictory);
 
   // Load calibrations on mount
   useEffect(() => {
@@ -178,6 +179,20 @@ function FlashcardPage() {
     if (savedAdvanced === 'true') setAdvancedMode(true);
   }, []);
 
+  // Load margin of victory per-profile from localStorage
+  useEffect(() => {
+    if (currentProfileId) {
+      const savedMargin = localStorage.getItem(`marginOfVictory_${currentProfileId}`);
+      if (savedMargin) {
+        const parsed = parseInt(savedMargin, 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 10) {
+          setMarginOfVictory(parsed);
+          console.log(`🎚️ Loaded margin of victory for profile ${currentProfileId.substring(0, 8)}...: ${parsed}%`);
+        }
+      }
+    }
+  }, [currentProfileId]);
+
   // Save settings to localStorage
   useEffect(() => {
     localStorage.setItem('flashcard_vowelsOnly', vowelsOnly.toString());
@@ -186,6 +201,14 @@ function FlashcardPage() {
   useEffect(() => {
     localStorage.setItem('flashcard_advancedMode', advancedMode.toString());
   }, [advancedMode]);
+
+  // Save margin of victory per-profile to localStorage
+  useEffect(() => {
+    if (currentProfileId) {
+      localStorage.setItem(`marginOfVictory_${currentProfileId}`, marginOfVictory.toString());
+      console.log(`🎚️ Saved margin of victory for profile ${currentProfileId.substring(0, 8)}...: ${marginOfVictory}%`);
+    }
+  }, [marginOfVictory, currentProfileId]);
 
   // Reset index and cycle tracking when mode changes
   useEffect(() => {
@@ -400,6 +423,8 @@ function FlashcardPage() {
           onAdvancedModeChange={setAdvancedMode}
           vowelsOnly={vowelsOnly}
           onVowelsOnlyChange={setVowelsOnly}
+          marginOfVictory={marginOfVictory}
+          onMarginOfVictoryChange={setMarginOfVictory}
         />
       </div>
 

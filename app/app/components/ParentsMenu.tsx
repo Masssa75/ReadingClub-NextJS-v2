@@ -13,9 +13,11 @@ interface ParentsMenuProps {
   onAdvancedModeChange?: (enabled: boolean) => void;
   vowelsOnly?: boolean;
   onVowelsOnlyChange?: (enabled: boolean) => void;
+  marginOfVictory?: number;
+  onMarginOfVictoryChange?: (value: number) => void;
 }
 
-export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange, vowelsOnly = false, onVowelsOnlyChange }: ParentsMenuProps = {}) {
+export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange, vowelsOnly = false, onVowelsOnlyChange, marginOfVictory = 3, onMarginOfVictoryChange }: ParentsMenuProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [showProfileInput, setShowProfileInput] = useState(false);
@@ -236,6 +238,37 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
                   <span>{vowelsOnly ? '📖' : '📚'}</span>
                   <span>Vowels Only: {vowelsOnly ? 'ON' : 'OFF'}</span>
                 </button>
+              )}
+
+              {/* Margin of Victory Slider (only show if callback provided) */}
+              {onMarginOfVictoryChange && (
+                <div className="w-full py-4 px-6 rounded-[22px] bg-gradient-to-r from-indigo-100 to-purple-100 shadow-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-indigo-800">🎯 Margin Required</span>
+                    <span className="text-lg font-black text-indigo-600">{marginOfVictory}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="10"
+                    value={marginOfVictory}
+                    onChange={(e) => onMarginOfVictoryChange(Number(e.target.value))}
+                    className="w-full h-3 bg-gradient-to-r from-green-300 via-yellow-300 to-red-300 rounded-full appearance-none cursor-pointer
+                      [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6
+                      [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-lg
+                      [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-indigo-400
+                      [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:rounded-full
+                      [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-lg [&::-moz-range-thumb]:border-2
+                      [&::-moz-range-thumb]:border-indigo-400"
+                  />
+                  <div className="flex justify-between text-[10px] font-medium text-indigo-600 mt-1">
+                    <span>Forgiving (0%)</span>
+                    <span>Strict (10%)</span>
+                  </div>
+                  <div className="text-[10px] text-indigo-600 mt-2 text-center">
+                    Other letters must beat target by this margin to win
+                  </div>
+                </div>
               )}
             </div>
 

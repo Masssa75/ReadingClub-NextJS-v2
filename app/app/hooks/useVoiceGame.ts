@@ -34,7 +34,8 @@ export interface VoiceGameActions {
 
 export function useVoiceGame(
   onSuccess: (letter: string, matchedSnapshot: any, similarity: number) => void,
-  onNegativeRejection?: (negativeScore: number, positiveScore: number, negativeSnapshot?: any) => void
+  onNegativeRejection?: (negativeScore: number, positiveScore: number, negativeSnapshot?: any) => void,
+  marginOfVictory: number = 3
 ) {
   const [isActive, setIsActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -53,6 +54,7 @@ export function useVoiceGame(
   const currentLetterRef = useRef<string | null>(null);
   const patternBufferRef = useRef<number[][]>([]);
   const calibrationDataRef = useRef<Record<string, CalibrationData>>({});
+  const marginOfVictoryRef = useRef<number>(marginOfVictory);
 
   // Keep refs in sync with state (ensures detection loop always has fresh data)
   useEffect(() => {
@@ -62,6 +64,11 @@ export function useVoiceGame(
   useEffect(() => {
     isMutedRef.current = isMuted;
   }, [isMuted]);
+
+  useEffect(() => {
+    marginOfVictoryRef.current = marginOfVictory;
+    console.log(`🎯 Margin of victory updated: ${marginOfVictory}%`);
+  }, [marginOfVictory]);
 
   // Load calibration data (cross-profile pooling for better accuracy)
   const loadCalibrations = useCallback(async (): Promise<Record<string, CalibrationData>> => {
@@ -144,7 +151,7 @@ export function useVoiceGame(
         }
 
         if (vol > volumeThreshold && conc > concentrationThreshold) {
-          console.log(`🎯 TRIGGERING MATCH CHECK - Letter: ${targetLetter}, Vol: ${vol.toFixed(1)}, Conc: ${conc.toFixed(1)}`);
+          console.log(`🎯 TRIGGERING MATCH CHECK - Letter: ${targetLetter}, Vol: ${vol.toFixed(1)}, Conc: ${conc.toFixed(1)}, Margin: ${marginOfVictoryRef.current}%`);
 
           // Capture audio for snapshot (records 1 second starting NOW)
           if (audioCaptureRef.current && !audioCaptureRef.current.isRecording) {
@@ -159,8 +166,6 @@ export function useVoiceGame(
           const result = strategy11_simpleSnapshot(patternBufferRef.current, targetLetter, calibrationDataRef.current);
           const matchInfo = getLastMatchInfo();
 
-          console.log(`📊 Match check - predicted: ${result.predictedLetter}, target: ${targetLetter}, score: ${result.score}, matchType: ${matchInfo?.matchType}`);
-
           // Check for negative rejection (call callback for visual feedback)
           if (matchInfo && matchInfo.matchType === 'rejected') {
             console.log(`🚫 NEGATIVE REJECTION: negative=${matchInfo.negativeScore}, positive=${matchInfo.positiveScore}`);
@@ -169,26 +174,41 @@ export function useVoiceGame(
             }
           }
 
-          // Check if predicted letter matches target and score is above threshold (case-insensitive)
-          const predictedMatch = result.predictedLetter.toLowerCase() === targetLetter.toLowerCase();
-          console.log(`🔍 Match conditions - matchType: ${matchInfo?.matchType}, predictedMatch: ${predictedMatch} (${result.predictedLetter} vs ${targetLetter}), score: ${result.score} > ${MATCH_THRESHOLD}`);
+          const margin = marginOfVictoryRef.current;
+          const threshold = MATCH_THRESHOLD;
 
-          if (matchInfo && matchInfo.matchType === 'accepted' && predictedMatch && result.score > MATCH_THRESHOLD) {
-            console.log(`✅ MATCH ACCEPTED!`);
-            // Update match timestamp to start cooldown
+          // MARGIN OF VICTORY: Other letters must beat target by X% to win
+          // If target scores 85% and margin is 3%, other letters need 88%+ to win
+          const predictedMatch = result.predictedLetter.toLowerCase() === targetLetter.toLowerCase();
+          const targetScore = result.targetScore;
+
+          console.log(`📊 Match check - predicted: ${result.predictedLetter} (${result.score.toFixed(1)}%), target: ${targetLetter} (${targetScore.toFixed(1)}%), margin: ${margin}%`);
+
+          // Determine if target letter wins
+          let targetWins = false;
+          if (predictedMatch) {
+            // Target letter is the best match - accept if above threshold
+            targetWins = result.score > threshold;
+            console.log(`🎯 Target is best match: score ${result.score.toFixed(1)}% > ${threshold}% = ${targetWins}`);
+          } else {
+            // Another letter scored higher - but does it beat target by the margin?
+            const otherLetterMargin = result.score - targetScore;
+            targetWins = otherLetterMargin < margin && targetScore > threshold;
+            console.log(`🔍 Other letter margin: ${otherLetterMargin.toFixed(1)}% < ${margin}% required, targetScore ${targetScore.toFixed(1)}% > ${threshold}% = ${targetWins}`);
+          }
+
+          if (matchInfo && matchInfo.matchType === 'accepted' && targetWins) {
+            console.log(`✅ MATCH ACCEPTED! Target wins with ${targetScore.toFixed(1)}%`);
             lastMatchTime = Date.now();
-            // Stop detection before calling success
             setIsActive(false);
             isActiveRef.current = false;
             if (animationFrameRef.current) {
               cancelAnimationFrame(animationFrameRef.current);
             }
-            // Increment snapshot score
             if (matchInfo.positiveSnapshot) {
               incrementSnapshotScore(targetLetter, matchInfo.positiveSnapshot, calibrationDataRef.current);
             }
-            // Call success callback
-            onSuccess(targetLetter, matchInfo.positiveSnapshot, matchInfo.positiveScore);
+            onSuccess(targetLetter, matchInfo.positiveSnapshot, targetScore);
             return;
           }
         }
