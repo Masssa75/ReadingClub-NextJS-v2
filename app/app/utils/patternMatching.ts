@@ -9,9 +9,14 @@ import {
 } from './snapshotScoring';
 
 let lastMatchInfo: MatchInfo | null = null;
+let lastWinningSnapshot: { snapshot: Snapshot; letter: string; score: number } | null = null;
 
 export function getLastMatchInfo(): MatchInfo | null {
   return lastMatchInfo;
+}
+
+export function getLastWinningSnapshot(): { snapshot: Snapshot; letter: string; score: number } | null {
+  return lastWinningSnapshot;
 }
 
 export function compareSnapshots(current: number[], stored: number[]): number {
@@ -55,19 +60,32 @@ export function testPattern(
 
   let bestLetter: string | null = null;
   let bestScore = 0;
+  let bestSnapshot: Snapshot | null = null;
   let targetScore = 0;
 
   // Test against all calibrated letters
   Object.keys(calibrationData).forEach(letter => {
-    const score = matchAgainstLetter(currentSnapshot, letter, calibrationData, letter === normalizedTarget);
-    if (score > bestScore) {
-      bestScore = score;
+    const result = matchAgainstLetter(currentSnapshot, letter, calibrationData, letter === normalizedTarget);
+    if (result.score > bestScore) {
+      bestScore = result.score;
       bestLetter = letter;
+      bestSnapshot = result.bestSnapshot;
     }
     if (letter === normalizedTarget) {
-      targetScore = score;
+      targetScore = result.score;
     }
   });
+
+  // Store the winning snapshot for retrieval
+  if (bestLetter && bestSnapshot) {
+    lastWinningSnapshot = {
+      snapshot: bestSnapshot,
+      letter: bestLetter,
+      score: bestScore
+    };
+  } else {
+    lastWinningSnapshot = null;
+  }
 
   return {
     score: bestScore,
@@ -93,14 +111,19 @@ function getGlobalNegatives(calibrationData: Record<string, CalibrationData>): S
   return globalNegatives;
 }
 
+interface MatchAgainstLetterResult {
+  score: number;
+  bestSnapshot: Snapshot | null;
+}
+
 export function matchAgainstLetter(
   currentSnapshot: number[],
   letter: string,
   calibrationData: Record<string, CalibrationData>,
   isTargetLetter: boolean = false
-): number {
+): MatchAgainstLetterResult {
   if (!calibrationData[letter] || !calibrationData[letter].snapshots) {
-    return 0;
+    return { score: 0, bestSnapshot: null };
   }
 
   const letterSnapshots = calibrationData[letter].snapshots;
@@ -181,7 +204,7 @@ export function matchAgainstLetter(
       }
     }
 
-    return 0; // Reject completely
+    return { score: 0, bestSnapshot: bestNegativeSnapshot }; // Reject completely, but return the blocking snapshot
   }
 
   // ACCEPTED: Positive match wins
@@ -195,7 +218,7 @@ export function matchAgainstLetter(
   if (isTargetLetter && lastMatchInfo) {
     lastMatchInfo.matchType = 'accepted';
   }
-  return bestPositiveScore;
+  return { score: bestPositiveScore, bestSnapshot: bestPositiveSnapshot };
 }
 
 export function isMatchAccepted(
