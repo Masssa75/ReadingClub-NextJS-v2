@@ -1,14 +1,24 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useVoiceGame } from '@/app/hooks/useVoiceGame';
 import { useProfileContext } from '@/app/contexts/ProfileContext';
 import { ProfileProvider } from '@/app/contexts/ProfileContext';
+import { useProficiency } from '@/app/hooks/useProficiency';
+import { LetterProficiency } from '@/app/lib/types';
 import SuccessCelebration from '@/app/components/SuccessCelebration';
 import CalibrationModal from '@/app/components/CalibrationModal';
 import ParentsMenu from '@/app/components/ParentsMenu';
 import MicrophonePermission from '@/app/components/MicrophonePermission';
 import { supabase } from '@/app/lib/supabase';
+
+// Audio delay based on proficiency level (in ms)
+const PROFICIENCY_AUDIO_DELAYS: Record<number, number> = {
+  [LetterProficiency.UNKNOWN]: 0,      // Immediate - learning
+  [LetterProficiency.SOMETIMES]: 1000, // 1 second - building confidence
+  [LetterProficiency.KNOWN]: 2000,     // 2 seconds - testing recall
+  [LetterProficiency.MASTERED]: 3000,  // 3 seconds - independent mastery
+};
 
 // Letter sequences
 const ALPHABET = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
@@ -93,6 +103,7 @@ function FlashcardPage() {
   }>>([]);
   const [selectedSnapshot, setSelectedSnapshot] = useState<any>(null);
   const [showCalibrationModal, setShowCalibrationModal] = useState(false);
+  const [lastMatchedLetter, setLastMatchedLetter] = useState<string | null>(null);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [micPermissionGranted, setMicPermissionGranted] = useState(false);
   const [vowelsOnly, setVowelsOnly] = useState(false);
@@ -108,6 +119,17 @@ function FlashcardPage() {
   const skipsInCycleRef = useRef(0);
 
   const { currentProfileId, isLoading: profileLoading } = useProfileContext();
+
+  // Proficiency tracking for audio delay progression (Leitner system)
+  const { proficiencies, getProficiency, updateProficiency } = useProficiency(currentProfileId);
+
+  // Track if audio has played for current letter (for "beat the audio" detection)
+  const [audioPlayedForLetter, setAudioPlayedForLetter] = useState(false);
+  const audioPlayedRef = useRef(false); // Ref for accurate checking in callbacks
+  const [beatTheAudio, setBeatTheAudio] = useState(false);
+  const audioDelayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [audioDelay, setAudioDelay] = useState(0); // Current delay for countdown display
+  const [countdownProgress, setCountdownProgress] = useState(0); // 0-100 for visual countdown
 
   // Handle negative rejection (show visual feedback with snapshot details)
   const handleNegativeRejection = (negativeScore: number, positiveScore: number, negativeSnapshot?: any) => {
@@ -217,11 +239,72 @@ function FlashcardPage() {
     skipsInCycleRef.current = 0;
   }, [vowelsOnly]);
 
-  // Auto-play letter sound when letter changes
+  // Auto-play letter sound when letter changes (with proficiency-based delay)
   useEffect(() => {
+    let countdownInterval: NodeJS.Timeout | null = null;
+
     if (currentLetter && !state.isActive) {
-      playLetterSound();
+      // Clear any pending audio timeout
+      if (audioDelayTimeoutRef.current) {
+        clearTimeout(audioDelayTimeoutRef.current);
+        audioDelayTimeoutRef.current = null;
+      }
+
+      // Reset audio tracking for new letter
+      setAudioPlayedForLetter(false);
+      audioPlayedRef.current = false;
+      setBeatTheAudio(false);
+      setCountdownProgress(0);
+
+      // Get proficiency-based delay
+      const proficiency = getProficiency(currentLetter);
+      const delay = PROFICIENCY_AUDIO_DELAYS[proficiency] ?? 0;
+      setAudioDelay(delay);
+
+      console.log(`🔊 Letter "${currentLetter}" proficiency: ${proficiency} → delay: ${delay}ms`);
+
+      if (delay === 0) {
+        // No delay - play immediately
+        playLetterSound();
+        setAudioPlayedForLetter(true);
+        audioPlayedRef.current = true;
+      } else {
+        // Start countdown animation
+        const startTime = Date.now();
+        countdownInterval = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(100, (elapsed / delay) * 100);
+          setCountdownProgress(progress);
+
+          if (progress >= 100) {
+            if (countdownInterval) clearInterval(countdownInterval);
+          }
+        }, 50); // Update every 50ms for smooth animation
+
+        // Schedule delayed audio
+        audioDelayTimeoutRef.current = setTimeout(() => {
+          // Only play if we haven't already succeeded (beat the audio)
+          if (!audioPlayedRef.current) {
+            playLetterSound();
+            setAudioPlayedForLetter(true);
+            audioPlayedRef.current = true;
+            console.log(`🔊 Delayed audio played after ${delay}ms`);
+          }
+        }, delay);
+      }
     }
+
+    // Cleanup on unmount or letter change
+    return () => {
+      if (audioDelayTimeoutRef.current) {
+        clearTimeout(audioDelayTimeoutRef.current);
+        audioDelayTimeoutRef.current = null;
+      }
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+      }
+    };
+    // Only run when letter changes, NOT when proficiencies update (to avoid re-triggering after success)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLetter]);
 
@@ -318,6 +401,13 @@ function FlashcardPage() {
       return;
     }
 
+    // Cancel pending audio - they're trying to beat it!
+    if (audioDelayTimeoutRef.current) {
+      clearTimeout(audioDelayTimeoutRef.current);
+      audioDelayTimeoutRef.current = null;
+      console.log('🎯 Audio cancelled - trying to beat the timer!');
+    }
+
     // Visual feedback
     setIsButtonPressed(true);
     setTimeout(() => setIsButtonPressed(false), 600);
@@ -354,12 +444,20 @@ function FlashcardPage() {
     setGameMessage('Tap the button and say the letter!');
   };
 
-  // Skip to next letter
-  const handleSkip = () => {
+  // Skip to next letter - Leitner system: move back one box on skip
+  const handleSkip = async () => {
     if (!currentLetter) return;
 
     // Track skip for analytics
     skipsInCycleRef.current++;
+
+    // Leitner system: Move back one box (decrement proficiency) on skip
+    const currentProf = getProficiency(currentLetter);
+    if (currentProf > LetterProficiency.UNKNOWN) {
+      const newProf = currentProf - 1;
+      console.log(`📉 Leitner: ${currentLetter.toUpperCase()} moves down (skip): ${currentProf} → ${newProf}`);
+      await updateProficiency(currentLetter, newProf);
+    }
 
     // Stop current game if active
     if (state.isActive) {
@@ -375,27 +473,96 @@ function FlashcardPage() {
     }
   };
 
+  // Listen button - replay audio (Leitner: counts as needing help, move back one box)
+  const handleListen = async () => {
+    if (!currentLetter) return;
+
+    // Play the letter sound
+    playLetterSound();
+
+    // Leitner system: Clicking Listen = needed help = move back one box
+    const currentProf = getProficiency(currentLetter);
+    if (currentProf > LetterProficiency.UNKNOWN) {
+      const newProf = currentProf - 1;
+      console.log(`📉 Leitner: ${currentLetter.toUpperCase()} moves down (listen): ${currentProf} → ${newProf}`);
+      await updateProficiency(currentLetter, newProf);
+    }
+  };
+
   // Replay current letter sound
   const handleReplay = () => {
     playLetterSound();
   };
 
-  // Handle successful match
-  function handleSuccess(letter: string) {
-    console.log('🎉 Success! Matched letter:', letter);
+  // Handle successful match - Leitner system: move up one box on success
+  async function handleSuccess(letter: string) {
+    // Check if they beat the audio (responded before audio played) - use ref for accuracy
+    const didBeatAudio = !audioPlayedRef.current && audioDelay > 0;
+
+    // Cancel any pending audio if they beat it
+    if (audioDelayTimeoutRef.current) {
+      clearTimeout(audioDelayTimeoutRef.current);
+      audioDelayTimeoutRef.current = null;
+    }
+
+    // Mark audio as "played" to prevent it from playing after success
+    audioPlayedRef.current = true;
+    setAudioPlayedForLetter(true);
+
+    if (didBeatAudio) {
+      console.log('🚀 BEAT THE AUDIO! Independent recall for:', letter);
+      setBeatTheAudio(true);
+    } else {
+      console.log('🎉 Success! Matched letter:', letter);
+    }
+
+    // Leitner system: Move up one box (increment proficiency)
+    const currentProf = getProficiency(letter);
+    if (currentProf < LetterProficiency.MASTERED) {
+      const newProf = currentProf + 1;
+      console.log(`📈 Leitner: ${letter.toUpperCase()} moves up: ${currentProf} → ${newProf}`);
+      await updateProficiency(letter, newProf);
+    } else {
+      console.log(`⭐ ${letter.toUpperCase()} already MASTERED`);
+    }
+
     setShowSuccess(true);
     setGameMessage('');
+    setLastMatchedLetter(letter);
 
-    // Quick succession for rapid learning - advance to next letter fast
+    // Show celebration briefly, then auto-advance to next letter
+    const celebrationTime = didBeatAudio ? 1200 : 800;
     setTimeout(() => {
       setShowSuccess(false);
+      setBeatTheAudio(false);
       const nextLetter = pickNextLetter();
       if (nextLetter) {
         setCurrentLetter(nextLetter);
         setGameMessage('Tap the button and say the letter!');
       }
-    }, 800); // Fast transition for rapid repetition
+    }, celebrationTime);
+
+    // Clear the "Not X" button after 5 seconds
+    setTimeout(() => {
+      setLastMatchedLetter(null);
+    }, 5000);
   }
+
+  // Mark last match as wrong (false positive) - opens calibration for negative snapshot
+  const handleNotX = async () => {
+    if (!lastMatchedLetter) return;
+
+    // Undo the proficiency increase (move back down)
+    const currentProf = getProficiency(lastMatchedLetter);
+    if (currentProf > LetterProficiency.UNKNOWN) {
+      const newProf = currentProf - 1;
+      console.log(`📉 Leitner: ${lastMatchedLetter.toUpperCase()} moves down (NOT X): ${currentProf} → ${newProf}`);
+      await updateProficiency(lastMatchedLetter, newProf);
+    }
+
+    // Open calibration modal to record negative snapshot
+    setShowCalibrationModal(true);
+  };
 
   // Loading state
   if (profileLoading) {
@@ -419,6 +586,18 @@ function FlashcardPage() {
       {/* Background */}
       <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(/images/background.jpg)` }} />
       <div className="absolute inset-0 bg-cover bg-center hidden md:block" style={{ backgroundImage: `url(/images/background-wide.jpg)` }} />
+
+      {/* "Not X" button - Top Left, shows for 5 seconds after a match */}
+      {lastMatchedLetter && !showCalibrationModal && (
+        <div className="absolute top-4 left-4 md:top-6 md:left-6 z-30">
+          <button
+            onClick={handleNotX}
+            className="px-4 py-2 md:px-5 md:py-3 text-sm md:text-base font-bold text-white rounded-full border-2 border-red-400/60 bg-red-500/50 hover:bg-red-500/70 transition-all shadow-lg flex items-center gap-2"
+          >
+            ✗ Not {lastMatchedLetter.toUpperCase()}
+          </button>
+        </div>
+      )}
 
       {/* Parents Menu - Top Right */}
       <div className="absolute top-4 right-4 md:top-6 md:right-6 z-30">
@@ -450,9 +629,9 @@ function FlashcardPage() {
         </div>
       ))}
 
-      {/* IS X and Skip Buttons - Top right, left of Parents menu */}
+      {/* IS X Button - Top right, left of Parents menu */}
       {currentLetter && state.isActive && (
-        <div className="absolute top-4 right-32 md:top-6 md:right-40 z-20 flex flex-row gap-2">
+        <div className="absolute top-4 right-32 md:top-6 md:right-40 z-20">
           <button
             onClick={() => {
               if (!currentProfileId || !currentLetter) return;
@@ -464,16 +643,6 @@ function FlashcardPage() {
           >
             ✓ IS {currentLetter.toUpperCase()}
           </button>
-          {/* Skip button only in advanced mode */}
-          {advancedMode && (
-            <button
-              onClick={handleSkip}
-              className="px-3 py-2 md:px-5 md:py-3 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-full font-bold text-sm md:text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
-              title="Skip to next letter"
-            >
-              ⏭️
-            </button>
-          )}
         </div>
       )}
 
@@ -493,35 +662,65 @@ function FlashcardPage() {
 
         {/* Big Smash Button with Letter - responsive sizing */}
         {currentLetter ? (
-          <button
-            onClick={handleButtonPress}
-            disabled={state.isActive}
-            className={`relative cursor-pointer select-none ${isButtonPressed ? 'animate-saturation-burst' : ''}`}
-            style={{
-              width: 'min(504px, 80vw, 50vh)',
-              height: 'min(504px, 80vw, 50vh)',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            {/* Button Image */}
-            <img
-              src="/images/Smash button.png"
-              alt="Smash Button"
-              className="w-full h-full object-contain pointer-events-none"
-            />
+          <div className="relative" style={{ width: 'min(504px, 80vw, 50vh)', height: 'min(504px, 80vw, 50vh)' }}>
+            {/* Countdown Ring - shows when there's a delay and audio hasn't played yet */}
+            {audioDelay > 0 && !audioPlayedForLetter && !state.isActive && (
+              <svg
+                className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-10"
+                viewBox="0 0 100 100"
+              >
+                {/* Background circle */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="48"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.2)"
+                  strokeWidth="3"
+                />
+                {/* Progress circle */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="48"
+                  fill="none"
+                  stroke="rgba(255,200,0,0.8)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray={`${countdownProgress * 3.01} 301`}
+                  className="transition-all duration-100"
+                />
+              </svg>
+            )}
 
-            {/* Letter Overlay - responsive font size */}
-            <div
-              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-black pointer-events-none ${isButtonPressed ? 'letter-pop' : ''}`}
+            <button
+              onClick={handleButtonPress}
+              disabled={state.isActive}
+              className={`relative cursor-pointer select-none w-full h-full ${isButtonPressed ? 'animate-saturation-burst' : ''}`}
               style={{
-                fontSize: 'min(288px, 45vw, 28vh)',
-                textShadow: '0 6px 12px rgba(0,0,0,0.3)',
                 transition: 'all 0.2s ease',
               }}
             >
-              {currentLetter}
-            </div>
-          </button>
+              {/* Button Image */}
+              <img
+                src="/images/Smash button.png"
+                alt="Smash Button"
+                className="w-full h-full object-contain pointer-events-none"
+              />
+
+              {/* Letter Overlay - responsive font size */}
+              <div
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-black pointer-events-none ${isButtonPressed ? 'letter-pop' : ''}`}
+                style={{
+                  fontSize: 'min(288px, 45vw, 28vh)',
+                  textShadow: '0 6px 12px rgba(0,0,0,0.3)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {currentLetter}
+              </div>
+            </button>
+          </div>
         ) : (
           <button
             onClick={startGame}
@@ -531,7 +730,7 @@ function FlashcardPage() {
           </button>
         )}
 
-        {/* Volume indicator + Stop button (when listening) */}
+        {/* Volume indicator + Stop/Skip buttons (when listening) */}
         {state.isActive && (
           <div className="flex flex-col items-center gap-2 w-64 md:w-80">
             <div className="w-full">
@@ -543,12 +742,40 @@ function FlashcardPage() {
                 />
               </div>
             </div>
-            {/* Stop Button */}
+            {/* Stop + Skip Buttons */}
+            <div className="flex flex-row items-center gap-4">
+              <button
+                onClick={handleStop}
+                className="px-6 py-2 md:px-8 md:py-3 text-base md:text-lg font-medium text-white/90 rounded-full border-2 border-red-400/50 bg-red-500/50 hover:bg-red-500/60 transition-all"
+              >
+                Stop
+              </button>
+              <button
+                onClick={handleSkip}
+                className="px-6 py-2 md:px-8 md:py-3 text-base md:text-lg font-medium text-white/90 rounded-full border-2 border-gray-400/50 bg-gray-500/40 hover:bg-gray-500/60 transition-all flex items-center gap-2"
+              >
+                ⏭️ Skip
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Listen + Skip buttons (when NOT listening) */}
+        {currentLetter && !state.isActive && !showSuccess && (
+          <div className="flex flex-row items-center gap-4">
+            {/* Listen Button - replays audio */}
             <button
-              onClick={handleStop}
-              className="px-8 py-2 md:px-12 md:py-3 text-base md:text-lg font-medium text-white/90 rounded-full border-2 border-red-400/50 bg-red-500/50 hover:bg-red-500/60 transition-all"
+              onClick={handleListen}
+              className="px-6 py-2 md:px-8 md:py-3 text-base md:text-lg font-medium text-white/90 rounded-full border-2 border-blue-400/50 bg-blue-500/40 hover:bg-blue-500/60 transition-all flex items-center gap-2"
             >
-              Stop
+              🔊 Listen
+            </button>
+            {/* Skip Button */}
+            <button
+              onClick={handleSkip}
+              className="px-6 py-2 md:px-8 md:py-3 text-base md:text-lg font-medium text-white/90 rounded-full border-2 border-gray-400/50 bg-gray-500/40 hover:bg-gray-500/60 transition-all flex items-center gap-2"
+            >
+              ⏭️ Skip
             </button>
           </div>
         )}
@@ -560,6 +787,19 @@ function FlashcardPage() {
         <SuccessCelebration letter={currentLetter} />
       )}
 
+      {/* "You Knew It!" Celebration - appears when they beat the audio */}
+      {beatTheAudio && showSuccess && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div className="animate-bounce-in text-center">
+            <div className="text-6xl md:text-8xl mb-4">🚀</div>
+            <div className="text-3xl md:text-5xl font-black text-yellow-300 drop-shadow-lg"
+              style={{ textShadow: '0 0 20px rgba(255,200,0,0.8), 0 4px 8px rgba(0,0,0,0.5)' }}>
+              You knew it!
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Microphone Permission Modal */}
       {showPermissionModal && (
         <MicrophonePermission
@@ -568,10 +808,10 @@ function FlashcardPage() {
         />
       )}
 
-      {/* Calibration Modal - for "IS X" manual override */}
-      {showCalibrationModal && currentLetter && (
+      {/* Calibration Modal - for "IS X" or "NOT X" override */}
+      {showCalibrationModal && (currentLetter || lastMatchedLetter) && (
         <CalibrationModal
-          letter={currentLetter}
+          letter={lastMatchedLetter || currentLetter!}
           variant="kid"
           onClose={async () => {
             // Reload calibrations BEFORE closing modal to ensure new snapshot is loaded
@@ -579,8 +819,9 @@ function FlashcardPage() {
             await actions.loadCalibrations();
             console.log('✅ Calibrations reloaded');
             setShowCalibrationModal(false);
+            setLastMatchedLetter(null);
 
-            // Unmute game - it will continue on the same letter
+            // Unmute game - it will continue on the current letter
             actions.setMuted(false);
           }}
           onSuccess={(letter) => {
@@ -763,6 +1004,17 @@ function FlashcardPage() {
 
         .animate-saturation-burst {
           animation: saturation-burst 0.6s ease-out;
+        }
+
+        @keyframes bounce-in {
+          0% { transform: scale(0); opacity: 0; }
+          50% { transform: scale(1.2); opacity: 1; }
+          70% { transform: scale(0.9); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+
+        .animate-bounce-in {
+          animation: bounce-in 0.5s ease-out forwards;
         }
 
         .letter-pop {
