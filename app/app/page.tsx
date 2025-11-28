@@ -104,6 +104,7 @@ function FlashcardPage() {
   const [selectedSnapshot, setSelectedSnapshot] = useState<any>(null);
   const [showCalibrationModal, setShowCalibrationModal] = useState(false);
   const [lastMatchedLetter, setLastMatchedLetter] = useState<string | null>(null);
+  const [lastMatchedSnapshot, setLastMatchedSnapshot] = useState<any | null>(null);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [micPermissionGranted, setMicPermissionGranted] = useState(false);
   const [vowelsOnly, setVowelsOnly] = useState(false);
@@ -495,7 +496,7 @@ function FlashcardPage() {
   };
 
   // Handle successful match - Leitner system: move up one box on success
-  async function handleSuccess(letter: string) {
+  async function handleSuccess(letter: string, matchedSnapshot?: any, score?: number) {
     // Check if they beat the audio (responded before audio played) - use ref for accuracy
     const didBeatAudio = !audioPlayedRef.current && audioDelay > 0;
 
@@ -529,6 +530,7 @@ function FlashcardPage() {
     setShowSuccess(true);
     setGameMessage('');
     setLastMatchedLetter(letter);
+    setLastMatchedSnapshot(matchedSnapshot || null);
 
     // Show celebration briefly, then auto-advance to next letter
     const celebrationTime = didBeatAudio ? 1200 : 800;
@@ -545,12 +547,16 @@ function FlashcardPage() {
     // Clear the "Not X" button after 5 seconds
     setTimeout(() => {
       setLastMatchedLetter(null);
+      setLastMatchedSnapshot(null);
     }, 5000);
   }
 
-  // Mark last match as wrong (false positive) - opens calibration for negative snapshot
+  // Mark last match as wrong (false positive) - mark the snapshot as negative
   const handleNotX = async () => {
-    if (!lastMatchedLetter) return;
+    if (!lastMatchedLetter || !lastMatchedSnapshot) {
+      console.log('❌ No matched snapshot to mark as negative');
+      return;
+    }
 
     // Undo the proficiency increase (move back down)
     const currentProf = getProficiency(lastMatchedLetter);
@@ -560,8 +566,63 @@ function FlashcardPage() {
       await updateProficiency(lastMatchedLetter, newProf);
     }
 
-    // Open calibration modal to record negative snapshot
-    setShowCalibrationModal(true);
+    // Mark the matched snapshot as negative in the database
+    try {
+      const snapshotId = lastMatchedSnapshot.id;
+      console.log('🚫 Marking snapshot as negative:', snapshotId);
+
+      // Find the calibration containing this snapshot
+      const { data: calibrations, error: fetchError } = await supabase
+        .from('calibrations')
+        .select('*')
+        .eq('letter', lastMatchedLetter.toLowerCase());
+
+      if (fetchError) throw fetchError;
+
+      // Find and update the snapshot
+      for (const cal of calibrations || []) {
+        if (cal.pattern_data?.snapshots) {
+          const snapshotIndex = cal.pattern_data.snapshots.findIndex((s: any) => s.id === snapshotId);
+          if (snapshotIndex !== -1) {
+            // Found the snapshot - mark it as negative
+            const updatedSnapshots = cal.pattern_data.snapshots.map((s: any) =>
+              s.id === snapshotId ? { ...s, isNegative: true } : s
+            );
+
+            const { error: updateError } = await supabase
+              .from('calibrations')
+              .update({
+                pattern_data: {
+                  ...cal.pattern_data,
+                  snapshots: updatedSnapshots,
+                },
+              })
+              .eq('id', cal.id);
+
+            if (updateError) throw updateError;
+
+            console.log('✅ Snapshot marked as negative successfully');
+
+            // Show brief success feedback
+            setGameMessage('✓ Marked as incorrect');
+            setTimeout(() => setGameMessage(''), 1500);
+
+            // Reload calibrations to pick up the change
+            await actions.loadCalibrations();
+
+            // Clear the "Not X" button
+            setLastMatchedLetter(null);
+            setLastMatchedSnapshot(null);
+
+            return;
+          }
+        }
+      }
+
+      console.error('❌ Snapshot not found in any calibration');
+    } catch (error) {
+      console.error('❌ Error marking snapshot as negative:', error);
+    }
   };
 
   // Loading state
