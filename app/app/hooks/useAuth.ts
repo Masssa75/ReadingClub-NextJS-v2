@@ -21,9 +21,9 @@ export function useAuth() {
         console.log('Auth state changed:', event, session?.user?.email);
         setUser(session?.user ?? null);
 
-        // Link guest profile to authenticated user
+        // Link guest profile OR load existing profiles for authenticated user
         if (session?.user) {
-          await linkGuestProfile(session.user.id);
+          await linkOrLoadProfile(session.user.id);
         }
       }
     );
@@ -73,26 +73,64 @@ export function useAuth() {
     }
   };
 
-  const linkGuestProfile = async (userId: string): Promise<void> => {
-    const guestProfileId = localStorage.getItem('guestProfileId');
-
-    if (!guestProfileId) {
-      console.log('No guest profile to link');
-      return;
-    }
-
+  const linkOrLoadProfile = async (userId: string): Promise<void> => {
     try {
-      const { error } = await supabase
+      // First, check if user already has profiles in Supabase
+      const { data: existingProfiles, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (fetchError) throw fetchError;
+
+      if (existingProfiles && existingProfiles.length > 0) {
+        // User has existing profiles! Load the most recent one
+        const profile = existingProfiles[0];
+        console.log('✅ Found existing profile for user:', profile.name, profile.id);
+
+        // Check if we're already using this profile (prevent infinite reload)
+        const currentProfile = localStorage.getItem('currentProfile');
+        if (currentProfile === profile.name) {
+          console.log('✅ Already using authenticated profile, no reload needed');
+          return;
+        }
+
+        // Update localStorage to use this profile
+        localStorage.setItem('currentProfile', profile.name);
+        localStorage.removeItem('guestProfileId'); // Clear guest profile
+
+        // Add profile name to the list if not already there
+        const savedProfiles = localStorage.getItem('phonicsProfiles');
+        const profileNames: string[] = savedProfiles ? JSON.parse(savedProfiles) : ['Default'];
+        if (!profileNames.includes(profile.name)) {
+          profileNames.push(profile.name);
+          localStorage.setItem('phonicsProfiles', JSON.stringify(profileNames));
+        }
+
+        console.log('🔄 Reloading to use authenticated profile...');
+        window.location.reload();
+        return;
+      }
+
+      // No existing profiles - link current guest profile to user
+      const guestProfileId = localStorage.getItem('guestProfileId');
+      if (!guestProfileId) {
+        console.log('No guest profile to link and no existing profiles');
+        return;
+      }
+
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ user_id: userId })
         .eq('id', guestProfileId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       console.log('✅ Guest profile linked to authenticated user');
-      localStorage.removeItem('guestProfileId');
+      // Keep the guestProfileId for now since it's now linked
     } catch (error) {
-      console.error('❌ Error linking guest profile:', error);
+      console.error('❌ Error in linkOrLoadProfile:', error);
     }
   };
 

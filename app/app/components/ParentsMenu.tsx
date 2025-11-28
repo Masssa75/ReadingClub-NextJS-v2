@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react';
 import { useProfileContext } from '@/app/contexts/ProfileContext';
 import { useAuth } from '@/app/hooks/useAuth';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 import { User } from 'lucide-react';
 import ProfileInputModal from './ProfileInputModal';
 
@@ -26,11 +25,6 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
   const menuRef = useRef<HTMLDivElement>(null);
   const { currentProfile, profileNames, switchProfile, createNewProfile, loadProfileNames } = useProfileContext();
   const { user, loading, sendMagicLink, signOut } = useAuth();
-  const pathname = usePathname();
-  const router = useRouter();
-
-  // Determine current level from pathname
-  const currentLevel = pathname === '/flash' ? 1 : 2;
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -110,54 +104,15 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
           <div className="text-center pt-8 pb-4 px-8">
             <div className="text-6xl mb-3 animate-[bounce_2s_ease-in-out_infinite]">🌈</div>
             <div className="text-4xl font-black bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">
-              {currentProfile}
+              {currentProfile.startsWith('Guest_') ? 'Guest' : currentProfile}
             </div>
           </div>
 
-          {/* Level Selection */}
-          <div className="px-8 pb-4">
-            <div className="text-center text-sm font-bold text-purple-600 mb-3">Choose Level</div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  router.push('/flash');
-                  setIsOpen(false);
-                }}
-                className={`flex-1 py-4 px-3 rounded-[20px] font-black text-center transition-all duration-300 shadow-md
-                  ${currentLevel === 1
-                    ? 'bg-gradient-to-br from-blue-500 to-blue-400 text-white transform scale-105 shadow-lg ring-4 ring-blue-300'
-                    : 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-800 hover:scale-105 hover:shadow-lg'
-                  }`}
-              >
-                <div className="text-2xl mb-1">🎴</div>
-                <div className="text-sm">Level 1</div>
-                <div className="text-[10px] opacity-75">Flashcards</div>
-              </button>
-              <button
-                onClick={() => {
-                  router.push('/');
-                  setIsOpen(false);
-                }}
-                className={`flex-1 py-4 px-3 rounded-[20px] font-black text-center transition-all duration-300 shadow-md
-                  ${currentLevel === 2
-                    ? 'bg-gradient-to-br from-purple-500 to-purple-400 text-white transform scale-105 shadow-lg ring-4 ring-purple-300'
-                    : 'bg-gradient-to-br from-purple-100 to-purple-200 text-purple-800 hover:scale-105 hover:shadow-lg'
-                  }`}
-              >
-                <div className="text-2xl mb-1">🎤</div>
-                <div className="text-sm">Level 2</div>
-                <div className="text-[10px] opacity-75">Voice</div>
-              </button>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="mx-8 border-t-4 border-white/30 mb-4"></div>
 
           {/* Profile Grid - Bubble Cards */}
           <div className="px-8 pb-6">
             <div className="grid grid-cols-2 gap-3 mb-5">
-              {profileNames.map((name) => (
+              {profileNames.filter(name => !name.startsWith('Guest_')).map((name) => (
                 <button
                   key={name}
                   onClick={() => handleSwitchProfile(name)}
@@ -307,8 +262,8 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
                           hover:scale-105 flex items-center justify-center gap-3"
                         style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' }}
                       >
-                        <span>💾</span>
-                        <span>Save Progress</span>
+                        <span>🔄</span>
+                        <span>Login / Sync</span>
                       </button>
                     ) : (
                       <div className="space-y-3">

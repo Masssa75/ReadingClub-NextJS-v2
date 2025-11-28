@@ -92,19 +92,35 @@ export function useProfile() {
 
   const getOrCreateProfile = async (profileName: string): Promise<Profile | null> => {
     try {
-      // Try to find existing profile by name (get the most recent one if multiple exist)
+      // First, try to find authenticated profile by name (for returning users)
+      const { data: authProfiles, error: authFetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('name', profileName)
+        .not('user_id', 'is', null) // Authenticated profiles
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (authFetchError) throw authFetchError;
+
+      if (authProfiles && authProfiles.length > 0) {
+        console.log(`✅ Found authenticated profile: ${profileName} (${authProfiles[0].id.substring(0, 8)}...)`);
+        return authProfiles[0];
+      }
+
+      // Try to find anonymous profile by name
       const { data: existingProfiles, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('name', profileName)
-        .is('user_id', null) // Only get anonymous profiles
+        .is('user_id', null) // Anonymous profiles
         .order('created_at', { ascending: false })
         .limit(1);
 
       if (fetchError) throw fetchError;
 
       if (existingProfiles && existingProfiles.length > 0) {
-        console.log(`✅ Found existing profile: ${profileName} (${existingProfiles[0].id.substring(0, 8)}...)`);
+        console.log(`✅ Found existing anonymous profile: ${profileName} (${existingProfiles[0].id.substring(0, 8)}...)`);
         return existingProfiles[0];
       }
 
