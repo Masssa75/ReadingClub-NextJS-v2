@@ -24,6 +24,19 @@ const PROFICIENCY_AUDIO_DELAYS: Record<number, number> = {
 const ALPHABET = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'];
 const VOWELS = ['a', 'e', 'i', 'o', 'u'];
 
+// Available reward videos (pick randomly from this pool)
+const REWARD_VIDEOS = [
+  '/Videos/a-Apple.mp4',
+  '/Videos/Bear.mp4',
+  '/Videos/e.mp4',
+  '/Videos/Funny_F_Sound_Video_Generation.mp4',
+];
+
+// Video reward settings
+const MIN_LETTERS_BEFORE_VIDEO = 5; // At least 5 letters must pass before a video can play
+const VIDEO_CHANCE_BEAT_CLOCK = 0.5; // 50% chance when they beat the audio
+const VIDEO_CHANCE_REGULAR = 0.1; // 10% chance on regular success
+
 // Record cycle completion to Supabase
 async function recordCycleCompletion(
   profileId: string,
@@ -110,6 +123,12 @@ function FlashcardPage() {
   const [vowelsOnly, setVowelsOnly] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [marginOfVictory, setMarginOfVictory] = useState(3);
+
+  // Video reward system state
+  const [lettersSinceVideo, setLettersSinceVideo] = useState(0);
+  const [showVideoReward, setShowVideoReward] = useState(false);
+  const [currentVideoUrl, setCurrentVideoUrl] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const rejectionIdRef = useRef(0);
@@ -495,6 +514,28 @@ function FlashcardPage() {
     playLetterSound();
   };
 
+  // Handle video reward ending
+  const handleVideoEnd = () => {
+    console.log('🎬 Video reward ended');
+    setShowVideoReward(false);
+    setCurrentVideoUrl(null);
+    setShowSuccess(false);
+    setBeatTheAudio(false);
+
+    // Advance to next letter
+    const nextLetter = pickNextLetter();
+    if (nextLetter) {
+      setCurrentLetter(nextLetter);
+      setGameMessage('Tap the button and say the letter!');
+    }
+  };
+
+  // Handle skipping video
+  const handleSkipVideo = () => {
+    console.log('🎬 Video skipped by user');
+    handleVideoEnd();
+  };
+
   // Handle successful match - Leitner system: move up one box on success
   async function handleSuccess(letter: string, matchedSnapshot?: any, score?: number) {
     // Check if they beat the audio (responded before audio played) - use ref for accuracy
@@ -532,17 +573,42 @@ function FlashcardPage() {
     setLastMatchedLetter(letter);
     setLastMatchedSnapshot(matchedSnapshot || null);
 
-    // Show celebration briefly, then auto-advance to next letter
-    const celebrationTime = didBeatAudio ? 1200 : 800;
-    setTimeout(() => {
-      setShowSuccess(false);
-      setBeatTheAudio(false);
-      const nextLetter = pickNextLetter();
-      if (nextLetter) {
-        setCurrentLetter(nextLetter);
-        setGameMessage('Tap the button and say the letter!');
-      }
-    }, celebrationTime);
+    // Increment letters since last video
+    const newLetterCount = lettersSinceVideo + 1;
+    setLettersSinceVideo(newLetterCount);
+
+    // Check if we should play a video reward
+    const hasEnoughLetters = newLetterCount >= MIN_LETTERS_BEFORE_VIDEO;
+    const videoChance = didBeatAudio ? VIDEO_CHANCE_BEAT_CLOCK : VIDEO_CHANCE_REGULAR;
+    const roll = Math.random();
+    const rollsVideo = roll < videoChance;
+
+    console.log(`🎬 Video check: letterCount=${newLetterCount}/${MIN_LETTERS_BEFORE_VIDEO}, beatAudio=${didBeatAudio}, chance=${(videoChance * 100).toFixed(0)}%, roll=${(roll * 100).toFixed(0)}%, plays=${rollsVideo && hasEnoughLetters}`);
+
+    // Play video if: enough letters passed + random roll succeeds
+    if (hasEnoughLetters && rollsVideo) {
+      // Pick a random video from the pool
+      const randomVideo = REWARD_VIDEOS[Math.floor(Math.random() * REWARD_VIDEOS.length)];
+      console.log(`🎬 Playing random video reward: ${randomVideo}`);
+      setCurrentVideoUrl(randomVideo);
+      setShowVideoReward(true);
+      setLettersSinceVideo(0); // Reset counter
+
+      // Video will handle advancing to next letter when it ends
+      // Don't use timeout-based advancement
+    } else {
+      // Show celebration briefly, then auto-advance to next letter
+      const celebrationTime = didBeatAudio ? 1200 : 800;
+      setTimeout(() => {
+        setShowSuccess(false);
+        setBeatTheAudio(false);
+        const nextLetter = pickNextLetter();
+        if (nextLetter) {
+          setCurrentLetter(nextLetter);
+          setGameMessage('Tap the button and say the letter!');
+        }
+      }, celebrationTime);
+    }
 
     // Clear the "Not X" button after 5 seconds
     setTimeout(() => {
@@ -849,13 +915,45 @@ function FlashcardPage() {
       )}
 
       {/* "You Knew It!" Celebration - appears when they beat the audio */}
-      {beatTheAudio && showSuccess && (
+      {beatTheAudio && showSuccess && !showVideoReward && (
         <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
           <div className="animate-bounce-in text-center">
             <div className="text-6xl md:text-8xl mb-4">🚀</div>
             <div className="text-3xl md:text-5xl font-black text-yellow-300 drop-shadow-lg"
               style={{ textShadow: '0 0 20px rgba(255,200,0,0.8), 0 4px 8px rgba(0,0,0,0.5)' }}>
               You knew it!
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Reward Player - Full screen overlay */}
+      {showVideoReward && currentVideoUrl && (
+        <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+          {/* Skip button - top right */}
+          <button
+            onClick={handleSkipVideo}
+            className="absolute top-4 right-4 z-60 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-full text-white font-medium transition-all"
+          >
+            Skip ⏭️
+          </button>
+
+          {/* Video player */}
+          <video
+            ref={videoRef}
+            src={currentVideoUrl}
+            autoPlay
+            playsInline
+            onEnded={handleVideoEnd}
+            className="max-w-full max-h-full object-contain"
+            style={{ width: '100%', height: '100%' }}
+          />
+
+          {/* Celebration text overlay */}
+          <div className="absolute bottom-8 left-0 right-0 text-center pointer-events-none">
+            <div className="text-2xl md:text-4xl font-black text-yellow-300 drop-shadow-lg animate-pulse"
+              style={{ textShadow: '0 0 20px rgba(255,200,0,0.8), 0 4px 8px rgba(0,0,0,0.8)' }}>
+              🎉 You knew it! 🎉
             </div>
           </div>
         </div>
