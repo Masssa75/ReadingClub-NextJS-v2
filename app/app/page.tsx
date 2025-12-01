@@ -130,6 +130,7 @@ function FlashcardPage() {
   const [showVideoReward, setShowVideoReward] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(true);
+  const [videoNeedsTap, setVideoNeedsTap] = useState(false); // For autoplay failure fallback
   const [videosPreloaded, setVideosPreloaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const preloadedVideosRef = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -585,13 +586,51 @@ function FlashcardPage() {
 
   // Handle video starting to play (clear loading state and timeout)
   const handleVideoCanPlay = () => {
-    console.log('🎬 Video can play - clearing loading state');
-    setVideoLoading(false);
+    console.log('🎬 Video can play - attempting to play...');
 
-    // Clear timeout since video is playing
-    if (videoTimeoutRef.current) {
-      clearTimeout(videoTimeoutRef.current);
-      videoTimeoutRef.current = null;
+    // Explicitly call play() to handle autoplay policy
+    if (videoRef.current) {
+      const playPromise = videoRef.current.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log('🎬 Video playing successfully');
+            setVideoLoading(false);
+            setVideoNeedsTap(false);
+
+            // Clear timeout since video is playing
+            if (videoTimeoutRef.current) {
+              clearTimeout(videoTimeoutRef.current);
+              videoTimeoutRef.current = null;
+            }
+          })
+          .catch((error) => {
+            console.log('🎬 Autoplay blocked, showing tap-to-play:', error.message);
+            setVideoLoading(false);
+            setVideoNeedsTap(true); // Show tap to play button
+          });
+      }
+    }
+  };
+
+  // Handle tap to play (for when autoplay is blocked)
+  const handleTapToPlay = () => {
+    console.log('🎬 User tapped to play');
+    if (videoRef.current) {
+      videoRef.current.play()
+        .then(() => {
+          setVideoNeedsTap(false);
+          // Clear timeout
+          if (videoTimeoutRef.current) {
+            clearTimeout(videoTimeoutRef.current);
+            videoTimeoutRef.current = null;
+          }
+        })
+        .catch((err) => {
+          console.error('🎬 Play failed even after tap:', err);
+          handleVideoEnd(); // Give up and skip
+        });
     }
   };
 
@@ -600,6 +639,7 @@ function FlashcardPage() {
     setCurrentVideoUrl(videoUrl);
     setShowVideoReward(true);
     setVideoLoading(true);
+    setVideoNeedsTap(false); // Reset tap state
 
     // Set timeout to skip if video doesn't load
     videoTimeoutRef.current = setTimeout(() => {
@@ -1017,11 +1057,24 @@ function FlashcardPage() {
           </button>
 
           {/* Loading spinner - shows while video is buffering */}
-          {videoLoading && (
+          {videoLoading && !videoNeedsTap && (
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
               <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4" />
               <div className="text-white text-lg font-medium">Loading video...</div>
             </div>
+          )}
+
+          {/* Tap to play button - shows when autoplay is blocked */}
+          {videoNeedsTap && (
+            <button
+              onClick={handleTapToPlay}
+              className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/60 cursor-pointer"
+            >
+              <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center mb-4 hover:bg-white/30 transition-all">
+                <div className="text-6xl text-white ml-2">▶</div>
+              </div>
+              <div className="text-white text-2xl font-bold">Tap to Play</div>
+            </button>
           )}
 
           {/* Video player */}
