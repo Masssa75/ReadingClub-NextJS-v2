@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { Play } from 'lucide-react';
 import { useVoiceGame } from '@/app/hooks/useVoiceGame';
 import { useProfileContext } from '@/app/contexts/ProfileContext';
 import { ProfileProvider } from '@/app/contexts/ProfileContext';
@@ -1070,10 +1071,10 @@ function FlashcardPage() {
               onClick={handleTapToPlay}
               className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-black/60 cursor-pointer"
             >
-              <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center mb-4 hover:bg-white/30 transition-all">
-                <div className="text-6xl text-white ml-2">▶</div>
+              <div className="w-28 h-28 rounded-full bg-white/20 flex items-center justify-center mb-4 hover:bg-white/30 hover:scale-110 transition-all shadow-2xl border-2 border-white/30">
+                <Play className="w-14 h-14 text-white ml-1" fill="white" />
               </div>
-              <div className="text-white text-2xl font-bold">Tap to Play</div>
+              <div className="text-white text-2xl font-bold drop-shadow-lg">Tap to Play</div>
             </button>
           )}
 
