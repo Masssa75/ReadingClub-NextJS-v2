@@ -27,7 +27,7 @@ const VOWELS = ['a', 'e', 'i', 'o', 'u'];
 
 // Available reward videos (pick randomly from this pool)
 const REWARD_VIDEOS = [
-  '/Videos/a-Apple.mp4',
+  '/Videos/a-Apple2.mp4',
   '/Videos/Bear.mp4',
   '/Videos/e.mp4',
   '/Videos/Funny_F_Sound_Video_Generation.mp4',
