@@ -562,7 +562,7 @@ function FlashcardPage() {
   };
 
   // Handle video reward ending (called on end, skip, close, or timeout)
-  const handleVideoEnd = useCallback(() => {
+  const handleVideoEnd = () => {
     console.log('🎬 Video reward ended');
 
     // Clear any pending timeout
@@ -571,11 +571,17 @@ function FlashcardPage() {
       videoTimeoutRef.current = null;
     }
 
+    // Ensure game is stopped so audio will play for next letter
+    if (state.isActive) {
+      actions.stopGame();
+    }
+
     setShowVideoReward(false);
     setCurrentVideoUrl(null);
     setVideoLoading(true); // Reset for next video
     setShowSuccess(false);
     setBeatTheAudio(false);
+    setVideoNeedsTap(false);
 
     // Advance to next letter
     const nextLetter = pickNextLetter();
@@ -583,7 +589,7 @@ function FlashcardPage() {
       setCurrentLetter(nextLetter);
       setGameMessage('Tap the button and say the letter!');
     }
-  }, []);
+  };
 
   // Handle video starting to play (clear loading state and timeout)
   const handleVideoCanPlay = () => {
@@ -636,7 +642,7 @@ function FlashcardPage() {
   };
 
   // Start video with timeout - if doesn't load in 5 seconds, skip
-  const startVideoWithTimeout = useCallback((videoUrl: string) => {
+  const startVideoWithTimeout = (videoUrl: string) => {
     setCurrentVideoUrl(videoUrl);
     setShowVideoReward(true);
     setVideoLoading(true);
@@ -647,7 +653,7 @@ function FlashcardPage() {
       console.log('🎬 Video load timeout - skipping');
       handleVideoEnd();
     }, VIDEO_LOAD_TIMEOUT);
-  }, [handleVideoEnd]);
+  };
 
   // Handle skipping/closing video
   const handleCloseVideo = () => {
