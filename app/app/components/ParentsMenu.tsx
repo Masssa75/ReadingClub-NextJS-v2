@@ -208,7 +208,7 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
                     max="10"
                     value={marginOfVictory}
                     onChange={(e) => onMarginOfVictoryChange(Number(e.target.value))}
-                    className="w-full h-3 bg-gradient-to-r from-green-300 via-yellow-300 to-red-300 rounded-full appearance-none cursor-pointer
+                    className="w-full h-3 bg-gradient-to-r from-red-300 via-yellow-300 to-green-300 rounded-full appearance-none cursor-pointer
                       [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:h-6
                       [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-lg
                       [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-indigo-400
