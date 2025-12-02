@@ -97,7 +97,7 @@ function FlashcardPage() {
   const [micPermissionGranted, setMicPermissionGranted] = useState(false);
   const [vowelsOnly, setVowelsOnly] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
-  const [marginOfVictory, setMarginOfVictory] = useState(3);
+  const [marginOfVictory, setMarginOfVictory] = useState(1);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const rejectionIdRef = useRef(0);

@@ -16,7 +16,7 @@ interface ParentsMenuProps {
   onMarginOfVictoryChange?: (value: number) => void;
 }
 
-export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange, vowelsOnly = false, onVowelsOnlyChange, marginOfVictory = 3, onMarginOfVictoryChange }: ParentsMenuProps = {}) {
+export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange, vowelsOnly = false, onVowelsOnlyChange, marginOfVictory = 1, onMarginOfVictoryChange }: ParentsMenuProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [showProfileInput, setShowProfileInput] = useState(false);
@@ -217,8 +217,8 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
                       [&::-moz-range-thumb]:border-indigo-400"
                   />
                   <div className="flex justify-between text-[10px] font-medium text-indigo-600 mt-1">
-                    <span>Forgiving (0%)</span>
-                    <span>Strict (10%)</span>
+                    <span>Strict (0%)</span>
+                    <span>Forgiving (10%)</span>
                   </div>
                   <div className="text-[10px] text-indigo-600 mt-2 text-center">
                     Other letters must beat target by this margin to win

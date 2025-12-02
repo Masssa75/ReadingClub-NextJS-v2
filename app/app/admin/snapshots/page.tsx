@@ -40,9 +40,9 @@ export default function AdminSnapshotsPage() {
   const [calibrationData, setCalibrationData] = useState<Record<string, CalibrationData>>({});
   const [showCalibrationModal, setShowCalibrationModal] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [marginOfVictory, setMarginOfVictory] = useState(3);
+  const [marginOfVictory, setMarginOfVictory] = useState(1);
   const isPausedRef = useRef(false);
-  const marginOfVictoryRef = useRef(3);
+  const marginOfVictoryRef = useRef(1);
   const liveWaveformRef = useRef<HTMLCanvasElement>(null);
   const attemptIdRef = useRef(0);
   const audioStateRef = useRef<AudioEngineState | null>(null);
