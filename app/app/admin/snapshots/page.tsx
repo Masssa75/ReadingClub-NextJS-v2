@@ -51,6 +51,7 @@ export default function AdminSnapshotsPage() {
   const patternBufferRef = useRef<number[][]>([]);
   const calibrationDataRef = useRef<Record<string, CalibrationData>>({});
   const lastAttemptTimeRef = useRef(0);
+  const selectedLetterRef = useRef<string | null>(null); // Track selected letter for detection loop
 
   // Live audio recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -76,6 +77,12 @@ export default function AdminSnapshotsPage() {
   useEffect(() => {
     marginOfVictoryRef.current = marginOfVictory;
   }, [marginOfVictory]);
+
+  // Keep selectedLetterRef in sync (critical for live testing letter switching)
+  useEffect(() => {
+    selectedLetterRef.current = selectedLetter;
+    console.log(`🔤 Selected letter updated: ${selectedLetter}`);
+  }, [selectedLetter]);
 
   // Draw live waveform
   useEffect(() => {
@@ -181,7 +188,7 @@ export default function AdminSnapshotsPage() {
       isTestingRef.current = true;
       patternBufferRef.current = [];
       setAttemptLog([]);
-      startVoiceDetection(selectedLetter);
+      startVoiceDetection(); // Uses selectedLetterRef.current
     } catch (err) {
       console.error('Failed to start testing:', err);
       alert('Failed to access microphone');
@@ -207,12 +214,19 @@ export default function AdminSnapshotsPage() {
     patternBufferRef.current = [];
   };
 
-  const startVoiceDetection = useCallback((targetLetter: string) => {
+  const startVoiceDetection = useCallback(() => {
     const ATTEMPT_COOLDOWN = 1500;
 
     const detectVoice = () => {
       const audioState = audioStateRef.current;
       if (!isTestingRef.current || !audioState || !audioState.analyser || !audioState.dataArray) {
+        return;
+      }
+
+      // Use ref for target letter so it updates when user clicks different letter
+      const targetLetter = selectedLetterRef.current;
+      if (!targetLetter) {
+        animationFrameRef.current = requestAnimationFrame(detectVoice);
         return;
       }
 
@@ -252,7 +266,7 @@ export default function AdminSnapshotsPage() {
           const result = strategy11_simpleSnapshot(patternBufferRef.current, targetLetter, calibrationDataRef.current);
           const matchInfo = getLastMatchInfo();
 
-          console.log('🔍 Test result:', { result, matchInfo });
+          console.log('🔍 Test result:', { targetLetter, result, matchInfo });
 
           // Create log entry based on what happened
           const entry: AttemptLogEntry = {
