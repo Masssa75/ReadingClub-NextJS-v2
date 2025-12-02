@@ -1013,11 +1013,11 @@ function AttemptLogCard({ entry, onDeleteSnapshot }: AttemptLogCardProps) {
                   • Snapshot from &quot;{snapshotLetter.toUpperCase()}&quot;
                   {snapshot.isNegative ? (snapshot.isGlobalNegative ? ' (🌍 global neg)' : ' (negative)') : ' (positive)'}
                 </span>
+                {typeof snapshot.score === 'number' && (
+                  <span className="ml-2 text-yellow-400">• Score: {snapshot.score}</span>
+                )}
                 {snapshot.id && (
                   <span className="ml-2 font-mono">• ID: ...{snapshot.id.slice(-8)}</span>
-                )}
-                {snapshot.calibrationId && (
-                  <span className="ml-2 font-mono text-[#666]">Cal: ...{snapshot.calibrationId.slice(-8)}</span>
                 )}
               </>
             )}
