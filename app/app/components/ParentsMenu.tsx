@@ -200,12 +200,13 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
                 <div className="w-full py-4 px-6 rounded-[22px] bg-gradient-to-r from-indigo-100 to-purple-100 shadow-lg">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-bold text-indigo-800">🎯 Margin Required</span>
-                    <span className="text-lg font-black text-indigo-600">{marginOfVictory}%</span>
+                    <span className="text-lg font-black text-indigo-600">{marginOfVictory.toFixed(1)}%</span>
                   </div>
                   <input
                     type="range"
                     min="0"
-                    max="10"
+                    max="1"
+                    step="0.1"
                     value={marginOfVictory}
                     onChange={(e) => onMarginOfVictoryChange(Number(e.target.value))}
                     className="w-full h-3 bg-gradient-to-r from-red-300 via-yellow-300 to-green-300 rounded-full appearance-none cursor-pointer
@@ -218,7 +219,7 @@ export default function ParentsMenu({ advancedMode = false, onAdvancedModeChange
                   />
                   <div className="flex justify-between text-[10px] font-medium text-indigo-600 mt-1">
                     <span>Strict (0%)</span>
-                    <span>Forgiving (10%)</span>
+                    <span>Forgiving (1%)</span>
                   </div>
                   <div className="text-[10px] text-indigo-600 mt-2 text-center">
                     Other letters must beat target by this margin to win

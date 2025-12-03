@@ -127,7 +127,7 @@ function FlashcardPage() {
   const [micPermissionGranted, setMicPermissionGranted] = useState(false);
   const [vowelsOnly, setVowelsOnly] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
-  const [marginOfVictory, setMarginOfVictory] = useState(1);
+  const [marginOfVictory, setMarginOfVictory] = useState(0.5); // 0-1% range, 0.1% steps
 
   // Video reward system state
   const [lettersSinceVideo, setLettersSinceVideo] = useState(0);
