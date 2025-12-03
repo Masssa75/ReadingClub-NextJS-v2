@@ -12,6 +12,8 @@ import CalibrationModal from '@/app/components/CalibrationModal';
 import ParentsMenu from '@/app/components/ParentsMenu';
 import MicrophonePermission from '@/app/components/MicrophonePermission';
 import { supabase } from '@/app/lib/supabase';
+import { addNegativePattern } from '@/app/utils/negativeSnapshot';
+import { uploadSnapshotAudio } from '@/app/utils/snapshotAudioUpload';
 
 // Audio delay based on proficiency level (in ms)
 const PROFICIENCY_AUDIO_DELAYS: Record<number, number> = {
@@ -120,6 +122,7 @@ function FlashcardPage() {
   const [showCalibrationModal, setShowCalibrationModal] = useState(false);
   const [lastMatchedLetter, setLastMatchedLetter] = useState<string | null>(null);
   const [lastMatchedSnapshot, setLastMatchedSnapshot] = useState<any | null>(null);
+  const [lastMatchedPattern, setLastMatchedPattern] = useState<number[] | null>(null); // Pattern that triggered the match
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [micPermissionGranted, setMicPermissionGranted] = useState(false);
   const [vowelsOnly, setVowelsOnly] = useState(false);
@@ -697,6 +700,7 @@ function FlashcardPage() {
     setGameMessage('');
     setLastMatchedLetter(letter);
     setLastMatchedSnapshot(matchedSnapshot || null);
+    setLastMatchedPattern(state.currentPattern ? [...state.currentPattern] : null); // Store pattern at match time
 
     // Increment letters since last video
     const newLetterCount = lettersSinceVideo + 1;
@@ -738,15 +742,26 @@ function FlashcardPage() {
     setTimeout(() => {
       setLastMatchedLetter(null);
       setLastMatchedSnapshot(null);
+      setLastMatchedPattern(null);
     }, 5000);
   }
 
-  // Mark last match as wrong (false positive) - mark the snapshot as negative
+  // Mark last match as wrong (false positive) - CREATE a new negative snapshot
   const handleNotX = async () => {
-    if (!lastMatchedLetter || !lastMatchedSnapshot) {
-      console.log('❌ No matched snapshot to mark as negative');
+    if (!lastMatchedLetter || !currentProfileId) {
+      console.log('❌ No matched letter or profile to create negative snapshot');
       return;
     }
+
+    // Need either the stored pattern or the matched snapshot's pattern
+    const patternToUse = lastMatchedPattern || lastMatchedSnapshot?.data;
+    if (!patternToUse) {
+      console.log('❌ No pattern available to create negative snapshot');
+      return;
+    }
+
+    console.log(`🚫 Creating NEW negative snapshot for ${lastMatchedLetter.toUpperCase()}`);
+    console.log(`   Pattern source: ${lastMatchedPattern ? 'stored match pattern' : 'matched snapshot data'}`);
 
     // Undo the proficiency increase (move back down)
     const currentProf = getProficiency(lastMatchedLetter);
@@ -756,62 +771,47 @@ function FlashcardPage() {
       await updateProficiency(lastMatchedLetter, newProf);
     }
 
-    // Mark the matched snapshot as negative in the database
     try {
-      const snapshotId = lastMatchedSnapshot.id;
-      console.log('🚫 Marking snapshot as negative:', snapshotId);
-
-      // Find the calibration containing this snapshot
-      const { data: calibrations, error: fetchError } = await supabase
-        .from('calibrations')
-        .select('*')
-        .eq('letter', lastMatchedLetter.toLowerCase());
-
-      if (fetchError) throw fetchError;
-
-      // Find and update the snapshot
-      for (const cal of calibrations || []) {
-        if (cal.pattern_data?.snapshots) {
-          const snapshotIndex = cal.pattern_data.snapshots.findIndex((s: any) => s.id === snapshotId);
-          if (snapshotIndex !== -1) {
-            // Found the snapshot - mark it as negative
-            const updatedSnapshots = cal.pattern_data.snapshots.map((s: any) =>
-              s.id === snapshotId ? { ...s, isNegative: true } : s
-            );
-
-            const { error: updateError } = await supabase
-              .from('calibrations')
-              .update({
-                pattern_data: {
-                  ...cal.pattern_data,
-                  snapshots: updatedSnapshots,
-                },
-              })
-              .eq('id', cal.id);
-
-            if (updateError) throw updateError;
-
-            console.log('✅ Snapshot marked as negative successfully');
-
-            // Show brief success feedback
-            setGameMessage('✓ Marked as incorrect');
-            setTimeout(() => setGameMessage(''), 1500);
-
-            // Reload calibrations to pick up the change
-            await actions.loadCalibrations();
-
-            // Clear the "Not X" button
-            setLastMatchedLetter(null);
-            setLastMatchedSnapshot(null);
-
-            return;
-          }
-        }
+      // Upload audio if the matched snapshot has audio we can reuse
+      let audioUrl: string | undefined;
+      if (lastMatchedSnapshot?.audio_url) {
+        // Reuse the audio URL from the matched snapshot
+        audioUrl = lastMatchedSnapshot.audio_url;
+        console.log(`   Reusing audio URL: ${audioUrl}`);
       }
 
-      console.error('❌ Snapshot not found in any calibration');
+      // Create a NEW negative snapshot using the stored pattern
+      const result = await addNegativePattern(
+        lastMatchedLetter,
+        patternToUse,
+        currentProfileId,
+        state.calibrationData,
+        audioUrl,
+        true // immediate save
+      );
+
+      if (result.success) {
+        console.log('✅ Negative snapshot created successfully');
+        setGameMessage('✓ Marked as incorrect');
+        setTimeout(() => setGameMessage(''), 1500);
+
+        // Reload calibrations to pick up the change
+        await actions.loadCalibrations();
+      } else {
+        console.error('❌ Failed to create negative snapshot:', result.message);
+        setGameMessage('Failed to save');
+        setTimeout(() => setGameMessage(''), 1500);
+      }
+
+      // Clear the "Not X" button
+      setLastMatchedLetter(null);
+      setLastMatchedSnapshot(null);
+      setLastMatchedPattern(null);
+
     } catch (error) {
-      console.error('❌ Error marking snapshot as negative:', error);
+      console.error('❌ Error creating negative snapshot:', error);
+      setGameMessage('Error saving');
+      setTimeout(() => setGameMessage(''), 1500);
     }
   };
 
@@ -1057,7 +1057,7 @@ function FlashcardPage() {
           {/* Close (X) button - top right */}
           <button
             onClick={handleCloseVideo}
-            className="absolute top-4 right-4 z-60 w-12 h-12 flex items-center justify-center bg-white/20 hover:bg-white/40 rounded-full text-white text-2xl font-bold transition-all"
+            className="absolute top-4 right-4 z-[60] w-12 h-12 flex items-center justify-center bg-white/20 hover:bg-white/40 rounded-full text-white text-2xl font-bold transition-all"
             aria-label="Close video"
           >
             ✕
